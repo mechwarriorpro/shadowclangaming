@@ -168,6 +168,8 @@ public final class LogicHarness {
         fuseTests();
         soulFurnaceTests();
         blastGeometryTests();
+        volumeShaderTests();
+        chargePhaseTests();
         rifleTests();
         emitterClusterTests();
         System.out.println();
@@ -2176,6 +2178,124 @@ public final class LogicHarness {
         } else {
             System.out.println("ok   " + label);
         }
+    }
+
+
+    /**
+     * The parameter set each warhead feeds the volumetric GPU shader.
+     *
+     * The shader has one code path for all thirty-eight warheads, so "distinct" is a claim about these
+     * numbers and nothing else. If two warheads ever share a signature they are literally the same effect,
+     * and this is what stops that from shipping.
+     */
+    private static void volumeShaderTests() {
+        section("volumetric shader parameters");
+
+        java.util.Set<String> signatures = new java.util.HashSet<>();
+        for (String id : WARHEADS) {
+            com.shadowclangaming.warhead.BlastMotif.Motif motif =
+                    com.shadowclangaming.warhead.BlastMotif.forWarhead(id);
+            com.shadowclangaming.warhead.BlastMotif.Volume volume = motif.volume();
+            check("volume parameters exist for " + id, volume != null);
+            check("volume signature is distinct for " + id, signatures.add(volume.signature()));
+
+            check("palette is opaque for " + id,
+                    ((volume.colorA() >>> 24) & 0xFF) == 0xFF
+                            && ((volume.colorB() >>> 24) & 0xFF) == 0xFF
+                            && ((volume.colorC() >>> 24) & 0xFF) == 0xFF);
+            check("shape parameters are in range for " + id,
+                    volume.beam() >= 0.0F && volume.beam() <= 1.0F
+                            && volume.ring() >= 0.0F && volume.ring() <= 1.0F
+                            && volume.skyRing() >= 0.0F && volume.skyRing() <= 1.0F
+                            && volume.streaks() >= 0.0F && volume.streaks() <= 1.0F
+                            && volume.dark() >= 0.0F && volume.dark() <= 1.0F
+                            && volume.implode() >= -1.0F && volume.implode() <= 1.0F
+                            && volume.turb() >= 0.05F && volume.turb() <= 2.0F
+                            && volume.rise() >= -1.0F && volume.rise() <= 1.0F
+                            && volume.glow() >= 0.05F && volume.glow() <= 2.0F
+                            && volume.swirl() >= 0.0F && volume.swirl() <= 2.0F);
+            check("motion is finite for " + id,
+                    Float.isFinite(volume.glow()) && Float.isFinite(volume.swirl())
+                            && Float.isFinite(volume.turb()));
+
+            // glow is 0.35 + finaleScale * 0.55: exactly 0.35 when there is no blast, more when there is.
+            if (motif.hasBlastFinale()) {
+                check("a warhead that ends in a blast burns brighter than one that does not: " + id,
+                        volume.glow() > 0.355F);
+            } else {
+                close("a warhead that is not a bomb sits at the base glow: " + id, 0.35D, volume.glow());
+            }
+            check("the noise field starts somewhere of its own for " + id,
+                    volume.seed() >= 0.0F && volume.seed() < 1.0F);
+        }
+        eq("every warhead has its own look", WARHEADS.length, signatures.size());
+
+        // The two the round was named after: they must not read as each other.
+        com.shadowclangaming.warhead.BlastMotif.Volume soul =
+                com.shadowclangaming.warhead.BlastMotif.forWarhead("soul_furnace").volume();
+        check("the Soul Furnace is dark-cored", soul.dark() >= 0.5F);
+        check("the Soul Furnace has magic circles overhead", soul.skyRing() >= 0.9F);
+        com.shadowclangaming.warhead.BlastMotif.Volume quasar =
+                com.shadowclangaming.warhead.BlastMotif.forWarhead("quasar_lance").volume();
+        check("the Quasar Lance is a pillar of light", quasar.beam() >= 0.9F);
+        check("the Quasar Lance is not dark-cored", quasar.dark() <= 0.2F);
+        com.shadowclangaming.warhead.BlastMotif.Volume cataclysm =
+                com.shadowclangaming.warhead.BlastMotif.forWarhead("ragnarok").volume();
+        check("a cataclysm has the full shockwave", cataclysm.ring() >= 0.9F);
+        check("a cataclysm is turbulent", cataclysm.turb() >= 1.0F);
+    }
+
+    /**
+     * The charge phase: the effect that plays while the weapon is cooking, before the blast.
+     *
+     * Every motif must have one, every layer in it must be marked as a charge layer, and it must be a
+     * smaller, converging version of the impact rather than a copy of it.
+     */
+    private static void chargePhaseTests() {
+        section("charge phase");
+
+        for (String id : WARHEADS) {
+            com.shadowclangaming.warhead.BlastMotif.Motif motif =
+                    com.shadowclangaming.warhead.BlastMotif.forWarhead(id);
+            check("charge layers exist for " + id, !motif.chargeSpecs().isEmpty());
+            eq("one charge layer per impact layer for " + id, motif.specs().size(),
+                    motif.chargeSpecs().size());
+
+            for (int i = 0; i < motif.chargeSpecs().size(); i++) {
+                com.shadowclangaming.warhead.BlastMotif.Spec charge = motif.chargeSpecs().get(i);
+                com.shadowclangaming.warhead.BlastMotif.Spec impact = motif.specs().get(i);
+                check("charge layer is a charge layer for " + id + "[" + i + "]",
+                        charge.phase() == com.shadowclangaming.warhead.BlastMotif.Phase.CHARGE);
+                check("impact layer is an impact layer for " + id + "[" + i + "]",
+                        impact.phase() == com.shadowclangaming.warhead.BlastMotif.Phase.IMPACT);
+                check("charge layer keeps its kind for " + id + "[" + i + "]",
+                        charge.layer() == impact.layer());
+                check("charge layer keeps its colour for " + id + "[" + i + "]",
+                        charge.argb() == impact.argb());
+                check("charge layer is inside the effect for " + id + "[" + i + "]",
+                        charge.from() >= 0.0D && charge.to() <= 1.0D && charge.to() > charge.from());
+                // Smaller, unless the impact layer is already at the Spec clamp floor of 0.05 and there
+                // is no room underneath it.
+                check("charge layer is smaller than the blast for " + id + "[" + i + "]",
+                        charge.scale() < impact.scale() || impact.scale() <= 0.06D);
+                check("charge layer winds the other way for " + id + "[" + i + "]",
+                        Math.signum(charge.spin()) != Math.signum(impact.spin())
+                                || charge.spin() == 0.0D);
+            }
+        }
+
+        // A charge that does not grow would be a static prop, which is what the last version looked like.
+        com.shadowclangaming.warhead.BlastMotif.Motif he =
+                com.shadowclangaming.warhead.BlastMotif.forWarhead("he");
+        double lastStart = -1.0D;
+        boolean staggered = false;
+        for (com.shadowclangaming.warhead.BlastMotif.Spec spec : he.chargeSpecs()) {
+            if (spec.from() > lastStart + 0.0001D) {
+                staggered = true;
+            }
+            lastStart = Math.max(lastStart, spec.from());
+        }
+        check("charge layers arrive one after another", staggered);
     }
 
     private static void check(String label, boolean condition) {

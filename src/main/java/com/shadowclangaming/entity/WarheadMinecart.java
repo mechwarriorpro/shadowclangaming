@@ -101,6 +101,12 @@ public class WarheadMinecart extends MinecartTNT {
         this.level().playSound(null, this.getX(), this.getY(), this.getZ(),
                 net.minecraft.sounds.SoundEvents.TNT_PRIMED,
                 net.minecraft.sounds.SoundSource.BLOCKS, 1.0F, 0.9F);
+        if (this.level() instanceof net.minecraft.server.level.ServerLevel server) {
+            // The effect plays for the whole of the fuse, then the warhead goes off on the last frame.
+            com.shadowclangaming.warhead.BlastFx.emitCharge(server, warhead, position(),
+                    ExplosivePackaging.power(warhead.basePower(), ExplosivePackaging.Form.MINECART),
+                    this.scgFuse);
+        }
     }
 
     /** The fuse left, for read-outs and debugging. -1 when the cart is not lit. */

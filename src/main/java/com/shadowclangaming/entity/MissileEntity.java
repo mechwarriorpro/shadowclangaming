@@ -574,9 +574,12 @@ public class MissileEntity extends Projectile implements ItemSupplier {
                 // stunt rather than suicide. They get slow falling and a moment of grace: the whole point
                 // of riding is to watch the thing land.
                 ejectRiders(serverLevel);
-                // The warhead decides what "detonate" means: decoy, EMP, antimatter, money...
-                warhead.detonate(serverLevel, position(), explosionPower, funding, spell, cargo,
-                        sliderRadius, buildSeed);
+                // The warhead decides what "detonate" means: decoy, EMP, antimatter, money... and it
+                // plays its own effect first. A two-kilometre warhead does not land and go off in the same
+                // tick: the anticipation runs for as long as that warhead's effect lasts, and the blast
+                // lands on the frame it ends. Warheads that deliver instead of exploding simply finish.
+                com.shadowclangaming.warhead.ChargeSequence.start(serverLevel, warhead, position(),
+                        explosionPower, funding, spell, cargo, sliderRadius, buildSeed);
             }
         }
         this.discard();

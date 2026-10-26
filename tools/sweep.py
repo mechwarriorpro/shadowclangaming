@@ -486,6 +486,116 @@ def check_lang():
 
 
 
+def check_world_shaders():
+    """The in-world effect programs: files, attributes, uniforms, and the Java that drives them.
+
+    These are core shaders, not post chains, and a mistake in one is silent: Minecraft logs a warning and
+    the warhead draws nothing at all. The checks that matter are the joins - every attribute the JSON
+    declares must exist in the vertex shader, every uniform the Java sets by name must exist in the JSON
+    (a typo would leave the effect permanently at its default), and the varyings must line up.
+    """
+    programs = ("world_blast_geom", "world_blast_volume")
+    drivers = {
+        "world_blast_geom": "com/shadowclangaming/client/CinematicFx.java",
+        "world_blast_volume": "com/shadowclangaming/client/VolumetricFx.java",
+    }
+    count = 0
+    for name in programs:
+        meta = os.path.join(ASSETS, "shaders/core", name + ".json")
+        vsh = os.path.join(ASSETS, "shaders/core", name + ".vsh")
+        fsh = os.path.join(ASSETS, "shaders/core", name + ".fsh")
+        for path, what in ((meta, "program JSON"), (vsh, "vertex shader"), (fsh, "fragment shader")):
+            if not os.path.isfile(path):
+                fail("core shader %s: missing %s" % (name, what))
+        if not (os.path.isfile(meta) and os.path.isfile(vsh) and os.path.isfile(fsh)):
+            continue
+        try:
+            data = json.loads(read(meta))
+        except Exception as error:  # noqa: BLE001
+            fail("core shader %s: invalid JSON (%s)" % (name, error))
+            continue
+
+        vertex_source = read(vsh)
+        fragment_source = read(fsh)
+        declared_attributes = [entry for entry in data.get("attributes", [])]
+        for attribute in declared_attributes:
+            if not re.search(r"^in\s+\w+\s+%s;" % attribute, vertex_source, re.M):
+                fail("core shader %s: JSON declares attribute %s that the vertex shader does not"
+                     % (name, attribute))
+        for declared in re.findall(r"^in\s+\w+\s+(\w+);", vertex_source, re.M):
+            if declared not in declared_attributes:
+                fail("core shader %s: vertex shader reads %s but the JSON does not declare it"
+                     % (name, declared))
+
+        declared_uniforms = {entry.get("name") for entry in data.get("uniforms", [])}
+        glsl_uniforms = set(re.findall(r"^uniform\s+\w+\s+(\w+);", vertex_source, re.M))
+        glsl_uniforms |= set(re.findall(r"^uniform\s+\w+\s+(\w+);", fragment_source, re.M))
+        for uniform in sorted(declared_uniforms):
+            if uniform not in glsl_uniforms:
+                fail("core shader %s: JSON declares uniform %s that no shader stage uses" % (name, uniform))
+        for uniform in sorted(glsl_uniforms):
+            if uniform not in declared_uniforms:
+                fail("core shader %s: shader uses uniform %s that the JSON does not declare, so Java "
+                     "can never set it" % (name, uniform))
+
+        for varying in re.findall(r"^out\s+\w+\s+(\w+);", vertex_source, re.M):
+            if not re.search(r"^in\s+\w+\s+%s;" % varying, fragment_source, re.M):
+                fail("core shader %s: vertex shader writes varying %s the fragment shader never reads"
+                     % (name, varying))
+        if "out vec4 fragColor;" not in fragment_source:
+            fail("core shader %s: fragment shader has no fragColor output" % name)
+
+        driver = read(os.path.join(JAVA, drivers[name]))
+        for uniform in set(re.findall(r'getUniform\("([^"]+)"\)', driver)):
+            if uniform not in declared_uniforms:
+                fail("core shader %s: %s looks up uniform %s that the program does not declare"
+                     % (name, drivers[name], uniform))
+        count += 1
+    print("core world shaders: %d" % count)
+    return count
+
+
+def check_charge_wiring():
+    """The effect plays first; the blast lands when it ends. Prove that is still wired up.
+
+    Two ways this silently breaks. A delivery form lights its fuse without announcing the effect, so the
+    player waits through a silent gap and the warhead "has no charge". Or a renderer exists but nothing
+    subscribes to it, which is what happened to the world geometry once already - the class compiled, the
+    shader registered, and not one frame was ever drawn.
+    """
+    for path, form in (("block/ExplosiveBlock.java", "Form.BLOCK"),
+                       ("entity/GrenadeEntity.java", "Form.GRENADE"),
+                       ("entity/WarheadMinecart.java", "Form.MINECART")):
+        source = read(os.path.join(JAVA, "com/shadowclangaming/" + path))
+        if "BlastFx.emitCharge" not in source:
+            fail("%s never announces its charge effect - the fuse would play in silence" % path)
+        if form not in source:
+            fail("%s does not derive its fuse from %s" % (path, form))
+
+    missile = read(os.path.join(JAVA, "com/shadowclangaming/entity/MissileEntity.java"))
+    if "ChargeSequence.start" not in missile:
+        fail("MissileEntity detonates on impact instead of playing its effect first")
+
+    main = read(os.path.join(JAVA, "com/shadowclangaming/ShadowClanGaming.java"))
+    for call in ("ChargeSequence.tick", "ChargeSequence.clear"):
+        if call not in main:
+            fail("ShadowClanGaming never calls %s" % call)
+
+    events = read(os.path.join(JAVA, "com/shadowclangaming/client/BlastClientEvents.java"))
+    if "VolumetricFx.render" not in events:
+        fail("nothing subscribes the volumetric renderer to a render stage - it would never draw")
+    if "CinematicFx.render" not in events:
+        fail("nothing falls back to the geometry renderer when the volumetric one is unavailable")
+    if "RenderLevelStageEvent" not in events:
+        fail("BlastClientEvents has no RenderLevelStageEvent listener")
+
+    queue = read(os.path.join(JAVA, "com/shadowclangaming/client/ClientBlastQueue.java"))
+    if "Phase phase" not in queue:
+        fail("ClientBlastQueue entries carry no phase, so a charge would be drawn as a detonation")
+    network = read(os.path.join(JAVA, "com/shadowclangaming/network/ScgNet.java"))
+    if "PHASE_CHARGE" not in network:
+        fail("the blast FX packet cannot carry a charge phase")
+
 def check_motifs():
     """Every warhead must own a world-space motif, and the renderer must know every layer kind."""
     motif_source = read(os.path.join(JAVA, "com/shadowclangaming/warhead/BlastMotif.java"))
@@ -543,6 +653,8 @@ def main():
     java_count = check_java()
     json_count = check_json()
     shaders = check_shaders()
+    check_world_shaders()
+    check_charge_wiring()
     blocks, items = check_assets()
     check_entities()
     check_particles()

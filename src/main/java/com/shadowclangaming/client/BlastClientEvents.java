@@ -5,6 +5,7 @@ import com.shadowclangaming.config.SCGConfig;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.client.event.ViewportEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 
@@ -31,6 +32,23 @@ public final class BlastClientEvents {
             // The shader-free half of every effect: world particles from the same motif table, so an
             // effect is still attached to the detonation point on a machine with no working shader.
             CinematicFx.tickParticles(net.minecraft.client.Minecraft.getInstance());
+        }
+    }
+
+    /**
+     * The world-space effect itself.
+     *
+     * AFTER_PARTICLES, after the terrain and the weather are in the framebuffer, so the volume is
+     * depth-tested against the world rather than painted over it. Volumetric first, triangles only if the
+     * raymarcher is not usable on this machine - and the particle pass above runs either way.
+     */
+    @SubscribeEvent
+    public static void onRenderLevel(RenderLevelStageEvent event) {
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) {
+            return;
+        }
+        if (!VolumetricFx.render(event)) {
+            CinematicFx.render(event);
         }
     }
 

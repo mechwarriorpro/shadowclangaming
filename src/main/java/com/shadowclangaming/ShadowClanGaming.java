@@ -116,6 +116,9 @@ public class ShadowClanGaming {
                     // The Soul Furnace is not a fixed stage schedule: it consumes, re-checks for mobs
                     // every five seconds, and releases only when a check finds nothing left to eat.
                     com.shadowclangaming.warhead.apex.SoulFurnaceStages.tick(event.getServer());
+                    // A warhead that arrived already armed plays its effect first and detonates on the
+                    // frame the effect ends (missile impacts, the kamikaze vest).
+                    com.shadowclangaming.warhead.ChargeSequence.tick(event.getServer());
                 });
 
         // Mana has no natural regeneration: this is the once-a-second pass that pays out the passive
@@ -189,6 +192,7 @@ public class ShadowClanGaming {
                     // planner has been shut down; discard their remaining cosmetic/destruction stages.
                     com.shadowclangaming.warhead.apex.ApexStages.clear();
                     com.shadowclangaming.warhead.apex.SoulFurnaceStages.clear();
+                    com.shadowclangaming.warhead.ChargeSequence.clear();
                     com.shadowclangaming.perf.BlastScheduler.INSTANCE.shutdown();
                     com.shadowclangaming.perf.ClientSync.clear();
                 });

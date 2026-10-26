@@ -111,6 +111,19 @@ public final class BlastMotif {
     }
 
     /**
+     * Which half of the weapon's life a layer belongs to.
+     *
+     * <p>CHARGE is the anticipation that plays *before* the warhead goes off - the fuse is this effect,
+     * not a silent wait - and IMPACT is the detonation itself, for the warheads that end in one.
+     */
+    public enum Phase {
+        /** Playing out before the blast. Its length is the form's fuse. */
+        CHARGE,
+        /** The detonation. Warheads with {@code finaleScale == 0} never have one. */
+        IMPACT
+    }
+
+    /**
      * One geometry layer of a motif.
      *
      * @param layer  which shape to build
@@ -121,7 +134,13 @@ public final class BlastMotif {
      * @param count  how many of them (rings in a stack, arcs, shards, rune strokes)
      * @param spin   radians per tick of rotation; negative spins the other way
      */
-    public record Spec(Layer layer, double from, double to, double scale, int argb, int count, double spin) {
+    public record Spec(Layer layer, double from, double to, double scale, int argb, int count, double spin,
+                       Phase phase) {
+
+        /** The impact-phase row, which is what all thirty-eight hand-written rows are. */
+        public Spec(Layer layer, double from, double to, double scale, int argb, int count, double spin) {
+            this(layer, from, to, scale, argb, count, spin, Phase.IMPACT);
+        }
 
         /** Clamped, so a hand-written row can never make the renderer divide by zero or draw backwards. */
         public Spec {
@@ -132,6 +151,14 @@ public final class BlastMotif {
             }
             scale = Math.max(0.05D, scale);
             count = Math.max(1, count);
+            if (phase == null) {
+                phase = Phase.IMPACT;
+            }
+        }
+
+        /** The same layer re-staged as anticipation: converging instead of bursting, and half the size. */
+        public Spec asCharge(double from, double to, double scaleFactor) {
+            return new Spec(layer, from, to, scale * scaleFactor, argb, count, -spin * 1.6D, Phase.CHARGE);
         }
 
         /** How far through this layer's own window {@code progress} is: 0 at {@code from}, 1 at {@code to}. */
@@ -159,6 +186,8 @@ public final class BlastMotif {
         private final List<Spec> specs;
         private final int baseTicks;
         private final float finaleScale;
+        private final List<Spec> charge;
+        private final Volume volume;
 
         Motif(String warheadId, Theme theme, int baseTicks, float finaleScale, List<Spec> specs) {
             this.warheadId = warheadId;
@@ -166,6 +195,25 @@ public final class BlastMotif {
             this.baseTicks = Math.max(MIN_TICKS, Math.min(MAX_TICKS, baseTicks));
             this.finaleScale = Math.max(0.0F, Math.min(2.0F, finaleScale));
             this.specs = List.copyOf(specs);
+            this.charge = List.copyOf(buildCharge(this.specs));
+            this.volume = Volume.of(this.warheadId, this.theme, this.specs, this.finaleScale);
+        }
+
+        /**
+         * The anticipation layers, derived from the impact layers rather than hand-written again.
+         *
+         * What you watch charging is a preview of what is coming: the same kinds of shape, the same
+         * colours, the same counts, but staggered in, at just over half the size, spinning the other way
+         * so the whole thing visibly winds up instead of winding down.
+         */
+        private static List<Spec> buildCharge(List<Spec> impact) {
+            List<Spec> out = new java.util.ArrayList<>();
+            int n = impact.size();
+            for (int i = 0; i < n; i++) {
+                double from = i / (double) Math.max(1, n) * 0.7D;
+                out.add(impact.get(i).asCharge(from, Math.min(1.0D, from + 0.4D), 0.55D));
+            }
+            return out;
         }
 
         public String warheadId() {
@@ -184,6 +232,16 @@ public final class BlastMotif {
         /** Effect lifetime before power scaling. */
         public int baseTicks() {
             return baseTicks;
+        }
+
+        /** The anticipation layers, for the CPU geometry and particle fallbacks. Never empty. */
+        public List<Spec> chargeSpecs() {
+            return charge;
+        }
+
+        /** The parameters this warhead feeds the volumetric GPU shader. Never null. */
+        public Volume volume() {
+            return volume;
         }
 
         /**
@@ -214,6 +272,111 @@ public final class BlastMotif {
         @Override
         public String toString() {
             return "motif[" + warheadId + " " + theme + " " + baseTicks + "t x" + specs.size() + "]";
+        }
+    }
+
+
+    /**
+     * What one warhead tells the volumetric GPU shader to do.
+     *
+     * <p>The shader ({@code shaders/core/world_blast_volume.fsh}) raymarches a procedural density field
+     * through a proxy volume the size of the blast. Everything that makes one warhead read differently
+     * from another arrives as one of these numbers - shape, motion, palette - so there is no branch per
+     * warhead in GLSL and nothing to get out of sync: this record is the shader's entire input besides
+     * position, size and time.
+     *
+     * <p>All of it is derived, not authored: the shape numbers come from the theme, the palette comes
+     * from the motif's own layer colours, and {@code swirl} from how fast its layers turn. Thirty-eight
+     * warheads therefore produce thirty-eight distinct parameter sets, which the logic harness asserts.
+     */
+    public record Volume(float beam, float ring, float skyRing, float implode, float turb, float rise,
+                         float streaks, float dark, float glow, float swirl, float seed,
+                         int colorA, int colorB, int colorC) {
+
+        /** Every field clamped, so a bad row cannot make the shader divide by zero or march backwards. */
+        public Volume {
+            beam = clamp01(beam);
+            ring = clamp01(ring);
+            skyRing = clamp01(skyRing);
+            implode = Math.max(-1.0F, Math.min(1.0F, implode));
+            turb = Math.max(0.05F, Math.min(2.0F, turb));
+            rise = Math.max(-1.0F, Math.min(1.0F, rise));
+            streaks = clamp01(streaks);
+            dark = clamp01(dark);
+            glow = Math.max(0.05F, Math.min(2.0F, glow));
+            swirl = Math.max(0.0F, Math.min(2.0F, swirl));
+            seed = Math.max(0.0F, Math.min(0.999F, seed));
+        }
+
+        /** Volume parameters for a motif: theme for shape, the motif's own layers for colour and motion. */
+        static Volume of(String warheadId, Theme theme, List<Spec> specs, float finaleScale) {
+            float beam;
+            float ring;
+            float skyRing;
+            float implode;
+            float turb;
+            float rise;
+            float streaks;
+            float dark;
+            switch (theme == null ? Theme.ORDNANCE : theme) {
+                case INFERNO -> { beam = 0.05F; ring = 0.55F; skyRing = 0.00F; implode = -0.50F; turb = 1.15F; rise = 0.85F; streaks = 0.40F; dark = 0.00F; }
+                case NUCLEAR -> { beam = 0.20F; ring = 0.95F; skyRing = 0.00F; implode = -0.40F; turb = 0.90F; rise = 1.00F; streaks = 0.30F; dark = 0.00F; }
+                case ARCANE -> { beam = 0.35F; ring = 0.35F; skyRing = 1.00F; implode = 0.30F; turb = 0.45F; rise = 0.10F; streaks = 0.25F; dark = 0.15F; }
+                case STELLAR -> { beam = 1.00F; ring = 0.40F; skyRing = 0.55F; implode = -0.30F; turb = 0.70F; rise = 0.25F; streaks = 0.85F; dark = 0.00F; }
+                case CATACLYSM -> { beam = 0.45F; ring = 1.00F; skyRing = 0.70F; implode = -0.80F; turb = 1.35F; rise = 0.45F; streaks = 0.75F; dark = 0.10F; }
+                case VOID -> { beam = 0.25F; ring = 0.20F; skyRing = 0.30F; implode = 1.00F; turb = 0.55F; rise = -0.30F; streaks = 0.60F; dark = 1.00F; }
+                case PLAGUE -> { beam = 0.00F; ring = 0.45F; skyRing = 0.15F; implode = -0.20F; turb = 1.25F; rise = 0.70F; streaks = 0.20F; dark = 0.30F; }
+                case CRYO -> { beam = 0.10F; ring = 0.60F; skyRing = 0.20F; implode = -0.10F; turb = 0.85F; rise = 0.15F; streaks = 0.55F; dark = 0.10F; }
+                case MACHINE -> { beam = 0.15F; ring = 0.70F; skyRing = 0.10F; implode = -0.20F; turb = 0.35F; rise = 0.05F; streaks = 0.30F; dark = 0.05F; }
+                case COIN -> { beam = 0.10F; ring = 0.50F; skyRing = 0.10F; implode = -0.30F; turb = 0.60F; rise = 0.55F; streaks = 0.45F; dark = 0.00F; }
+                case BARRIER -> { beam = 0.05F; ring = 0.30F; skyRing = 0.05F; implode = 0.20F; turb = 0.20F; rise = 0.00F; streaks = 0.10F; dark = 0.00F; }
+                case LOGISTICS -> { beam = 0.30F; ring = 0.25F; skyRing = 0.05F; implode = 0.10F; turb = 0.30F; rise = 0.20F; streaks = 0.15F; dark = 0.00F; }
+                case SWARM -> { beam = 0.00F; ring = 0.35F; skyRing = 0.00F; implode = -0.40F; turb = 1.10F; rise = 0.60F; streaks = 0.50F; dark = 0.00F; }
+                case BEAST -> { beam = 0.05F; ring = 0.40F; skyRing = 0.00F; implode = -0.50F; turb = 1.05F; rise = 0.35F; streaks = 0.30F; dark = 0.05F; }
+                case SOUL -> { beam = 0.30F; ring = 0.30F; skyRing = 1.00F; implode = 0.60F; turb = 0.50F; rise = 0.30F; streaks = 0.40F; dark = 0.70F; }
+                case SILENT -> { beam = 0.00F; ring = 0.10F; skyRing = 0.00F; implode = 0.00F; turb = 0.25F; rise = 0.00F; streaks = 0.05F; dark = 0.00F; }
+                default -> { beam = 0.00F; ring = 0.75F; skyRing = 0.00F; implode = -0.60F; turb = 1.00F; rise = 0.30F; streaks = 0.35F; dark = 0.00F; }
+            }
+            // The palette is the motif's own: the first layer's colour is the hot core, the last is the
+            // cool edge, and the middle is halfway between them.
+            int a = specs.isEmpty() ? 0xFFFFCC66 : specs.get(0).argb();
+            int c = specs.isEmpty() ? 0xFF552200 : specs.get(specs.size() - 1).argb();
+            int b = mix(a, c, 0.5F);
+            // Warheads that end in a bigger bang burn brighter; the ones that are not bombs stay dim.
+            float glow = 0.35F + finaleScale * 0.55F;
+            // How fast this motif's layers turn, folded into one number the shader uses to shear the
+            // field. Two warheads in the same theme still move differently because of it.
+            double spin = 0.0D;
+            for (Spec spec : specs) {
+                spin += Math.abs(spec.spin());
+            }
+            float swirl = (float) Math.min(2.0D, spin / Math.max(1, specs.size()) * 22.0D);
+            // Where in the noise field this warhead starts. Two warheads of the same theme would otherwise
+            // be the same effect with a different palette; this puts their turbulence in different places,
+            // and because it comes from the warhead's own id it is also what makes all thirty-eight
+            // parameter sets provably distinct.
+            float seed = (warheadId == null ? 0 : warheadId.hashCode() & 0x7FFFFFFF)
+                    / (float) Integer.MAX_VALUE;
+            return new Volume(beam, ring, skyRing, implode, turb, rise, streaks, dark, glow, swirl, seed,
+                    a | 0xFF000000, b | 0xFF000000, c | 0xFF000000);
+        }
+
+        /** One string per warhead, so the harness can prove no two warheads share a look. */
+        public String signature() {
+            return String.format(java.util.Locale.ROOT,
+                    "%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.8f/%08x/%08x/%08x",
+                    beam, ring, skyRing, implode, turb, rise, streaks, dark, glow, swirl, seed,
+                    colorA, colorB, colorC);
+        }
+
+        private static int mix(int argb0, int argb1, float t) {
+            int out = 0;
+            for (int shift = 0; shift < 24; shift += 8) {
+                int v0 = (argb0 >>> shift) & 0xFF;
+                int v1 = (argb1 >>> shift) & 0xFF;
+                out |= Math.round(v0 + (v1 - v0) * t) << shift;
+            }
+            return out;
         }
     }
 

@@ -1,18 +1,17 @@
 package com.shadowclangaming.client;
 
 import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.shader.Uniform;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.shadowclangaming.ShadowClanGaming;
 import com.shadowclangaming.config.SCGConfig;
 import com.shadowclangaming.warhead.BlastMotif;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -116,19 +115,27 @@ public final class CinematicFx {
             return;
         }
 
-        ShaderInstance active = shader != null ? shader : GameRenderer.getPositionColorShader();
+        ShaderInstance active = shader;
         if (active == null) {
+            // No program, no triangles. The particle pass keeps running regardless, so the warhead is
+            // still visible - it is just not geometry. Guessing at a vanilla program whose uniforms are
+            // not ours would put the effect in the wrong place, which is worse.
             return;
         }
 
-        Vec3 cam = event.getCamera().getPosition();
         ShaderInstance previous = RenderSystem.getShader();
-        PoseStack poseStack = event.getPoseStack();
-        poseStack.pushPose();
-        // Same camera convention as the established world-FX path: translate the event pose by -camera and
-        // submit world-space vertices, letting the active ModelView matrix apply the camera rotation once.
-        poseStack.translate(-cam.x, -cam.y, -cam.z);
-        Matrix4f worldView = poseStack.last().pose();
+        // Vertices are world-space; the view matrix is built from the camera here rather than taken off
+        // the pose stack (see WorldMatrices). One translation, applied once.
+        Matrix4f view = WorldMatrices.view(event.getCamera());
+        Matrix4f projection = WorldMatrices.projection();
+        Uniform viewUniform = active.getUniform("ScgView");
+        Uniform projUniform = active.getUniform("ScgProj");
+        if (viewUniform != null) {
+            viewUniform.set(view);
+        }
+        if (projUniform != null) {
+            projUniform.set(projection);
+        }
 
         RenderSystem.enableDepthTest();
         RenderSystem.depthMask(false);
@@ -139,7 +146,9 @@ public final class CinematicFx {
             RenderSystem.setShader(() -> active);
             BufferBuilder buffer = Tesselator.getInstance()
                     .begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-            CountingSink sink = new CountingSink(buffer, worldView);
+            // Identity, deliberately: vertices stay in world coordinates and the shader's own ScgView
+            // does the one and only transform.
+            CountingSink sink = new CountingSink(buffer, new Matrix4f());
             int vertices = 0;
             for (Effect effect : effects) {
                 if (vertices >= MAX_VERTICES) {
@@ -153,14 +162,13 @@ public final class CinematicFx {
                 BufferUploader.drawWithShader(buffer.buildOrThrow());
             }
             com.shadowclangaming.debug.ShadowDebug.log("CINEMATIC_DRAW",
-                    "frame={} effects={} vertices={} shader={}", frame, effects.size(), sink.vertices,
-                    shader != null ? "mod" : "vanilla");
+                    "frame={} effects={} vertices={} program=world_blast_geom", frame, effects.size(),
+                    sink.vertices);
         } catch (Throwable ex) {
             loadFailed = true;
             ShadowClanGaming.LOGGER.error("Cinematic geometry draw failed; world particles remain", ex);
             com.shadowclangaming.debug.ShadowDebug.logThrowable("CINEMATIC_DRAW_FAIL", "frame=" + frame, ex);
         } finally {
-            poseStack.popPose();
             RenderSystem.depthMask(true);
             RenderSystem.defaultBlendFunc();
             RenderSystem.disableBlend();
@@ -174,7 +182,8 @@ public final class CinematicFx {
     /** One effect: every layer its motif asks for, at this point in its life. */
     private static void draw(CountingSink sink, Effect effect) {
         int seed = (int) (effect.seed ^ (effect.seed >>> 32)) ^ (int) (effect.progress * 40.0F);
-        for (BlastMotif.Spec spec : effect.motif.specs()) {
+        for (BlastMotif.Spec spec : effect.charging()
+                ? effect.motif.chargeSpecs() : effect.motif.specs()) {
             if (sink.vertices >= MAX_VERTICES) {
                 return;
             }
@@ -191,8 +200,13 @@ public final class CinematicFx {
 
     // ------------------------------------------------------------------ collecting
 
-    /** The effects to draw this frame, strongest first, capped. */
-    private static List<Effect> collect(Minecraft mc) {
+    /**
+     * The effects to draw this frame, strongest first, capped.
+     *
+     * Shared with {@link VolumetricFx}: both renderers must agree on what is active, how strong it is and
+     * which half of its life it is in, or the volumetric pass and the geometry pass would fight.
+     */
+    static List<Effect> collect(Minecraft mc) {
         Vec3 cam = mc.gameRenderer.getMainCamera().getPosition();
         List<Effect> out = new ArrayList<>();
 
@@ -211,7 +225,7 @@ public final class CinematicFx {
             BlastMotif.Motif motif = BlastMotif.forWarhead(entry.warheadId);
             out.add(new Effect(entry.x, entry.y, entry.z, Math.max(6, entry.radius),
                     entry.progress(), Math.min(1.0F, strength), motif,
-                    (long) (entry.x * 31.0D + entry.z * 17.0D), 0));
+                    (long) (entry.x * 31.0D + entry.z * 17.0D), 0, entry.phase));
         }
 
         for (ClientApexQueue.Entry entry : ClientApexQueue.active()) {
@@ -243,7 +257,7 @@ public final class CinematicFx {
             BlastMotif.Motif motif = BlastMotif.forWarhead(entry.apex.id());
             out.add(new Effect(entry.x, visualY, entry.z, Math.max(8, entry.radius), progress,
                     Math.min(1.0F, strength), motif, (long) (entry.x * 31.0D + entry.z * 17.0D),
-                    entry.age));
+                    entry.age, BlastMotif.Phase.IMPACT));
         }
 
         out.sort(Comparator.comparingDouble((Effect e) -> e.strength).reversed());
@@ -282,7 +296,7 @@ public final class CinematicFx {
             float progress = entry.progress();
             BlastMotif.Motif motif = BlastMotif.forWarhead(entry.warheadId);
             emit(mc, motif, entry.x, entry.y, entry.z, Math.max(6, entry.radius), progress, scale,
-                    entry.age);
+                    entry.age, entry.phase);
         }
 
         for (ClientApexQueue.Entry entry : ClientApexQueue.active()) {
@@ -299,39 +313,88 @@ public final class CinematicFx {
             float progress = Math.min(1.0F, entry.age / (float) Math.max(1, entry.lifetime));
             BlastMotif.Motif motif = BlastMotif.forWarhead(entry.apex.id());
             emit(mc, motif, entry.x, visualY, entry.z, Math.max(8, entry.radius), progress, scale,
-                    entry.age);
+                    entry.age, BlastMotif.Phase.IMPACT);
         }
     }
 
     /** One burst of motif-appropriate world particles. */
+    /**
+     * The shader-free half of an effect: world particles, driven from the same motif table.
+     *
+     * Two behaviours, because the two halves of a weapon's life move in opposite directions. A charge
+     * CONVERGES - motes fall in from the blast radius towards the point where the warhead is going to go
+     * off, faster as it gets closer, with a column above it where the pillar will be - so the anticipation
+     * reads as the world being pulled towards one point. An impact does the reverse and throws everything
+     * outward with an upward plume.
+     *
+     * This runs whether or not either shader compiled, on every machine, with no GL at all.
+     */
     private static void emit(Minecraft mc, BlastMotif.Motif motif, double x, double y, double z,
-                             double radius, float progress, double scale, int age) {
-        double grow = 0.20D + 0.80D * progress;
-        double shell = Math.max(2.0D, radius * grow * 0.55D);
-        int count = (int) Math.max(6.0D, Math.min(48.0D, 26.0D * scale));
+                             double radius, float progress, double scale, int age,
+                             BlastMotif.Phase phase) {
+        boolean charging = phase == BlastMotif.Phase.CHARGE;
         long seed = (long) (x * 31.0D + z * 17.0D) + age;
+        double shell = charging
+                // Converging: wide at the start of the fuse, nearly at the centre by the end of it.
+                ? Math.max(1.5D, radius * (1.15D - 0.95D * progress))
+                : Math.max(2.0D, radius * (0.20D + 0.80D * progress) * 0.55D);
+        int count = (int) Math.max(8.0D, Math.min(charging ? 40.0D : 64.0D,
+                (charging ? 22.0D : 34.0D) * scale));
 
         for (int i = 0; i < count; i++) {
             double t = i / (double) count;
-            double theta = Math.PI * 2.0D * t + age * 0.05D;
+            double theta = Math.PI * 2.0D * t + age * (charging ? 0.09D : 0.05D);
             double phi = Math.PI * (0.25D + 0.5D * BlastGeometry.hash01((int) (seed + i * 7)));
             double px = x + shell * Math.sin(phi) * Math.cos(theta);
             double py = y + shell * Math.cos(phi) * 0.8D;
             double pz = z + shell * Math.sin(phi) * Math.sin(theta);
-            double vx = (px - x) * 0.02D;
-            double vy = 0.03D + BlastGeometry.hash01((int) (seed + i)) * 0.06D;
-            double vz = (pz - z) * 0.02D;
+            double vx;
+            double vy;
+            double vz;
+            if (charging) {
+                // Inward and down, harder the closer the fuse is to running out.
+                double pull = -0.03D - 0.05D * progress;
+                vx = (px - x) * pull;
+                vy = (py - y) * pull - 0.01D;
+                vz = (pz - z) * pull;
+            } else {
+                vx = (px - x) * 0.045D;
+                vy = 0.05D + BlastGeometry.hash01((int) (seed + i)) * 0.11D;
+                vz = (pz - z) * 0.045D;
+            }
             mc.level.addParticle(motifParticle(motif.theme(), i + age), px, py, pz, vx, vy, vz);
         }
 
+        // A column above the point, for the warheads that will end with a pillar of light. It descends
+        // while the weapon charges and erupts when it goes off.
+        BlastMotif.Volume volume = motif.volume();
+        if (volume.beam() > 0.12F) {
+            int columnCount = (int) Math.max(4.0D, Math.min(26.0D, 14.0D * scale * volume.beam()));
+            double height = Math.max(6.0D, radius * (charging ? 1.6D : 2.2D));
+            for (int i = 0; i < columnCount; i++) {
+                double h = BlastGeometry.hash01((int) (seed + i * 13)) * height;
+                double theta = Math.PI * 2.0D * BlastGeometry.hash01((int) (seed + i * 29)) + age * 0.06D;
+                double spread = Math.max(0.6D, radius * 0.08D);
+                double px = x + Math.cos(theta) * spread;
+                double pz = z + Math.sin(theta) * spread;
+                double vy = charging
+                        ? -0.12D - 0.1D * progress
+                        : 0.16D + BlastGeometry.hash01((int) (seed + i * 3)) * 0.2D;
+                mc.level.addParticle(motifParticle(motif.theme(), i * 5 + age), px, y + h, pz,
+                        0.0D, vy, 0.0D);
+            }
+        }
+
         // A ring on the ground, so the effect reads from above as well as from the side.
-        int ringCount = (int) Math.max(8.0D, Math.min(40.0D, 20.0D * scale));
-        double ringRadius = Math.max(2.0D, radius * grow);
+        int ringCount = (int) Math.max(10.0D, Math.min(56.0D, 28.0D * scale));
+        double ringRadius = Math.max(2.0D, radius * (charging ? 0.35D + 0.65D * progress
+                : 0.20D + 0.80D * progress));
         for (int i = 0; i < ringCount; i++) {
-            double theta = Math.PI * 2.0D * i / ringCount + age * 0.02D;
+            double theta = Math.PI * 2.0D * i / ringCount + age * 0.03D;
+            double outward = charging ? 0.02D : 0.09D;
             mc.level.addParticle(motifParticle(motif.theme(), i * 3 + age),
                     x + Math.cos(theta) * ringRadius, y + 0.25D, z + Math.sin(theta) * ringRadius,
-                    Math.cos(theta) * 0.05D, 0.04D, Math.sin(theta) * 0.05D);
+                    Math.cos(theta) * outward, 0.04D, Math.sin(theta) * outward);
         }
     }
 
@@ -370,8 +433,18 @@ public final class CinematicFx {
     }
 
     /** One drawable effect. */
-    private record Effect(double x, double y, double z, double radius, float progress, float strength,
-                          BlastMotif.Motif motif, long seed, int age) {
+    /**
+     * One live effect, ready to draw.
+     *
+     * Package-private because {@link VolumetricFx} draws the same list through the GPU raymarcher instead
+     * of through triangles.
+     */
+    record Effect(double x, double y, double z, double radius, float progress, float strength,
+                  BlastMotif.Motif motif, long seed, int age, BlastMotif.Phase phase) {
+
+        boolean charging() {
+            return phase == BlastMotif.Phase.CHARGE;
+        }
     }
 
     /** A {@link BlastGeometry.Sink} that writes into a real vertex buffer and counts what it wrote. */

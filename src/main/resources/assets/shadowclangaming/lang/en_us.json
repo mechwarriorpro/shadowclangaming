@@ -892,13 +892,14 @@
   "item.shadowclangaming.grenade_dud": "Dud Grenade",
   "item.shadowclangaming.minecart_dud": "Dud Minecart",
   "tooltip.shadowclangaming.grenade.usage": "Right-click to throw. The fuse is short - mind the arc.",
-  "tooltip.shadowclangaming.fuse": "Fuse: %s s - matched to this warhead's effect",
-  "tooltip.shadowclangaming.fuse_minecart": "Fuse: %s s once primed - matched to this warhead's effect, on top of the cart's own 4 s",
+  "tooltip.shadowclangaming.fuse": "Fuse: %s s - the effect plays for exactly this long, then it goes off",
+  "tooltip.shadowclangaming.fuse_minecart": "Fuse: %s s once primed - the effect plays, then it goes off, on top of the cart's own 4 s",
   "tooltip.shadowclangaming.minecart_warhead.usage": "Place on rails, then send it. Detonates on impact.",
   "tooltip.shadowclangaming.kamikaze.payload": "Loaded with: %s",
   "tooltip.shadowclangaming.kamikaze.payload.empty": "No payload loaded - right-click a charge block with this vest",
   "tooltip.shadowclangaming.kamikaze.payload.clear": "Sneak-right-click to empty the payload",
   "message.shadowclangaming.vest_loaded": "Vest loaded with %s",
   "message.shadowclangaming.vest_cleared": "Vest payload removed",
-  "message.shadowclangaming.designator_tuned_pad": "Channel %s written to this silo - designator paired"
+  "message.shadowclangaming.designator_tuned_pad": "Channel %s written to this silo - designator paired",
+  "tooltip.shadowclangaming.charge": "Charging - the blast lands when the effect ends"
 }

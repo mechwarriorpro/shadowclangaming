@@ -72,6 +72,10 @@ public class GrenadeEntity extends ThrowableItemProjectile {
         fuse = fuseTicks();
         // It has landed: stop it rolling away while it burns.
         setDeltaMovement(Vec3.ZERO);
+        // And the effect starts here, running for exactly the fuse: a grenade charges visibly for as long
+        // as it is still a grenade, then goes off.
+        com.shadowclangaming.warhead.BlastFx.emitCharge(level, warheadOf(), position(),
+                ExplosivePackaging.power(warheadOf().basePower(), ExplosivePackaging.Form.GRENADE), fuse);
         level.playSound(null, position().x, position().y, position().z, SoundEvents.TNT_PRIMED,
                 SoundSource.NEUTRAL, 1.0F, 1.3F);
         level.sendParticles(ParticleTypes.SMOKE, position().x, position().y, position().z, 12,

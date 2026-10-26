@@ -1,6 +1,7 @@
 package com.shadowclangaming.client;
 
 import com.shadowclangaming.config.SCGConfig;
+import com.shadowclangaming.warhead.BlastMotif;
 import com.shadowclangaming.warhead.BlastStyle;
 
 import java.util.ArrayList;
@@ -33,11 +34,18 @@ public final class ClientBlastQueue {
         public final double y;
         public final double z;
         public final int radius;
-        /** Ticks since the detonation. */
+        /** Ticks since this half of the effect began. */
         public int age;
         public final int lifetime;
+        /**
+         * Which half of the weapon's life this entry is: the anticipation playing out before the blast,
+         * or the detonation itself. A charge is drawn from the motif's charge layers and brightens as it
+         * goes; an impact flashes and decays.
+         */
+        public final BlastMotif.Phase phase;
 
-        Entry(BlastStyle style, String warheadId, double x, double y, double z, int radius, int lifetime) {
+        Entry(BlastStyle style, String warheadId, double x, double y, double z, int radius, int lifetime,
+              BlastMotif.Phase phase) {
             this.style = style;
             this.warheadId = warheadId == null || warheadId.isBlank() ? style.id() : warheadId;
             this.x = x;
@@ -45,6 +53,11 @@ public final class ClientBlastQueue {
             this.z = z;
             this.radius = radius;
             this.lifetime = Math.max(1, lifetime);
+            this.phase = phase == null ? BlastMotif.Phase.IMPACT : phase;
+        }
+
+        public boolean charging() {
+            return phase == BlastMotif.Phase.CHARGE;
         }
 
         public boolean expired() {
@@ -64,6 +77,12 @@ public final class ClientBlastQueue {
          */
         public float intensity() {
             float t = progress();
+            if (charging()) {
+                // Anticipation: it builds. An exponential decay here would make a thirty-second charge
+                // invisible for twenty-nine of its seconds, which is exactly the read that got the
+                // previous version rejected.
+                return Math.max(0.0F, Math.min(1.0F, 0.3F + 0.7F * t));
+            }
             float attack = Math.min(1.0F, age / 3.0F);
             float decay = (float) Math.exp(-3.0D * t);
             return Math.max(0.0F, Math.min(1.0F, attack * decay));
@@ -77,12 +96,12 @@ public final class ClientBlastQueue {
 
     /** Called from the network handler. */
     public static void accept(String styleId, String warheadId, double x, double y, double z, int radius,
-                              int ticks) {
+                              int ticks, BlastMotif.Phase phase) {
         if (!SCGConfig.shadersEnabled() && !SCGConfig.flashEnabled() && !SCGConfig.screenShake()) {
             // Everything visual is switched off: do not even grow the list.
             return;
         }
-        PENDING.add(new Entry(BlastStyle.byId(styleId), warheadId, x, y, z, radius, ticks));
+        PENDING.add(new Entry(BlastStyle.byId(styleId), warheadId, x, y, z, radius, ticks, phase));
         while (PENDING.size() > MAX_ENTRIES) {
             PENDING.remove(0);
         }

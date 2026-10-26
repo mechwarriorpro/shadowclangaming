@@ -21,6 +21,33 @@ public final class BlastFx {
     private BlastFx() {
     }
 
+    /** How big the effect is drawn, in blocks, from the power this form actually delivers. */
+    public static int radius(float power) {
+        return Math.max(8, Math.min(4096, Math.round(Math.abs(power) * 6.0F) + 8));
+    }
+
+    /**
+     * Announce the anticipation.
+     *
+     * <p>THE EFFECT IS THE FUSE. A primed charge used to sit there ticking for its own fuse length and then
+     * go off, so the only thing to look at during the wait was a wisp of smoke; now the warhead's effect
+     * plays *during* the wait, at exactly the same length as the fuse, and for the warheads that end in a
+     * blast the blast lands on the frame the effect finishes. One clock, one packet, no silent gap.
+     *
+     * @param ticks how long the weapon has left before it goes off - the form's fuse, in ticks
+     */
+    public static void emitCharge(ServerLevel level, WarheadType type, Vec3 pos, float power, int ticks) {
+        BlastStyle style = BlastStyle.forWarhead(type.id());
+        BlastMotif.Motif motif = BlastMotif.forWarhead(type.id());
+        int radius = radius(power);
+        com.shadowclangaming.debug.ShadowDebug.log("BLAST_FX",
+                "phase=charge warhead={} style={} theme={} pos=({}, {}, {}) radius={} ticks={} layers={} power={}",
+                type.id(), style.id(), motif.theme(), pos.x, pos.y, pos.z, radius, ticks,
+                motif.chargeSpecs().size(), power);
+        com.shadowclangaming.network.ScgNet.sendBlastFx(level, style, type.id(), pos, radius,
+                Math.max(1, ticks), com.shadowclangaming.network.ScgNet.BlastFxPayload.PHASE_CHARGE);
+    }
+
     /**
      * Send the effect for one detonation.
      *
@@ -29,12 +56,12 @@ public final class BlastFx {
     public static void emit(ServerLevel level, WarheadType type, Vec3 pos, float power) {
         BlastStyle style = BlastStyle.forWarhead(type.id());
         BlastMotif.Motif motif = BlastMotif.forWarhead(type.id());
-        int radius = Math.max(8, Math.min(4096, Math.round(Math.abs(power) * 6.0F) + 8));
+        int radius = radius(power);
         // The motif owns the duration: it is per-warhead, it is what the client draws for, and it is the
         // same number ExplosivePackaging turns into this warhead's fuse.
         int ticks = motif.durationTicks(power);
         com.shadowclangaming.debug.ShadowDebug.log("BLAST_FX",
-                "warhead={} style={} theme={} pos=({}, {}, {}) radius={} ticks={} layers={} power={}",
+                "phase=impact warhead={} style={} theme={} pos=({}, {}, {}) radius={} ticks={} layers={} power={}",
                 type.id(), style.id(), motif.theme(), pos.x, pos.y, pos.z, radius, ticks,
                 motif.specs().size(), power);
         com.shadowclangaming.network.ScgNet.sendBlastFx(level, style, type.id(), pos, radius, ticks);

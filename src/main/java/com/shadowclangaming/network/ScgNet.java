@@ -188,7 +188,12 @@ public final class ScgNet {
      * degrades to its fallback shader instead of rendering somebody else's warhead.
      */
     public record BlastFxPayload(String style, String warhead, double x, double y, double z, int radius,
-                                 int ticks) implements CustomPacketPayload {
+                                 int ticks, int phase) implements CustomPacketPayload {
+
+        /** {@code phase} on the wire: 0 for the anticipation, 1 for the detonation. */
+        public static final int PHASE_CHARGE = 0;
+        public static final int PHASE_IMPACT = 1;
+
         public static final Type<BlastFxPayload> TYPE = new Type<>(
                 ResourceLocation.fromNamespaceAndPath(ShadowClanGaming.MOD_ID, "blast_fx"));
         /**
@@ -212,6 +217,7 @@ public final class ScgNet {
                     DOUBLE_FIELD.encode(buffer, payload.z());
                     INT_FIELD.encode(buffer, payload.radius());
                     INT_FIELD.encode(buffer, payload.ticks());
+                    INT_FIELD.encode(buffer, payload.phase());
                 },
                 buffer -> new BlastFxPayload(
                         STYLE_FIELD.decode(buffer),
@@ -219,6 +225,7 @@ public final class ScgNet {
                         DOUBLE_FIELD.decode(buffer),
                         DOUBLE_FIELD.decode(buffer),
                         DOUBLE_FIELD.decode(buffer),
+                        INT_FIELD.decode(buffer),
                         INT_FIELD.decode(buffer),
                         INT_FIELD.decode(buffer)));
 
@@ -235,9 +242,23 @@ public final class ScgNet {
      * horizon while a grenade only bothers the people standing next to it. Clamped by the server's own config
      * limit so a 4096-radius blast cannot try to send to the whole world at once.
      */
+    /** The detonation effect. */
     public static void sendBlastFx(net.minecraft.server.level.ServerLevel level,
                                    com.shadowclangaming.warhead.BlastStyle style, String warheadId,
                                    net.minecraft.world.phys.Vec3 pos, int radius, int ticks) {
+        sendBlastFx(level, style, warheadId, pos, radius, ticks, BlastFxPayload.PHASE_IMPACT);
+    }
+
+    /**
+     * One half of a warhead effect.
+     *
+     * @param phase {@link BlastFxPayload#PHASE_CHARGE} for the anticipation that plays while the weapon is
+     *              cooking - its length is the fuse, and the blast lands when it ends - or
+     *              {@link BlastFxPayload#PHASE_IMPACT} for the detonation
+     */
+    public static void sendBlastFx(net.minecraft.server.level.ServerLevel level,
+                                   com.shadowclangaming.warhead.BlastStyle style, String warheadId,
+                                   net.minecraft.world.phys.Vec3 pos, int radius, int ticks, int phase) {
         if (!com.shadowclangaming.config.SCGConfig.fxPackets()) {
             return;
         }
@@ -246,7 +267,9 @@ public final class ScgNet {
         net.neoforged.neoforge.network.PacketDistributor.sendToPlayersNear(level, null,
                 pos.x, pos.y, pos.z, reach,
                 new BlastFxPayload(style.id(), warheadId == null ? style.id() : warheadId,
-                        pos.x, pos.y, pos.z, radius, ticks));
+                        pos.x, pos.y, pos.z, radius, ticks,
+                        phase == BlastFxPayload.PHASE_CHARGE
+                                ? BlastFxPayload.PHASE_CHARGE : BlastFxPayload.PHASE_IMPACT));
     }
 
     /**
@@ -478,10 +501,14 @@ public final class ScgNet {
         context.enqueueWork(() -> {
             com.shadowclangaming.client.ClientBlastQueue.accept(
                     payload.style(), payload.warhead(), payload.x(), payload.y(), payload.z(),
-                    payload.radius(), payload.ticks());
+                    payload.radius(), payload.ticks(),
+                    payload.phase() == BlastFxPayload.PHASE_CHARGE
+                            ? com.shadowclangaming.warhead.BlastMotif.Phase.CHARGE
+                            : com.shadowclangaming.warhead.BlastMotif.Phase.IMPACT);
             com.shadowclangaming.debug.ShadowDebug.log("FX_PACKET",
-                    "received type=blast style={} warhead={} radius={} ticks={}",
-                    payload.style(), payload.warhead(), payload.radius(), payload.ticks());
+                    "received type=blast style={} warhead={} radius={} ticks={} phase={}",
+                    payload.style(), payload.warhead(), payload.radius(), payload.ticks(),
+                    payload.phase());
         });
     }
 

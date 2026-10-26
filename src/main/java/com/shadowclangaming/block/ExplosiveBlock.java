@@ -90,7 +90,13 @@ public class ExplosiveBlock extends Block {
         level.setBlock(pos, state.setValue(PRIMED, true), Block.UPDATE_ALL);
         level.playSound(null, pos, SoundEvents.TNT_PRIMED, SoundSource.BLOCKS, 1.0F, 0.9F);
         if (level instanceof ServerLevel serverLevel) {
-            serverLevel.scheduleTick(pos, this, fuseTicks());
+            int fuse = fuseTicks();
+            serverLevel.scheduleTick(pos, this, fuse);
+            // The effect IS the fuse. It starts on this tick, runs for exactly this long, and the blast
+            // lands when it ends - so the thing you watch while walking away is the warhead itself, not a
+            // wisp of smoke standing in for it.
+            com.shadowclangaming.warhead.BlastFx.emitCharge(serverLevel, warhead, Vec3.atCenterOf(pos),
+                    ExplosivePackaging.power(warhead.basePower(), ExplosivePackaging.Form.BLOCK), fuse);
         }
     }
 
