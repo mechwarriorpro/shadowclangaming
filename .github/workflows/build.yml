@@ -103,33 +103,6 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Dump the vanilla API CI compiles against
-        continue-on-error: true
-        run: |
-          # javap against the real classpath, so a wrong method name costs a log line instead of a build.
-          # Never swallow javap's own error: a filtered grep that finds nothing used to hide the fact that
-          # the class was not on the classpath at all.
-          {
-            bash gradlew -q --no-daemon printCompileClasspath > /tmp/cp.txt 2>/tmp/cp.err || cat /tmp/cp.err
-            CP=$(paste -sd: /tmp/cp.txt)
-            echo "classpath entries: $(wc -l < /tmp/cp.txt)"
-            dump() {
-              echo "===== $1"
-              out=$(javap -cp "$CP" "$1" 2>&1) || { echo "$out"; return 0; }
-              if [ -n "$2" ]; then
-                echo "$out" | grep -E "$2" || { echo "(no match; first lines follow)"; echo "$out" | head -6; }
-              else
-                echo "$out"
-              fi
-            }
-            dump net.minecraft.world.entity.vehicle.MinecartTNT
-            dump net.minecraft.world.entity.projectile.ThrowableItemProjectile
-            dump net.minecraft.network.codec.StreamCodec "composite|of\("
-            dump net.minecraft.client.renderer.GameRenderer "ositionColor"
-            dump net.minecraft.world.level.Level "sendParticles|addParticle"
-            dump net.minecraft.world.level.block.TntBlock
-          } 2>&1 | tee /tmp/api.log || true
-
       - name: Compile and package
         id: build
         continue-on-error: true
@@ -145,11 +118,38 @@ jobs:
         run: |
           for jar in build/libs/*.jar; do
             echo "== $jar"
+            sha256sum "$jar" | sed 's/^/sha256 /'
             unzip -l "$jar" | tail -3
+            echo "new classes: $(unzip -l "$jar" | grep -c 'com/shadowclangaming')"
+            echo "world geometry shader: $(unzip -l "$jar" | grep -c 'world_blast_geom')"
             unzip -p "$jar" META-INF/MANIFEST.MF || true
             unzip -l "$jar" | awk '{print $4}' | grep -v '^$' | sort | uniq -d \
               | sed 's/^/DUPLICATE ENTRY: /'
           done | tee /tmp/jar.log
+
+      - name: Publish the jar as a GitHub release
+        if: steps.build.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # The Actions artifact blob host is not reachable from everywhere, and a jar nobody can
+          # download is not a delivery. A release asset is served from the repository itself.
+          set -e
+          jar=$(ls build/libs/ShadowClanGaming-*.jar | head -1)
+          tag="v1.0.0-round45"
+          notes="Built from ${GITHUB_SHA} on ${GITHUB_REF_NAME} by run ${GITHUB_RUN_ID}.
+          Per-warhead world-space blast geometry (38 motifs, 12 layer kinds), effect-derived fuses
+          for block/grenade/minecart, and the Soul Furnace rework: it eats every 100 ticks until a
+          look-around comes back empty. Not runtime-tested - the CI build, the sweeps and the three
+          harnesses pass."
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --notes "$notes"
+          else
+            gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+              --title "ShadowClanGaming 1.0.0 - per-warhead world effects and fuses" --notes "$notes"
+          fi
+          gh release upload "$tag" "$jar" --repo "$GITHUB_REPOSITORY" --clobber
+          echo "published: https://github.com/$GITHUB_REPOSITORY/releases/tag/$tag" | tee -a /tmp/jar.log
 
       - name: Publish the build log on the commit
         if: always()
@@ -162,8 +162,6 @@ jobs:
             echo '```'
             grep -nE "error:|warning:|FAILED|FAILURE|BUILD SUCCESS|What went wrong|> Task .* FAILED" \
               /tmp/build.log 2>/dev/null | tail -n 120 || true
-            echo '--- api (javap against the classpath CI compiled with) ---'
-            cat /tmp/api.log 2>/dev/null || true
             echo '--- errors with their context ---'
             grep -A3 -nE "error:" /tmp/build.log 2>/dev/null | head -n 120 || true
             echo '--- tail ---'

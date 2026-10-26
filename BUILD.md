@@ -207,6 +207,26 @@ number and the log.
 22. **Cannon director**: `/term cannon arm | aim | fire | engage | status` next to a CBC cannon mount.
 23. **Lua**: `lua` from the terminal, `print(1+1)`, a `for` loop, `os.time()`, and a program saved with `edit`.
 
+**Every warhead looks different now (round 45)**
+24. `/shadowclangaming fx motifs` — 38 rows: theme, base duration, layer count, finale. `/shadowclangaming fx
+    fuses` — the same 38 across all three forms, in seconds. Both come out of the code, so they cannot lie.
+25. `/shadowclangaming fx test void` — one effect on you, no warhead needed. **Walk around it.** It is real
+    geometry anchored to the detonation point, so it must change shape as you move, be hidden by a hill, and be
+    framed by a doorway. If it still reads as one flat disc, say so and include the `CINEMATIC_FRAME` lines from
+    `logs/shadow_debug.log`.
+26. Three detonations, three different lengths, all computed from the table: a **dud** 2.8 s, **HE** 7.7 s,
+    **Antimatter** 28.3 s. Nothing should end inside two seconds unless the warhead is supposed to.
+27. **Fuses follow the warhead.** Place a block, a grenade and a minecart of the *same* warhead: the block's fuse
+    is the effect length, the grenade's is 35 % of it, the cart's is 50 % of it *after* vanilla's own 4-second
+    priming. The tooltip on each item quotes its own number.
+28. **A grenade no longer explodes on contact.** It sticks, sparks, and counts down.
+29. **Soul Furnace** with mobs nearby: the sphere should *grow* every five seconds and the tally on the action
+    bar should climb; black-violet lightning cracks around it and red circles turn in the sky above. Walk the
+    mobs away and it releases on the next check — roughly five seconds later, not on a schedule. With nothing
+    alive near it from the start, it still shows one growth pass and then lets go.
+30. The eleven warheads that are not bombs — dud, decoy, EMP, Bulwark, Spell, Cargo, Minefield, Constructor,
+    Spatial, Violator, Beef — must still do no blast damage. They have a spectacle and no crater.
+
 ---
 
 ## 4. If you need to rebuild it yourself
@@ -630,3 +650,23 @@ Changed:
 - Apex/blast renderers log every frame and every candidate's distance, reach, age/lifetime, progress and
   computed strength; post chains log resource probes, uniforms, framebuffer size, duration and success/failure.
   Exceptions include complete stack traces. No sampling interval is applied.
+
+### Round 45 — per-warhead world geometry, effect-derived fuses, a Soul Furnace that runs out
+
+Full write-up in `docs/WARHEADS.md` §Round 45 and `docs/APEX.md` §1. Short version:
+
+- `warhead/BlastMotif` — 38 warheads, each a list of world-space layers (sphere, shockwave, ground sigil, sky
+  circle, beam, arcs, embers, shards, ring stack, tendrils, scan shell, glyph ring), each with its own window,
+  size, colour and count. Durations are 2 s to 60 s and differ per warhead. The harness fails the build if two
+  warheads share a motif signature.
+- `client/BlastGeometry` + `client/CinematicFx` + `shaders/core/world_blast_geom` — the motifs become real
+  triangles drawn in the world at `AFTER_PARTICLES`, depth-tested against terrain, no cull, no depth write.
+  Three levels of fallback: the mod shader, vanilla `rendertype_position_color`, and particles driven from the
+  same table (which need no shader at all).
+- `ExplosivePackaging.fuseTicks` — the fuse for each form is a share of the warhead's own effect duration
+  (block 100 %, grenade 35 %, minecart 50 %), clamped per form. The fixed 80/40/0 behaviour is gone.
+- `warhead/apex/SoulFurnacePlan` + `SoulFurnaceStages` — the furnace consumes, then checks every 100 ticks;
+  while it finds mobs it grows (to ×3 radius) and lasts longer (+8 ticks per soul, to 1800); it releases when a
+  check finds nothing, with a 40-check ceiling so a mob farm cannot hold a detonation open forever.
+- The one thing not done: none of this has been seen inside a running client. CI compiles it against
+  NeoForge 21.1.264, the sweeps and three harnesses pass, and that is the whole of the verification.
