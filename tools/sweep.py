@@ -555,6 +555,42 @@ def check_world_shaders():
     return count
 
 
+def check_event_subscribers():
+    """Every @EventBusSubscriber class must actually have a listener, and no renderer may draw twice.
+
+    NeoForge's automatic subscriber registers the class and then throws
+    "has no @SubscribeEvent methods, but register was called anyway" - during mod construction, before
+    anything else in the mod loads. That is not a warning in a log; it is the whole mod failing to start,
+    and it is what the first real launch of the volumetric build did.
+
+    The second half is the same mistake from the other side: a renderer that subscribes itself AND is
+    called from the fallback path draws the effect twice, and the legacy billboard that stayed subscribed
+    after being replaced drew a flat disc underneath every effect for several rounds.
+    """
+    subscribers = []
+    for path in java_files():
+        source = read(path)
+        annotated = bool(re.search(r"^\s*@EventBusSubscriber\b", source, re.M))
+        if not annotated:
+            continue
+        name = os.path.relpath(path, JAVA)
+        listeners = len(re.findall(r"^\s*@SubscribeEvent\b", source, re.M))
+        if listeners == 0:
+            fail("%s is annotated @EventBusSubscriber but has no @SubscribeEvent method - NeoForge "
+                 "refuses to load the mod" % name)
+        subscribers.append((name, listeners))
+
+    events = read(os.path.join(JAVA, "com/shadowclangaming/client/BlastClientEvents.java"))
+    called = set(re.findall(r"\b(\w+)\.render\(event\)", events))
+    for name, _ in subscribers:
+        if os.path.basename(name)[:-5] in called:
+            fail("%s subscribes itself to the render stage and is also called from BlastClientEvents - "
+                 "the effect would be drawn twice" % name)
+    for renderer in ("VolumetricFx", "CinematicFx"):
+        if renderer not in called:
+            fail("BlastClientEvents never calls %s.render - the world effect would never be drawn" % renderer)
+    return len(subscribers)
+
 def check_charge_wiring():
     """The effect plays first; the blast lands when it ends. Prove that is still wired up.
 
@@ -655,6 +691,7 @@ def main():
     shaders = check_shaders()
     check_world_shaders()
     check_charge_wiring()
+    subscribers = check_event_subscribers()
     blocks, items = check_assets()
     check_entities()
     check_particles()
@@ -668,6 +705,7 @@ def main():
     print("lang keys: %d" % lang_count)
     print("recipes: %d" % recipe_count)
     print("shader chains: %d" % shaders)
+    print("event subscriber classes: %d" % subscribers)
     print("warhead motifs: %d" % motif_count)
     if problems:
         print("\nFAIL (%d problem(s)):" % len(problems))

@@ -19,7 +19,6 @@ import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import org.joml.Matrix4f;
@@ -50,7 +49,6 @@ import java.util.List;
  *
  * <p>GAME bus, {@code Dist.CLIENT}: a dedicated server never loads it.
  */
-@EventBusSubscriber(modid = ShadowClanGaming.MOD_ID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public final class CinematicFx {
 
     private static final ResourceLocation PROGRAM =
@@ -94,7 +92,13 @@ public final class CinematicFx {
         return loadFailed;
     }
 
-    @SubscribeEvent
+    /**
+     * Draw the effects as CPU triangles.
+     *
+     * Called from {@code BlastClientEvents} only when the volumetric program is unavailable - it is the
+     * fallback, not a second pass. It used to carry its own {@code @SubscribeEvent}, which meant the
+     * geometry drew on every frame whether or not the raymarcher had already drawn the same effect.
+     */
     public static void render(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) {
             return;
@@ -123,13 +127,6 @@ public final class CinematicFx {
         }
 
         ShaderInstance previous = RenderSystem.getShader();
-        // Vertices are world-space; the view matrix is built from the camera here rather than taken off
-        // the pose stack (see WorldMatrices). One translation, applied once.
-        Matrix4f view = WorldMatrices.view(event.getCamera());
-        Matrix4f projection = WorldMatrices.projection();
-        active.safeGetUniform("ScgView").set(view);
-        active.safeGetUniform("ScgProj").set(projection);
-
         RenderSystem.enableDepthTest();
         RenderSystem.depthMask(false);
         RenderSystem.enableBlend();
@@ -137,6 +134,11 @@ public final class CinematicFx {
         RenderSystem.disableCull();
         try {
             RenderSystem.setShader(() -> active);
+            // Vertices are world-space; the view matrix is built from the camera here rather than taken
+            // off the pose stack (see WorldMatrices). One translation, applied once. Inside the guard, so
+            // a driver that objects leaves the render state as it found it.
+            active.safeGetUniform("ScgView").set(WorldMatrices.view(event.getCamera()));
+            active.safeGetUniform("ScgProj").set(WorldMatrices.projection());
             BufferBuilder buffer = Tesselator.getInstance()
                     .begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
             // Identity, deliberately: vertices stay in world coordinates and the shader's own ScgView

@@ -14,9 +14,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import org.joml.Matrix4f;
@@ -39,11 +36,16 @@ import java.util.List;
  * culling, and the fragment shader works out for itself whether the camera is outside it or standing
  * inside the fireball, then shades each pixel exactly once.
  *
+ * <p>NO EVENT-BUS ANNOTATION, deliberately. This class has no listener methods: the shader is registered
+ * from {@code WorldBlastShaderRegistration} and the frame is drawn from {@code BlastClientEvents}, which
+ * decides between this and the triangle fallback. NeoForge refuses to register a class that carries
+ * {@code @EventBusSubscriber} with nothing to subscribe - it fails the whole mod at construction - and
+ * that is exactly the crash this class caused on its first launch.
+ *
  * <p>FALLBACK. If the program does not compile on this machine, {@link #render} returns false and
  * {@link CinematicFx} draws the same effect as CPU triangles instead, with the particle pass running in
  * both cases. A driver that cannot run this shader still gets a warhead that looks like itself.
  */
-@EventBusSubscriber(modid = ShadowClanGaming.MOD_ID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public final class VolumetricFx {
 
     private static final ResourceLocation PROGRAM =

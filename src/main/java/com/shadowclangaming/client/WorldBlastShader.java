@@ -17,9 +17,6 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import org.joml.Matrix4f;
@@ -31,7 +28,6 @@ import java.util.Comparator;
 import java.util.List;
 
 /** Actual world-space shader-rendered blast billboards, depth-tested against the world. Never draws HUD pixels. */
-@EventBusSubscriber(modid = ShadowClanGaming.MOD_ID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public final class WorldBlastShader {
     private static final ResourceLocation PROGRAM = ResourceLocation.fromNamespaceAndPath(ShadowClanGaming.MOD_ID, "world_blast");
     private static ShaderInstance shader;
@@ -55,7 +51,13 @@ public final class WorldBlastShader {
         }
     }
 
-    @SubscribeEvent
+    /**
+     * The legacy camera-facing billboard.
+     *
+     * Unsubscribed: it was still drawing on every frame at AFTER_PARTICLES, underneath everything else -
+     * which is the flat disc this mod has been trying to get rid of for several rounds. Kept for the
+     * fallback intensity bookkeeping only; nothing calls this any more.
+     */
     public static void render(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES || !SCGConfig.cinematicShadersEnabled()) return;
         Minecraft mc = Minecraft.getInstance();
