@@ -1,0 +1,73 @@
+package com.shadowclangaming.client;
+
+import com.shadowclangaming.ShadowClanGaming;
+import com.shadowclangaming.config.SCGConfig;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.ViewportEvent;
+import net.neoforged.neoforge.event.tick.LevelTickEvent;
+
+/**
+ * Client hooks for the ordinary warhead effects.
+ *
+ * Four events, four jobs, all of them cheap:
+ *
+ *   LevelTickEvent.Post          advance the queue (once per tick, not per frame)
+ *   (the post chain itself is drawn from ApexClientEvents, so only one full-screen pass ever runs)
+ *   RenderGuiLayerEvent.Post     the HUD fallback when no chain will build
+ *   ViewportEvent.CameraAngles   camera shake
+ *
+ * GAME bus + Dist.CLIENT, so a dedicated server never loads any of it.
+ */
+@EventBusSubscriber(modid = ShadowClanGaming.MOD_ID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
+public final class BlastClientEvents {
+
+    @SubscribeEvent
+    public static void onLevelTick(LevelTickEvent.Post event) {
+        if (event.getLevel().isClientSide()) {
+            ClientBlastQueue.tick();
+            WorldBlastShader.tickFallback();
+            // The shader-free half of every effect: world particles from the same motif table, so an
+            // effect is still attached to the detonation point on a machine with no working shader.
+            CinematicFx.tickParticles(net.minecraft.client.Minecraft.getInstance());
+        }
+    }
+
+    // The post chain is drawn from ApexClientEvents, immediately after the apex chain and only when an
+    // apex weapon is NOT already owning the screen: two full-screen passes in one frame is a measurable cost
+    // and turning the image into mush. One screen effect at a time, always.
+
+    /**
+     * Camera shake.
+     *
+     * Two different frequencies on purpose: a slow one for the ground moving and a fast one for the pressure
+     * wave, so it reads as a shockwave rather than a camera wobble. The amount is the same strength value the
+     * shaders use, so a player who turns shake down to zero still gets everything else.
+     */
+    @SubscribeEvent
+    public static void onCameraAngles(ViewportEvent.ComputeCameraAngles event) {
+        if (!SCGConfig.screenShake() || SCGConfig.shakeStrength() <= 0.0D) {
+            return;
+        }
+        float strength = BlastShaderFx.strength();
+        if (strength <= 0.01F) {
+            return;
+        }
+        float scale = (float) (SCGConfig.shakeStrength() * strength
+                * BlastShaderFx.overlayStyle().shake() * 1.6F);
+        if (scale <= 0.0F) {
+            return;
+        }
+        double time = (System.currentTimeMillis() % 100_000L) / 1000.0D;
+        float yaw = (float) (Math.sin(time * 47.0D) * Math.sin(time * 13.0D)) * scale;
+        float pitch = (float) (Math.cos(time * 41.0D) * Math.sin(time * 11.0D)) * scale * 0.6F;
+        float roll = (float) (Math.sin(time * 29.0D)) * scale * 0.5F;
+        event.setYaw(event.getYaw() + yaw);
+        event.setPitch(event.getPitch() + pitch);
+        event.setRoll(event.getRoll() + roll);
+    }
+
+    private BlastClientEvents() {
+    }
+}

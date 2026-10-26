@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "active=false": {
+      "model": "shadowclangaming:block/blood_circle"
+    },
+    "active=true": {
+      "model": "shadowclangaming:block/blood_circle_active"
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "XCX",
+    "X X"
+  ],
+  "key": {
+    "X": {
+      "item": "minecraft:netherite_scrap"
+    },
+    "C": {
+      "item": "minecraft:obsidian"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:infamy_boots",
+    "count": 1
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_spatial"
+    },
+    {
+      "item": "shadowclangaming:grenade_spatial"
+    },
+    {
+      "item": "shadowclangaming:grenade_spatial"
+    },
+    {
+      "item": "shadowclangaming:grenade_spatial"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_spatial",
+    "count": 1
+  }
+}

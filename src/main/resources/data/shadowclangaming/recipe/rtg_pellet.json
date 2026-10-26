@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " L ",
+    "LEL",
+    " L "
+  ],
+  "key": {
+    "L": {
+      "item": "minecraft:lead"
+    },
+    "E": {
+      "item": "shadowclangaming:enriched_uranium"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:rtg_pellet",
+    "count": 2
+  }
+}

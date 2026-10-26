@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_abyssal_covenant"
+    },
+    {
+      "item": "shadowclangaming:grenade_abyssal_covenant"
+    },
+    {
+      "item": "shadowclangaming:grenade_abyssal_covenant"
+    },
+    {
+      "item": "shadowclangaming:grenade_abyssal_covenant"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_abyssal_covenant",
+    "count": 1
+  }
+}

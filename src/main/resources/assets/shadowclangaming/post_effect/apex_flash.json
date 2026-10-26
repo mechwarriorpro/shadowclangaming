@@ -1,0 +1,31 @@
+{
+  "targets": [
+    "swap"
+  ],
+  "passes": [
+    {
+      "name": "shadowclangaming:post/apex_flash",
+      "intarget": "minecraft:main",
+      "outtarget": "swap",
+      "uniforms": [
+        {
+          "name": "Strength",
+          "values": [
+            1.0
+          ]
+        },
+        {
+          "name": "Time",
+          "values": [
+            0.0
+          ]
+        }
+      ]
+    },
+    {
+      "name": "shadowclangaming:post/apex_copy",
+      "intarget": "swap",
+      "outtarget": "minecraft:main"
+    }
+  ]
+}

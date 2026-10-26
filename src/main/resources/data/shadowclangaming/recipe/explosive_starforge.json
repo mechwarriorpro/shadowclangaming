@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_starforge"
+    },
+    {
+      "item": "shadowclangaming:grenade_starforge"
+    },
+    {
+      "item": "shadowclangaming:grenade_starforge"
+    },
+    {
+      "item": "shadowclangaming:grenade_starforge"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_starforge",
+    "count": 1
+  }
+}

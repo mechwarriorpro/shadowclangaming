@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_arcane_singularity"
+    },
+    {
+      "item": "shadowclangaming:grenade_arcane_singularity"
+    },
+    {
+      "item": "shadowclangaming:grenade_arcane_singularity"
+    },
+    {
+      "item": "shadowclangaming:grenade_arcane_singularity"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_arcane_singularity",
+    "count": 1
+  }
+}

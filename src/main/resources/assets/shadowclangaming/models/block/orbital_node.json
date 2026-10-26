@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "shadowclangaming:block/orbital_node_top",
+    "bottom": "shadowclangaming:block/orbital_node_bottom",
+    "side": "shadowclangaming:block/orbital_node_side"
+  }
+}

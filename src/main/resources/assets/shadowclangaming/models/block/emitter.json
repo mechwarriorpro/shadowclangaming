@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "shadowclangaming:block/emitter_top",
+    "bottom": "shadowclangaming:block/emitter_bottom",
+    "side": "shadowclangaming:block/emitter_side"
+  }
+}

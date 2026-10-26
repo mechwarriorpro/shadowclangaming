@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "primed=false": {
+      "model": "shadowclangaming:block/explosive_world_eater"
+    },
+    "primed=true": {
+      "model": "shadowclangaming:block/explosive_world_eater"
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " W ",
+    "WMW",
+    " G "
+  ],
+  "key": {
+    "W": {
+      "item": "shadowclangaming:war_bond"
+    },
+    "M": {
+      "item": "shadowclangaming:mrbm"
+    },
+    "G": {
+      "item": "minecraft:gunpowder"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:numismatic_missile",
+    "count": 1
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "STS",
+    "TMT",
+    "STS"
+  ],
+  "key": {
+    "S": {
+      "item": "minecraft:string"
+    },
+    "T": {
+      "item": "minecraft:tnt"
+    },
+    "M": {
+      "item": "shadowclangaming:mine"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:minefield_missile",
+    "count": 1
+  }
+}

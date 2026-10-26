@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " E ",
+    "IRI",
+    " I "
+  ],
+  "key": {
+    "E": {
+      "item": "shadowclangaming:emitter"
+    },
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "R": {
+      "item": "minecraft:redstone_block"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:spell_missile",
+    "count": 1
+  }
+}

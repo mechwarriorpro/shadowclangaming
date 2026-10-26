@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_cluster"
+    },
+    {
+      "item": "shadowclangaming:grenade_cluster"
+    },
+    {
+      "item": "shadowclangaming:grenade_cluster"
+    },
+    {
+      "item": "shadowclangaming:grenade_cluster"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_cluster",
+    "count": 1
+  }
+}

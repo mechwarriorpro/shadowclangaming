@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "GTG",
+    "GGG",
+    "GGG"
+  ],
+  "key": {
+    "G": {
+      "item": "minecraft:iron_ingot"
+    },
+    "T": {
+      "item": "shadowclangaming:missile_module_t3"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:missile_module_cluster_t3",
+    "count": 1
+  }
+}

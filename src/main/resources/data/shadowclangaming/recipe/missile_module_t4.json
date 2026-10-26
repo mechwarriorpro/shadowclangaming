@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " U ",
+    "UTU",
+    " U "
+  ],
+  "key": {
+    "U": {
+      "item": "shadowclangaming:enriched_uranium"
+    },
+    "T": {
+      "item": "shadowclangaming:missile_module_t3"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:missile_module_t4",
+    "count": 1
+  }
+}

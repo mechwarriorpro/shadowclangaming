@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_incendiary"
+    },
+    {
+      "item": "shadowclangaming:grenade_incendiary"
+    },
+    {
+      "item": "shadowclangaming:grenade_incendiary"
+    },
+    {
+      "item": "shadowclangaming:grenade_incendiary"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_incendiary",
+    "count": 1
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_beef"
+    },
+    {
+      "item": "shadowclangaming:grenade_beef"
+    },
+    {
+      "item": "shadowclangaming:grenade_beef"
+    },
+    {
+      "item": "shadowclangaming:grenade_beef"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_beef",
+    "count": 1
+  }
+}

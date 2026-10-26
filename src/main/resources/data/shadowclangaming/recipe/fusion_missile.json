@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " T ",
+    "EIE",
+    " G "
+  ],
+  "key": {
+    "T": {
+      "item": "shadowclangaming:tritium_cell"
+    },
+    "E": {
+      "item": "shadowclangaming:enriched_uranium"
+    },
+    "I": {
+      "item": "shadowclangaming:icbm"
+    },
+    "G": {
+      "item": "minecraft:gunpowder"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:fusion_missile",
+    "count": 1
+  }
+}

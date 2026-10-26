@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " D ",
+    "DTD",
+    " D "
+  ],
+  "key": {
+    "D": {
+      "item": "minecraft:diamond"
+    },
+    "T": {
+      "item": "shadowclangaming:missile_module_t2"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:missile_module_t3",
+    "count": 1
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "minecraft:minecart"
+    },
+    {
+      "item": "shadowclangaming:explosive_absolute_annihilation"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:minecart_absolute_annihilation",
+    "count": 1
+  }
+}

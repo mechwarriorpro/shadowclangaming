@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_absolute_annihilation"
+    },
+    {
+      "item": "shadowclangaming:grenade_absolute_annihilation"
+    },
+    {
+      "item": "shadowclangaming:grenade_absolute_annihilation"
+    },
+    {
+      "item": "shadowclangaming:grenade_absolute_annihilation"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_absolute_annihilation",
+    "count": 1
+  }
+}

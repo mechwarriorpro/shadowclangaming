@@ -1,0 +1,84 @@
+name: Build
+
+on:
+  push:
+    branches: [ main, master, arena/da1d4f8a-shadowclangaming ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # The fast half of the verification: everything in this mod that is arithmetic rather than Minecraft is
+  # compiled and asserted here, plus the asset/lang/shader sweeps. No NeoForm decompile, no downloads of
+  # the game, so it answers "is the logic right" in about a minute instead of fifteen.
+  checks:
+    name: Harnesses and sweeps
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Sweep (assets, lang, recipes, shaders, motifs, fuses)
+        run: python3 tools/sweep.py
+
+      - name: Names
+        run: python3 tools/check_names.py
+
+      - name: Logic harness (pure Java assertions)
+        run: bash tools/run_logic_harness.sh
+
+      - name: API harness
+        run: bash tools/run_api_harness.sh
+
+      - name: Lua harness
+        run: bash tools/run_lua_harness.sh
+
+      - name: Syntax check of every source file
+        run: bash tools/check_syntax.sh
+
+  # The real build: compiles all 269 sources against a genuine NeoForge 21.1.264 / Minecraft 1.21.1
+  # classpath and packages the jar. This is the only step that can catch a type error.
+  build:
+    name: Compile and package
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      # NeoForm decompiles Minecraft as a child Java process; keep the heavy work
+      # on the hosted runner, not in the constrained local workspace.
+      JAVA_TOOL_OPTIONS: -XX:ActiveProcessorCount=2 -XX:+UseSerialGC -Xmx3G
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Compile and package
+        run: bash gradlew build --no-daemon --stacktrace --max-workers=2 -Dorg.gradle.jvmargs='-Xmx2G -XX:+UseSerialGC -XX:ActiveProcessorCount=2'
+
+      - name: Report jar contents
+        run: |
+          for jar in build/libs/*.jar; do
+            echo "== $jar"
+            unzip -l "$jar" | tail -3
+            unzip -p "$jar" META-INF/MANIFEST.MF || true
+            unzip -l "$jar" | awk '{print $4}' | grep -v '^$' | sort | uniq -d | sed 's/^/DUPLICATE ENTRY: /'
+          done
+
+      - name: Upload jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: shadowclangaming-jar
+          path: build/libs/*.jar
+          if-no-files-found: error
+          retention-days: 14
