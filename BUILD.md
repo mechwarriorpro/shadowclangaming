@@ -207,25 +207,35 @@ number and the log.
 22. **Cannon director**: `/term cannon arm | aim | fire | engage | status` next to a CBC cannon mount.
 23. **Lua**: `lua` from the terminal, `print(1+1)`, a `for` loop, `os.time()`, and a program saved with `edit`.
 
-**Every warhead looks different now (round 45)**
+**Every warhead looks different now (rounds 45–46)**
 24. `/shadowclangaming fx motifs` — 38 rows: theme, base duration, layer count, finale. `/shadowclangaming fx
     fuses` — the same 38 across all three forms, in seconds. Both come out of the code, so they cannot lie.
-25. `/shadowclangaming fx test void` — one effect on you, no warhead needed. **Walk around it.** It is real
-    geometry anchored to the detonation point, so it must change shape as you move, be hidden by a hill, and be
-    framed by a doorway. If it still reads as one flat disc, say so and include the `CINEMATIC_FRAME` lines from
-    `logs/shadow_debug.log`.
-26. Three detonations, three different lengths, all computed from the table: a **dud** 2.8 s, **HE** 7.7 s,
+25. `/shadowclangaming fx test void` — one effect on you, no warhead needed. **Walk around it.** It is a
+    volume raymarched on the GPU and anchored to the detonation point, so it must change shape as you move,
+    be hidden by a hill, and be framed by a doorway. Walk *into* it: you should end up inside the fireball,
+    not clipping it away. If it reads as one flat disc, or as nothing at all, say so and include the
+    `VOLUME_FRAME` lines from `logs/shadow_debug.log`.
+26. **The effect comes first and the blast comes last.** Light a charge and watch: the anticipation should
+    start on the tick you light it, build for the whole of the fuse (motes falling in towards the point,
+    the sphere swelling, the palette pulsing), and the explosion should land on the frame the effect ends.
+    There is no silent gap at the start and no blast-then-effect at the end.
+27. Three detonations, three different lengths, all computed from the table: a **dud** 2.8 s, **HE** 7.7 s,
     **Antimatter** 28.3 s. Nothing should end inside two seconds unless the warhead is supposed to.
-27. **Fuses follow the warhead.** Place a block, a grenade and a minecart of the *same* warhead: the block's fuse
-    is the effect length, the grenade's is 35 % of it, the cart's is 50 % of it *after* vanilla's own 4-second
-    priming. The tooltip on each item quotes its own number.
-28. **A grenade no longer explodes on contact.** It sticks, sparks, and counts down.
-29. **Soul Furnace** with mobs nearby: the sphere should *grow* every five seconds and the tally on the action
-    bar should climb; black-violet lightning cracks around it and red circles turn in the sky above. Walk the
-    mobs away and it releases on the next check — roughly five seconds later, not on a schedule. With nothing
-    alive near it from the start, it still shows one growth pass and then lets go.
-30. The eleven warheads that are not bombs — dud, decoy, EMP, Bulwark, Spell, Cargo, Minefield, Constructor,
-    Spatial, Violator, Beef — must still do no blast damage. They have a spectacle and no crater.
+28. **A missile impact stages too.** Fire one and the warhead should play its effect where it landed, for as
+    long as that same warhead would cook as a placed charge, then go off.
+29. **Fuses follow the warhead.** Place a block, a grenade and a minecart of the *same* warhead: the block's
+    fuse is the effect length, the grenade's is 35 % of it, the cart's is 50 % of it *after* vanilla's own
+    4-second priming. The tooltip on each item quotes its own number.
+30. **A grenade no longer explodes on contact.** It sticks, sparks, plays its charge, and counts down.
+31. **Soul Furnace** with mobs nearby: the sphere should *grow* every five seconds and the tally on the
+    action bar should climb; black-violet lightning cracks around it and red circles turn in the sky above.
+    Walk the mobs away and it releases on the next check — roughly five seconds later, not on a schedule.
+    With nothing alive near it from the start, it still shows one growth pass and then lets go.
+32. The eleven warheads that are not bombs — dud, decoy, EMP, Bulwark, Spell, Cargo, Minefield, Constructor,
+    Spatial, Violator, Beef — play their effect and then simply stop. No crater, no damage.
+33. **Frame rate.** Stand next to four charges going off at once. If it crawls, that is the raymarch; the
+    step count already drops with distance and at most four volumes are marched per frame, but this is the
+    first build that has a real volumetric shader in it and the cost is unmeasured.
 
 ---
 
@@ -670,3 +680,23 @@ Full write-up in `docs/WARHEADS.md` §Round 45 and `docs/APEX.md` §1. Short ver
   check finds nothing, with a 40-check ceiling so a mob farm cannot hold a detonation open forever.
 - The one thing not done: none of this has been seen inside a running client. CI compiles it against
   NeoForge 21.1.264, the sweeps and three harnesses pass, and that is the whole of the verification.
+
+### Round 46 — volumetric GPU effects, and the blast lands when the effect ends
+
+Full write-up in `docs/WARHEADS.md` §Round 46. Short version:
+
+- `shaders/core/world_blast_volume` raymarches a procedural, domain-warped noise field through a cube the
+  size of the blast: fireball, shockwave, pillar of light, overhead circle, radial streaks. No textures,
+  no billboards, no post-processing - and one code path for all 38 warheads, driven by
+  `BlastMotif.Volume` (shape, motion, palette, and a per-warhead offset into the noise field).
+- `client/VolumetricFx` draws it depth-tested against the terrain at AFTER_PARTICLES; `client/CinematicFx`
+  draws the same motifs as triangles if the program will not compile; the particle pass runs either way.
+- Both effect programs own their `ScgView`/`ScgProj` matrices (`client/WorldMatrices`), and
+  `BlastClientEvents` now actually subscribes a renderer to a stage - the world geometry was never wired
+  to an event before.
+- The timing is reversed to match the warheads: charge effect for exactly the fuse, blast on the last
+  frame. `warhead/ChargeSequence` does the same for missile impacts, which used to detonate on the tick
+  they landed.
+- Verified: CI build against NeoForge 21.1.264, the sweeps (including two new ones: the core-shader joins
+  and the charge wiring) and the logic harness at 4011 assertions. Not verified: a single frame of it
+  inside a running client.

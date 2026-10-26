@@ -116,6 +116,12 @@ its target is survivable exactly once per set of slow-falling boots, which is th
 
 ## 3. The shaders
 
+> **Round 46.** The effects are raymarched now: `shaders/core/world_blast_volume` marches a procedural
+> noise field through a cube the size of the blast, driven by `BlastMotif.Volume` - one code path for all
+> 38 warheads, no textures, no post chain. And the order is fixed: the effect plays for the whole of the
+> fuse and the blast lands on its last frame, instead of a silent wait followed by both at once.
+> See `docs/WARHEADS.md` §Round 46.
+>
 > **Round 45.** The screen chains below are still here, but they are no longer how a warhead is *seen*.
 > Every warhead now owns a world-space motif — real geometry anchored to the detonation point, depth-tested
 > against the terrain: shells, ground sigils, sky circles, pillars, arcs, tendrils, cages. See

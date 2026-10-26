@@ -121,7 +121,8 @@ jobs:
             sha256sum "$jar" | sed 's/^/sha256 /'
             unzip -l "$jar" | tail -3
             echo "new classes: $(unzip -l "$jar" | grep -c 'com/shadowclangaming')"
-            echo "world geometry shader: $(unzip -l "$jar" | grep -c 'world_blast_geom')"
+            echo "shader programs in the jar:"
+            unzip -l "$jar" | awk '{print $4}' | grep 'shaders/core/' | sed 's/^/  /'
             unzip -p "$jar" META-INF/MANIFEST.MF || true
             unzip -l "$jar" | awk '{print $4}' | grep -v '^$' | sort | uniq -d \
               | sed 's/^/DUPLICATE ENTRY: /'
@@ -137,6 +138,10 @@ jobs:
           set -e
           jar=$(ls build/libs/ShadowClanGaming-*.jar | head -1)
           tag="v1.0.0-round45"
+          # Move the tag, not just the asset: a release whose tag points at last week's commit while its
+          # jar came from today's build is a release that lies about its own contents.
+          git tag -f "$tag" "$GITHUB_SHA" > /dev/null
+          git push -f origin "refs/tags/$tag"
           notes="Built from ${GITHUB_SHA} on ${GITHUB_REF_NAME} by run ${GITHUB_RUN_ID}.
           Per-warhead world-space blast geometry (38 motifs, 12 layer kinds), effect-derived fuses
           for block/grenade/minecart, and the Soul Furnace rework: it eats every 100 ticks until a
