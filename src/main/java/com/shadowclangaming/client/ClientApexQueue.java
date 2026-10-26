@@ -32,6 +32,12 @@ public final class ClientApexQueue {
         public int radius;
         /** Ticks since the detonation began. */
         public int age;
+        /**
+         * The furthest through its life this effect has been seen. Re-announcing a weapon with a longer
+         * lifetime (a Soul Furnace that just ate) would otherwise pull its progress backwards, and a
+         * sphere that shrinks when it grows is exactly the wrong read.
+         */
+        public float visualProgress;
         /** How long the whole thing lasts; the client reads its own timeline against this. */
         public int lifetime;
 
@@ -73,7 +79,7 @@ public final class ClientApexQueue {
             if (entry.apex == apex
                     && Math.abs(entry.x - x) < 1.0D
                     && Math.abs(entry.z - z) < 1.0D) {
-                entry.radius = Math.max(1, radius);
+                entry.radius = Math.max(entry.radius, Math.max(1, radius));
                 entry.lifetime = Math.max(entry.lifetime, entry.age + Math.max(1, ticks));
                 return;
             }

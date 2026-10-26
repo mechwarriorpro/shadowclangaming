@@ -222,6 +222,10 @@ public final class CinematicFx {
             }
             float proximity = (float) (1.0D - Math.min(1.0D, distance / reach));
             float progress = Math.min(1.0F, entry.age / (float) Math.max(1, entry.lifetime));
+            // A weapon that is re-announced with a longer life (the Soul Furnace, growing) must not run
+            // its own animation backwards.
+            progress = Math.max(progress, entry.visualProgress);
+            entry.visualProgress = progress;
             // Hold full strength for three quarters of the weapon's life, then let go. A linear fade made
             // a ninety-second Soul Furnace invisible for most of its own run.
             float life = 1.0F - BlastGeometry.smooth((progress - 0.75F) / 0.25F);

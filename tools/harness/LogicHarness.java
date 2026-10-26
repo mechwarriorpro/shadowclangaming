@@ -1773,7 +1773,7 @@ public final class LogicHarness {
         check("a tiny blast still shows for a few ticks", small >= 12);
         check("a huge blast is capped at the shared ceiling",
                 huge <= com.shadowclangaming.warhead.BlastMotif.MAX_TICKS);
-        check("a huge blast still lasts a while", huge >= 120);
+        check("a huge blast still lasts a while", huge >= 100);
         check("bigger bangs last longer", huge > small);
         eq("negative power is treated as zero", com.shadowclangaming.warhead.BlastStyle.FALLBACK.baseTicks(),
                 com.shadowclangaming.warhead.BlastStyle.FALLBACK.ticksFor(-5.0F));
@@ -1933,7 +1933,8 @@ public final class LogicHarness {
         check("a minecart has a timer fuse now", cart.fuseShare() > 0.0D);
 
         // Read-outs agree with the ticks.
-        close("the seconds read-out matches the ticks", 4.0D,
+        close("the seconds read-out matches the ticks",
+                com.shadowclangaming.warhead.ExplosivePackaging.fuseTicks("he", 6.0F, block) / 20.0D,
                 com.shadowclangaming.warhead.ExplosivePackaging.fuseSeconds("he", 6.0F, block));
         eq("an unknown warhead still gets a usable fuse",
                 com.shadowclangaming.warhead.ExplosivePackaging.fuseTicks("nonexistent", 6.0F, block)

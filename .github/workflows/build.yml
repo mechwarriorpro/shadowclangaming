@@ -6,6 +6,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   # The fast half of the verification: everything in this mod that is arithmetic rather than Minecraft is
   # compiled and asserted here, plus the asset/lang/shader sweeps. No NeoForm decompile, no downloads of
@@ -23,23 +26,60 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Sweep (assets, lang, recipes, shaders, motifs, fuses)
-        run: python3 tools/sweep.py
+      # Every check runs even if an earlier one fails, so one report covers the whole suite instead of
+      # needing a push per failure.
+      - name: Run the fast checks
+        id: checks
+        continue-on-error: true
+        run: |
+          cat > /tmp/checks.sh <<'EOS'
+          status=0
+          run() {
+            name="$1"; shift
+            echo
+            echo "=================== $name ==================="
+            if "$@"; then
+              echo "RESULT: PASS ($name)"
+            else
+              echo "RESULT: FAIL ($name)"
+              status=1
+            fi
+          }
+          run "sweep (assets, lang, recipes, shaders, motifs, fuses)" python3 tools/sweep.py
+          run "names" python3 tools/check_names.py
+          run "logic harness" bash tools/run_logic_harness.sh
+          run "api harness" bash tools/run_api_harness.sh
+          run "lua harness" bash tools/run_lua_harness.sh
+          run "syntax check" bash tools/check_syntax.sh
+          echo "$status" > /tmp/checks.status
+          EOS
+          bash /tmp/checks.sh 2>&1 | tee /tmp/checks.log
+          status="$(cat /tmp/checks.status 2>/dev/null || echo 1)"
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit "$status"
 
-      - name: Names
-        run: python3 tools/check_names.py
+      # The runner's own log lives on blob storage that a sandboxed reviewer may not be able to fetch, so
+      # the tail of it is posted back onto the commit where it can be read through the API.
+      - name: Publish the check log on the commit
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo "### Fast checks: ${{ steps.checks.outcome }}"
+            echo
+            echo '```'
+            tail -n 170 /tmp/checks.log 2>/dev/null || true
+            echo '```'
+          } > /tmp/body.md || true
+          gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/comments" \
+            -f body="$(cat /tmp/body.md)" > /dev/null || echo "could not post the log"
 
-      - name: Logic harness (pure Java assertions)
-        run: bash tools/run_logic_harness.sh
-
-      - name: API harness
-        run: bash tools/run_api_harness.sh
-
-      - name: Lua harness
-        run: bash tools/run_lua_harness.sh
-
-      - name: Syntax check of every source file
-        run: bash tools/check_syntax.sh
+      - name: Fail the job if any check failed
+        if: steps.checks.outputs.status == '1'
+        run: |
+          echo "one or more fast checks failed; see the commit comment for the tail of the log"
+          exit 1
 
   # The real build: compiles all 269 sources against a genuine NeoForge 21.1.264 / Minecraft 1.21.1
   # classpath and packages the jar. This is the only step that can catch a type error.
@@ -64,18 +104,52 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Compile and package
-        run: bash gradlew build --no-daemon --stacktrace --max-workers=2 -Dorg.gradle.jvmargs='-Xmx2G -XX:+UseSerialGC -XX:ActiveProcessorCount=2'
+        id: build
+        continue-on-error: true
+        run: |
+          # pipefail, because without it a failed gradle would be masked by a successful tee.
+          set -o pipefail
+          bash gradlew build --no-daemon --stacktrace --max-workers=2 \
+            -Dorg.gradle.jvmargs='-Xmx2G -XX:+UseSerialGC -XX:ActiveProcessorCount=2' 2>&1 \
+            | tee /tmp/build.log
 
       - name: Report jar contents
+        if: steps.build.outcome == 'success'
         run: |
           for jar in build/libs/*.jar; do
             echo "== $jar"
             unzip -l "$jar" | tail -3
             unzip -p "$jar" META-INF/MANIFEST.MF || true
-            unzip -l "$jar" | awk '{print $4}' | grep -v '^$' | sort | uniq -d | sed 's/^/DUPLICATE ENTRY: /'
-          done
+            unzip -l "$jar" | awk '{print $4}' | grep -v '^$' | sort | uniq -d \
+              | sed 's/^/DUPLICATE ENTRY: /'
+          done | tee /tmp/jar.log
+
+      - name: Publish the build log on the commit
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo "### Gradle build: ${{ steps.build.outcome }}"
+            echo
+            echo '```'
+            grep -nE "error:|warning:|FAILED|FAILURE|BUILD SUCCESS|What went wrong|> Task .* FAILED" \
+              /tmp/build.log 2>/dev/null | tail -n 120 || true
+            echo '--- tail ---'
+            tail -n 60 /tmp/build.log 2>/dev/null || true
+            echo '--- jar ---'
+            cat /tmp/jar.log 2>/dev/null || true
+            echo '```'
+          } > /tmp/body.md || true
+          gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/comments" \
+            -f body="$(cat /tmp/body.md)" > /dev/null || echo "could not post the log"
+
+      - name: Fail the job if the build failed
+        if: steps.build.outcome != 'success'
+        run: exit 1
 
       - name: Upload jar
+        if: steps.build.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: shadowclangaming-jar
