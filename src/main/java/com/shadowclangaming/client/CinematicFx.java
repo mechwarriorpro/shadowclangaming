@@ -280,7 +280,7 @@ public final class CinematicFx {
                 continue;
             }
             float progress = entry.progress();
-            BlastMotif.Motif motif = BlastMotif.forWarhead(entry.apex.id());
+            BlastMotif.Motif motif = BlastMotif.forWarhead(entry.warheadId);
             emit(mc, motif, entry.x, entry.y, entry.z, Math.max(6, entry.radius), progress, scale,
                     entry.age);
         }

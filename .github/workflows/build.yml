@@ -107,22 +107,27 @@ jobs:
         continue-on-error: true
         run: |
           # javap against the real classpath, so a wrong method name costs a log line instead of a build.
+          # Never swallow javap's own error: a filtered grep that finds nothing used to hide the fact that
+          # the class was not on the classpath at all.
           {
             bash gradlew -q --no-daemon printCompileClasspath > /tmp/cp.txt 2>/tmp/cp.err || cat /tmp/cp.err
             CP=$(paste -sd: /tmp/cp.txt)
             echo "classpath entries: $(wc -l < /tmp/cp.txt)"
-            for cls in \
-                net.minecraft.world.entity.vehicle.MinecartTNT \
-                net.minecraft.world.entity.vehicle.AbstractMinecart \
-                net.minecraft.world.entity.projectile.ThrowableItemProjectile \
-                net.minecraft.world.entity.projectile.Projectile \
-                net.minecraft.network.codec.StreamCodec \
-                net.minecraft.client.renderer.GameRenderer; do
-              echo "===== $cls"
-              javap -cp "$CP" "$cls" 2>&1 \
-                | grep -E "prime|use|explode|activate|SaveData|composite| of\(|ositionColor" \
-                || echo "(no match)"
-            done
+            dump() {
+              echo "===== $1"
+              out=$(javap -cp "$CP" "$1" 2>&1) || { echo "$out"; return 0; }
+              if [ -n "$2" ]; then
+                echo "$out" | grep -E "$2" || { echo "(no match; first lines follow)"; echo "$out" | head -6; }
+              else
+                echo "$out"
+              fi
+            }
+            dump net.minecraft.world.entity.vehicle.MinecartTNT
+            dump net.minecraft.world.entity.projectile.ThrowableItemProjectile
+            dump net.minecraft.network.codec.StreamCodec "composite|of\("
+            dump net.minecraft.client.renderer.GameRenderer "ositionColor"
+            dump net.minecraft.world.level.Level "sendParticles|addParticle"
+            dump net.minecraft.world.level.block.TntBlock
           } 2>&1 | tee /tmp/api.log || true
 
       - name: Compile and package
