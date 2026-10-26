@@ -128,14 +128,14 @@ public final class VolumetricFx {
                 if (drawn >= MAX_VOLUMES) {
                     break;
                 }
-                if (effect.strength <= 0.04F) {
+                if (effect.strength() <= 0.04F) {
                     continue;
                 }
-                double distance = Math.sqrt((effect.x - cam.x) * (effect.x - cam.x)
-                        + (effect.y - cam.y) * (effect.y - cam.y)
-                        + (effect.z - cam.z) * (effect.z - cam.z));
+                double distance = Math.sqrt((effect.x() - cam.x) * (effect.x() - cam.x)
+                        + (effect.y() - cam.y) * (effect.y() - cam.y)
+                        + (effect.z() - cam.z) * (effect.z() - cam.z));
                 setUniforms(shader, effect, cam, view, projection, time, distance);
-                drawProxy(effect.x, effect.y, effect.z, effect.radius * PROXY_BOX);
+                drawProxy(effect.x(), effect.y(), effect.z(), effect.radius() * PROXY_BOX);
                 drawn++;
             }
             com.shadowclangaming.debug.ShadowDebug.log("VOLUME_FRAME",
@@ -169,16 +169,16 @@ public final class VolumetricFx {
      */
     private static void setUniforms(ShaderInstance program, CinematicFx.Effect effect, Vec3 cam,
                                     Matrix4f view, Matrix4f projection, float time, double distance) {
-        BlastMotif.Volume v = effect.motif.volume();
+        BlastMotif.Volume v = effect.motif().volume();
         set(program, "ScgView", view);
         set(program, "ScgProj", projection);
-        set(program, "Center", (float) effect.x, (float) effect.y, (float) effect.z);
+        set(program, "Center", (float) effect.x(), (float) effect.y(), (float) effect.z());
         set(program, "CamPos", (float) cam.x, (float) cam.y, (float) cam.z);
-        set(program, "ColorA", v.colorA(), effect.strength);
-        set(program, "ColorB", v.colorB(), effect.strength);
-        set(program, "ColorC", v.colorC(), effect.strength);
-        set(program, "Radius", (float) Math.max(1.0D, effect.radius));
-        set(program, "Progress", effect.progress);
+        set(program, "ColorA", v.colorA(), effect.strength());
+        set(program, "ColorB", v.colorB(), effect.strength());
+        set(program, "ColorC", v.colorC(), effect.strength());
+        set(program, "Radius", (float) Math.max(1.0D, effect.radius()));
+        set(program, "Progress", effect.progress());
         set(program, "Phase", effect.charging() ? 0.0F : 1.0F);
         set(program, "Time", time);
         // Fewer steps for distant volumes: the same march over a blast on the horizon is wasted work.
@@ -191,7 +191,7 @@ public final class VolumetricFx {
         set(program, "Rise", v.rise());
         set(program, "Streaks", v.streaks());
         set(program, "Dark", v.dark());
-        set(program, "Glow", v.glow() * effect.strength);
+        set(program, "Glow", v.glow() * effect.strength());
         set(program, "Swirl", v.swirl());
         set(program, "Seed", v.seed());
     }
