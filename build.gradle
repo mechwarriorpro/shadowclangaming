@@ -58,3 +58,17 @@ tasks.named('jar', Jar).configure {
         ])
     }
 }
+
+/**
+ * Prints the compile classpath, one entry per line.
+ *
+ * CI runs `javap` against this so the exact NeoForge/Mojmap signatures are on the record. Guessing a
+ * method name from memory is how this project lost a build to `MinecartTNT.primeMinecart`, which does not
+ * exist in 1.21.1 - the compiler knows better, so ask the compiler.
+ */
+tasks.register('printCompileClasspath') {
+    def files = sourceSets.main.compileClasspath
+    doLast {
+        files.files.each { println it.absolutePath }
+    }
+}

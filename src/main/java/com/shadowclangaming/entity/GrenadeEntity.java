@@ -86,8 +86,8 @@ public class GrenadeEntity extends ThrowableItemProjectile {
         }
         if (fuse > 0) {
             fuse--;
-            if (fuse % 4 == 0) {
-                level().sendParticles(ParticleTypes.ELECTRIC_SPARK, getX(), getY() + 0.2D, getZ(),
+            if (fuse % 4 == 0 && level() instanceof net.minecraft.server.level.ServerLevel server) {
+                server.sendParticles(ParticleTypes.ELECTRIC_SPARK, getX(), getY() + 0.2D, getZ(),
                         3, 0.15D, 0.15D, 0.15D, 0.0D);
             }
             return;
@@ -112,14 +112,18 @@ public class GrenadeEntity extends ThrowableItemProjectile {
         discard();
     }
 
+    /**
+     * Public, not protected: {@code ThrowableItemProjectile} widens both of these in 1.21.1, and an
+     * override may not narrow what it overrides.
+     */
     @Override
-    protected void addAdditionalSaveData(net.minecraft.nbt.CompoundTag tag) {
+    public void addAdditionalSaveData(net.minecraft.nbt.CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         tag.putInt("ScgFuse", fuse);
     }
 
     @Override
-    protected void readAdditionalSaveData(net.minecraft.nbt.CompoundTag tag) {
+    public void readAdditionalSaveData(net.minecraft.nbt.CompoundTag tag) {
         super.readAdditionalSaveData(tag);
         fuse = tag.getInt("ScgFuse");
     }

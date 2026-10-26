@@ -103,6 +103,28 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Dump the vanilla API CI compiles against
+        continue-on-error: true
+        run: |
+          # javap against the real classpath, so a wrong method name costs a log line instead of a build.
+          {
+            bash gradlew -q --no-daemon printCompileClasspath > /tmp/cp.txt 2>/tmp/cp.err || cat /tmp/cp.err
+            CP=$(paste -sd: /tmp/cp.txt)
+            echo "classpath entries: $(wc -l < /tmp/cp.txt)"
+            for cls in \
+                net.minecraft.world.entity.vehicle.MinecartTNT \
+                net.minecraft.world.entity.vehicle.AbstractMinecart \
+                net.minecraft.world.entity.projectile.ThrowableItemProjectile \
+                net.minecraft.world.entity.projectile.Projectile \
+                net.minecraft.network.codec.StreamCodec \
+                net.minecraft.client.renderer.GameRenderer; do
+              echo "===== $cls"
+              javap -cp "$CP" "$cls" 2>&1 \
+                | grep -E "prime|use|explode|activate|SaveData|composite| of\(|ositionColor" \
+                || echo "(no match)"
+            done
+          } 2>&1 | tee /tmp/api.log || true
+
       - name: Compile and package
         id: build
         continue-on-error: true
@@ -135,8 +157,12 @@ jobs:
             echo '```'
             grep -nE "error:|warning:|FAILED|FAILURE|BUILD SUCCESS|What went wrong|> Task .* FAILED" \
               /tmp/build.log 2>/dev/null | tail -n 120 || true
+            echo '--- api (javap against the classpath CI compiled with) ---'
+            cat /tmp/api.log 2>/dev/null || true
+            echo '--- errors with their context ---'
+            grep -A3 -nE "error:" /tmp/build.log 2>/dev/null | head -n 120 || true
             echo '--- tail ---'
-            tail -n 60 /tmp/build.log 2>/dev/null || true
+            tail -n 40 /tmp/build.log 2>/dev/null || true
             echo '--- jar ---'
             cat /tmp/jar.log 2>/dev/null || true
             echo '```'

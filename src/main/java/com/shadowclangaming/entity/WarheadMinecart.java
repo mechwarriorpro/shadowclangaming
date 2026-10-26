@@ -17,11 +17,15 @@ import net.minecraft.world.phys.Vec3;
  * rules, the activator-rail trigger and the renderer all come from vanilla.
  *
  * <p>TWO THINGS ARE OVERRIDDEN, and they are the whole feature. What "explode" means, and how long the
- * fuse is: vanilla's TNT cart cooks for a fixed 80 ticks whatever is in it, so this cart keeps vanilla's
- * private fuse at -1 (by overriding {@link #primeMinecart} without calling super) and runs its own, whose
- * length comes from the warhead's own effect duration ({@link ExplosivePackaging#fuseTicks}). An activator
- * rail, a collision or a destroyed cart lights it; the warhead then goes off on the warhead's clock, not
- * on a constant one.
+ * fuse is.
+ *
+ * <p>Vanilla's TNT cart cooks for a fixed 80 ticks whatever is in it, and its fuse field is private. This
+ * cart therefore does not fight it: it lets vanilla do the priming (activator rail, collision, a destroyed
+ * cart all end up calling {@link #explode}), takes the call, and starts its own clock instead of going off
+ * - a clock whose length comes from the warhead's own effect duration
+ * ({@link ExplosivePackaging#fuseTicks}). Until that clock runs out, every further call from vanilla's
+ * fuse is swallowed; when it expires the warhead detonates once and the cart is discarded. So the total
+ * cook is vanilla's 80-tick priming plus the warhead's fuse, and the second half differs per warhead.
  *
  * The warhead rides on the entity (NBT `Warhead`) rather than being re-derived from the item every time,
  * because a minecart that has been picked up and put back down must still be the same weapon.
@@ -64,27 +68,6 @@ public class WarheadMinecart extends MinecartTNT {
                 ExplosivePackaging.Form.MINECART);
     }
 
-    /**
-     * Light it.
-     *
-     * Deliberately does NOT call {@code super.primeMinecart()}: that would set vanilla's own 80-tick fuse,
-     * and vanilla would then call {@link #explode} on its schedule instead of ours. Leaving vanilla's fuse
-     * at -1 means this cart detonates exactly once, when our timer says so.
-     */
-    @Override
-    public void primeMinecart() {
-        if (this.level().isClientSide) {
-            return;
-        }
-        if (this.scgFuse >= 0) {
-            return;
-        }
-        this.scgFuse = fuseTicks();
-        this.level().playSound(null, this.getX(), this.getY(), this.getZ(),
-                net.minecraft.sounds.SoundEvents.TNT_PRIMED,
-                net.minecraft.sounds.SoundSource.BLOCKS, 1.0F, 0.9F);
-    }
-
     /** Our own countdown. Vanilla's tick still runs the rails and the physics underneath. */
     @Override
     public void tick() {
@@ -94,14 +77,30 @@ public class WarheadMinecart extends MinecartTNT {
         }
         if (this.scgFuse > 0) {
             this.scgFuse--;
-            if (this.scgFuse % 4 == 0) {
-                this.level().sendParticles(net.minecraft.core.particles.ParticleTypes.SMOKE,
+            if (this.scgFuse % 4 == 0 && this.level()
+                    instanceof net.minecraft.server.level.ServerLevel server) {
+                server.sendParticles(net.minecraft.core.particles.ParticleTypes.SMOKE,
                         this.getX(), this.getY() + 0.6D, this.getZ(), 4, 0.2D, 0.2D, 0.2D, 0.02D);
             }
             return;
         }
-        this.scgFuse = -1;
-        explode(0.0D);
+        detonate();
+    }
+
+    /**
+     * Light it.
+     *
+     * Public because the item that places a cart on a rail lights it, and because a command can. Idempotent:
+     * an activator rail under a lit cart does not shorten its fuse.
+     */
+    public void arm() {
+        if (this.level().isClientSide || this.scgFuse >= 0) {
+            return;
+        }
+        this.scgFuse = fuseTicks();
+        this.level().playSound(null, this.getX(), this.getY(), this.getZ(),
+                net.minecraft.sounds.SoundEvents.TNT_PRIMED,
+                net.minecraft.sounds.SoundSource.BLOCKS, 1.0F, 0.9F);
     }
 
     /** The fuse left, for read-outs and debugging. -1 when the cart is not lit. */
@@ -109,11 +108,32 @@ public class WarheadMinecart extends MinecartTNT {
         return scgFuse;
     }
 
+    /**
+     * Vanilla calls this when its own 80-tick fuse runs out - and, because nothing is discarded here until
+     * the warhead is ready, it calls it again every tick after that. That is what this override is for:
+     * the first call starts the warhead's own clock, the ones in between are swallowed, and the warhead
+     * itself goes off from {@link #tick}.
+     */
     @Override
     public void explode(double radiusScale) {
         if (this.level().isClientSide) {
             return;
         }
+        if (this.scgFuse < 0) {
+            arm();
+            return;
+        }
+        if (this.scgFuse == 0) {
+            detonate();
+        }
+    }
+
+    /** The warhead goes off. Discards the cart first, so nothing can prime a cart that no longer exists. */
+    private void detonate() {
+        if (this.level().isClientSide) {
+            return;
+        }
+        this.scgFuse = -1;
         Vec3 at = position();
         discard();
         if (!(this.level() instanceof net.minecraft.server.level.ServerLevel level)) {

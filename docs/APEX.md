@@ -48,7 +48,7 @@ effect wins, weighted by distance and by where it is in its timeline. See §3.
 | 6 | **Ragnarok** | `ragnarok` | 150 | outward | blood sky, meteors, runes on the horizon |
 | 7 | **World Rune** | `world_rune` | 140 | static | glowing sigil, drawn stroke by stroke |
 | 8 | **Abyssal Covenant** | `abyssal_covenant` | 90 | static | hundreds of portals, black tendrils |
-| 9 | **Soul Furnace** | `soul_furnace` | 80 | inward | spectral vortex that grows with souls |
+| 9 | **Soul Furnace** | `soul_furnace` | 80 | inward | growing black-violet sphere, crackling arcs, red sky circles; runs until the mobs run out |
 | 10 | **Arcane Singularity** | `arcane_singularity` | 105 | inward | spell circles, violet eruption |
 | 11 | **Quasar Lance** | `quasar_lance` | 64 | static | twin jets, a canyon four radii long |
 | 12 | **Starforge** | `starforge` | 130 | outward | expanding corona that melts ground |
@@ -79,8 +79,13 @@ effect wins, weighted by distance and by where it is in its timeline. See §3.
 8. **Abyssal Covenant** — 90+ random-walk tendrils per run, each carving a hole at its end; ~240 portal
    particle columns; entities are pulled in and the surface is trenched.
 9. **Soul Furnace** — 12 damage plus wither to everything non-player inside the front, weakness and
-   darkness to players. The tally feeds the final blast (up to +100 % power) — a crowded battlefield is a
-   bigger explosion than an empty one.
+   darkness to players. The tally feeds the final blast (up to +150 % power) — a crowded battlefield is a
+   bigger explosion than an empty one. **It is not on a stage schedule.** It consumes on ignition, then
+   looks for more every 100 ticks; while it finds something it grows (radius ×1.18 per check, to ×3.0) and
+   its effect gets longer (+8 ticks per soul, to 1800), and it releases only when a look-around comes back
+   empty — or at the 40-check safety ceiling, which exists so a mob farm cannot keep a detonation alive
+   forever. See `warhead/apex/SoulFurnacePlan` (numbers, harness-tested) and `SoulFurnaceStages` (the part
+   that touches the world).
 10. **Arcane Singularity** — same collapse math as the imploder (deliberately: it is the magic version of
     the same idea), with a witch/enchant palette and a violet release.
 11. **Quasar Lance** — one long capsule carve, `4 × radius` long and up to 16 blocks wide, in a direction
@@ -110,6 +115,14 @@ its target is survivable exactly once per set of slow-falling boots, which is th
 ---
 
 ## 3. The shaders
+
+> **Round 45.** The screen chains below are still here, but they are no longer how a warhead is *seen*.
+> Every warhead now owns a world-space motif — real geometry anchored to the detonation point, depth-tested
+> against the terrain: shells, ground sigils, sky circles, pillars, arcs, tendrils, cages. See
+> `warhead/BlastMotif` (the table), `client/BlastGeometry` (the triangles, Minecraft-free and
+> harness-asserted) and `client/CinematicFx` (the draw). The apex packets drive it too, which is why the
+> Soul Furnace's sphere grows: the server re-announces the weapon with a larger radius and a longer life on
+> every successful consumption check, and the client ratchets both so growth never plays backwards.
 
 The signature GLSL post-processing chains are available as an opt-in (`post_chains_enabled = true`), not a
 shader pack. The 1.21.1 framebuffer chain is opt-in because one tested client displayed a black frame even when

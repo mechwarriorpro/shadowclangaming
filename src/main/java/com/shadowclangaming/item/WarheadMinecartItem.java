@@ -80,8 +80,9 @@ public class WarheadMinecartItem extends Item {
         tooltip.add(Component.translatable(warhead.translationKey()).withStyle(ChatFormatting.RED));
         tooltip.add(Component.translatable("tooltip.shadowclangaming.minecart_warhead.usage")
                 .withStyle(ChatFormatting.DARK_GRAY));
-        // Impact lights it; this is how long it then cooks for.
-        tooltip.add(Component.translatable("tooltip.shadowclangaming.fuse",
+        // An activator rail, a collision or a broken cart lights it; this is how long it then cooks for,
+        // on top of the four seconds vanilla's own priming takes.
+        tooltip.add(Component.translatable("tooltip.shadowclangaming.fuse_minecart",
                 String.format(java.util.Locale.ROOT, "%.1f",
                         com.shadowclangaming.warhead.ExplosivePackaging.fuseSeconds(
                                 warhead.id(), warhead.basePower(),

@@ -124,7 +124,7 @@ public final class BlastMotif {
     public record Spec(Layer layer, double from, double to, double scale, int argb, int count, double spin) {
 
         /** Clamped, so a hand-written row can never make the renderer divide by zero or draw backwards. */
-        Spec {
+        public Spec {
             from = clamp01(from);
             to = clamp01(to);
             if (to <= from) {

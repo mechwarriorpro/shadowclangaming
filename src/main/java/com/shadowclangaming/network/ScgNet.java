@@ -5,6 +5,7 @@ import com.shadowclangaming.client.ClientApexQueue;
 import net.minecraft.core.BlockPos;
 import com.shadowclangaming.block.LaunchPadBlockEntity;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -190,16 +191,36 @@ public final class ScgNet {
                                  int ticks) implements CustomPacketPayload {
         public static final Type<BlastFxPayload> TYPE = new Type<>(
                 ResourceLocation.fromNamespaceAndPath(ShadowClanGaming.MOD_ID, "blast_fx"));
-        public static final StreamCodec<RegistryFriendlyByteBuf, BlastFxPayload> CODEC =
-                StreamCodec.composite(
-                        ByteBufCodecs.stringUtf8(32), BlastFxPayload::style,
-                        ByteBufCodecs.stringUtf8(48), BlastFxPayload::warhead,
-                        ByteBufCodecs.DOUBLE, BlastFxPayload::x,
-                        ByteBufCodecs.DOUBLE, BlastFxPayload::y,
-                        ByteBufCodecs.DOUBLE, BlastFxPayload::z,
-                        ByteBufCodecs.VAR_INT, BlastFxPayload::radius,
-                        ByteBufCodecs.VAR_INT, BlastFxPayload::ticks,
-                        BlastFxPayload::new);
+        /**
+         * Field codecs, kept apart so the encoder and the decoder cannot drift out of order.
+         *
+         * This is written out by hand instead of through {@code StreamCodec.composite} for one boring
+         * reason: composite has no overload for seven components, and this payload has seven. The wire
+         * format is the same either way - seven values in this order, nothing else.
+         */
+        private static final StreamCodec<ByteBuf, String> STYLE_FIELD = ByteBufCodecs.stringUtf8(32);
+        private static final StreamCodec<ByteBuf, String> WARHEAD_FIELD = ByteBufCodecs.stringUtf8(48);
+        private static final StreamCodec<ByteBuf, Double> DOUBLE_FIELD = ByteBufCodecs.DOUBLE;
+        private static final StreamCodec<ByteBuf, Integer> INT_FIELD = ByteBufCodecs.VAR_INT;
+
+        public static final StreamCodec<RegistryFriendlyByteBuf, BlastFxPayload> CODEC = StreamCodec.of(
+                (buffer, payload) -> {
+                    STYLE_FIELD.encode(buffer, payload.style());
+                    WARHEAD_FIELD.encode(buffer, payload.warhead());
+                    DOUBLE_FIELD.encode(buffer, payload.x());
+                    DOUBLE_FIELD.encode(buffer, payload.y());
+                    DOUBLE_FIELD.encode(buffer, payload.z());
+                    INT_FIELD.encode(buffer, payload.radius());
+                    INT_FIELD.encode(buffer, payload.ticks());
+                },
+                buffer -> new BlastFxPayload(
+                        STYLE_FIELD.decode(buffer),
+                        WARHEAD_FIELD.decode(buffer),
+                        DOUBLE_FIELD.decode(buffer),
+                        DOUBLE_FIELD.decode(buffer),
+                        DOUBLE_FIELD.decode(buffer),
+                        INT_FIELD.decode(buffer),
+                        INT_FIELD.decode(buffer)));
 
         @Override
         public Type<? extends CustomPacketPayload> type() {

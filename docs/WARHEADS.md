@@ -1192,3 +1192,150 @@ uniform inputs, framebuffer dimensions, process begin/end and elapsed microsecon
 effect JSON/program JSON/vertex/fragment source. Shader exceptions are written with their full stack trace.
 Writes are queued on a daemon file-writer thread to avoid stalling the render thread. Log rotation is raised to
 256 MiB, preserving the previous file as `.1`; the trace can be large by design.
+
+## Round 45 — every warhead gets its own world-space event, its own fuse, and a Soul Furnace that eats until it runs out
+
+Three complaints, one round. "The effects are all the same small sphere with sparkles in it." "The fuse has
+nothing to do with the warhead." "The Soul Furnace goes off on a schedule whether there is anything left to
+eat or not." All three were correct, and all three were structural rather than tuning, so all three are
+fixed below the surface.
+
+### 1. The effects are geometry now, not a sprite
+
+The previous world renderer drew **one camera-facing quad per detonation** through a fragment shader. From
+any angle, at any distance, for any warhead, that is the same disc - which is exactly what was reported. It
+was not a small explosion; it was a billboard.
+
+`warhead/BlastMotif` is the new source of truth: **38 warheads × 12 layer kinds × 17 themes**, one row per
+warhead, in pure Java with no Minecraft imports. A row is a list of layers, each with its own window in the
+effect's life, its size as a fraction of the blast radius, its colour, its count and its spin:
+
+| layer | what it draws in the world |
+|---|---|
+| `CORE_SPHERE` | a UV sphere shell that swells from the centre - the fireball proper |
+| `SHOCKWAVE` | a thin ring racing outward along the ground: the pressure wave |
+| `GROUND_CIRCLE` | a slowly turning sigil lying flat on the terrain, with radial strokes |
+| `SKY_CIRCLE` | a giant circle hanging above the impact, facing down |
+| `BEAM` | a vertical pillar of light (a quasar jet is three radii tall; a candle is not) |
+| `ARC` | jagged crackling arcs: world-space lightning, thick polylines, not a texture |
+| `EMBERS` | a rising column of motes: embers, ash, feathers, fallout |
+| `SHARDS` | rotating crystalline shards: crystal, debris, coin |
+| `RINGS_STACK` | concentric tilted rings: a cage, a resonance ladder, a spell array |
+| `TENDRILS` | spiralling tendrils crawling outward along the ground |
+| `SCAN_SHELL` | a wireframe sphere sweeping outward: an EMP front, a constructor's cage |
+| `GLYPH_RING` | a ring of rune strokes drawn around the impact |
+
+`client/BlastGeometry` builds those shapes as triangles on the CPU (and is Minecraft-free, so the harness
+asserts their size and bounds), and `client/CinematicFx` submits them at `AFTER_PARTICLES`, depth-tested
+against the terrain, with no depth write and no cull. Walk around one and it changes shape the way a real
+object does; a hill occludes it; a window frames it. It is **not** a HUD pass and **not** a post chain -
+both of those were tried in earlier rounds and both were rejected.
+
+Three levels of redundancy, because a visual that fails silently is how this got rejected once already:
+
+1. `shaders/core/world_blast_geom` - a two-line fragment shader (vertex colour out) that has no sampler,
+   no noise and no branch to fail on an odd driver;
+2. vanilla `rendertype_position_color`, if the mod shader does not register;
+3. `CinematicFx.tickParticles` - world particles driven from the *same* motif table, which need no shader
+   at all and always run, budgeted by distance and by `particle_scale`.
+
+Distinct is a claim the code can now defend: the harness builds a signature string for every warhead's layer
+list and fails if two warheads share one.
+
+### 2. Durations are long, and they vary by warhead
+
+`BlastMotif.Motif#durationTicks(power)` = `baseTicks + log1p(power) × 12`, clamped to **40..1200 ticks**
+(two seconds to one minute). `baseTicks` is per-warhead: a dud is 50, HE is 130, Incendiary 300, Fission 460,
+Ragnarok 660, Big Bang Seed 760, Absolute Annihilation 900, and the Soul Furnace 900 before it has eaten
+anything. The style-level curve in `BlastStyle.ticksFor` keeps the same shape and now shares the same
+ceiling, but the motif is authoritative: it is what the packet carries, what the client draws for, and what
+the fuse is made from.
+
+### 3. Fuses are the effect
+
+`ExplosivePackaging.fuseTicks(warheadId, basePower, form)` derives the fuse from the warhead's own effect
+duration **at the power that form delivers**, then takes that form's share and clamps it:
+
+| form | share of the effect | clamp | trigger |
+|---|---|---|---|
+| block | 100% | 40..900 ticks | redstone or right-click |
+| grenade | 35% | 15..320 ticks | impact lights it, the timer finishes it |
+| minecart | 50% | 20..450 ticks | activator rail, collision or destruction lights it |
+
+The minecart is the one form that does not start its clock from zero. Vanilla's TNT cart owns its own
+private 80-tick fuse, so this cart takes the detonation call vanilla makes when that runs out and starts
+*our* clock there instead of going off; until our clock expires, every later call is swallowed. Total cook
+is therefore four seconds of priming plus the warhead's fuse - four seconds every cart has, and a second
+half that differs per warhead, which is the part that was fixed.
+
+The fixed 80/40/0 behaviour is gone. A grenade no longer detonates the instant it touches anything -
+`GrenadeEntity` now sticks, sparks and counts down. `WarheadMinecart` keeps vanilla's private 80-tick fuse
+at -1 (by overriding `primeMinecart` without calling super) and runs its own timer, so a rail-delivered
+Absolute Annihilation cooks for as long as an Absolute Annihilation takes. Primed charges smoke and spark
+(`ExplosiveBlock.animateTick`), grenade and minecart tooltips quote the fuse in seconds, and
+`/shadowclangaming fx fuses` prints the whole table straight out of the code so it cannot go stale.
+
+### 4. The Soul Furnace eats until it runs out
+
+It is the one apex weapon whose length is a property of the battlefield, so it no longer books a stage
+schedule. `warhead/apex/SoulFurnacePlan` (pure numbers, harness-tested) and `warhead/apex/SoulFurnaceStages`
+(the part that touches the world) implement exactly the rule that was asked for:
+
+1. On ignition it consumes everything in range immediately.
+2. Every **100 ticks** (five seconds) it looks for more.
+3. Mobs found: consume them, grow the sphere, extend the effect, report the tally, go back to 2.
+4. No mobs found: terminal blast, scaled by everything it ate.
+
+Consumed count drives all three of size, time and power:
+
+| consumed | sphere radius | effect lifetime | terminal power |
+|---|---|---|---|
+| 0 | ×1.00 | 240 ticks (12 s) | ×1.00 |
+| 5 | ×1.90 | 280 ticks | ×1.10 |
+| 20 | ×3.00 (capped) | 400 ticks | ×1.40 |
+| 75+ | ×3.00 | 840+ ticks | ×2.50 (capped) |
+
+The visual is the one that was specified: a **growing sphere** in near-black violet (`CORE_SPHERE`),
+**black and purple lightning crackling around it** (`ARC`, twenty bolts re-rolled as it grows), and **giant
+red magic circles in the sky** (`SKY_CIRCLE`, 1.6 radii across, 24 strokes, plus a red ground sigil). The
+server re-announces the weapon with its new radius and its new lifetime on every successful check, and the
+client ratchets both (`radius` and `visualProgress` only ever increase) so eating never makes it shrink.
+
+There is one ceiling, and it is not a design flourish: `MAX_CHECKS = 40` (two hundred seconds). A mob farm
+inside the radius would otherwise keep a detonation alive forever, scanning for entities every five seconds
+until somebody restarted the world. Past the ceiling the furnace releases what it has, and says so in the
+log. `MIN_CHECKS = 2` is the other side of the same coin: a furnace dropped on bare rock still shows its
+growth before it lets go, rather than detonating on the very first look-around.
+
+### 5. Warheads that are not bombs still are not bombs
+
+`Motif#finaleScale()` is `0` for the eleven warheads whose description ends somewhere other than a crater:
+dud, decoy, EMP, Bulwark, Spell, Cargo, Minefield, Constructor, Spatial, Violator, Beef. They get a
+spectacle - Bulwark a cage of rings, Cargo a descending column, Constructor a wireframe of the sphere it is
+building - and no blast was added to any of them. The harness asserts both directions: those eleven have no
+finale, and HE, Incendiary, Fission, Fusion, Antimatter, Numismatic, Soul Furnace, Omega and Absolute
+Annihilation do.
+
+### 6. Reading it back in game
+
+```
+/shadowclangaming fx status    config, packets, ranges, the style table
+/shadowclangaming fx motifs    all 38 motifs: theme, base duration, layer count, finale
+/shadowclangaming fx fuses     all 38 warheads × 3 forms, in seconds
+/shadowclangaming fx test void one effect at you, no warhead required
+```
+
+`shadow_debug.log` gained `CINEMATIC_FRAME` (active effects, which shader is in use, whether registration
+failed) and `CINEMATIC_DRAW` (effects, vertices, mod-or-vanilla program) alongside the existing
+`BLAST_FX`, `FX_PACKET`, `SOUL_FURNACE_START`, `SOUL_FURNACE_CHECK` and `SOUL_FURNACE_END` entries.
+
+### 7. What was verified, and what was not
+
+Machine-checked in this round: `tools/sweep.py` (assets, lang, recipes, shader chains, the new geometry
+program, the motif roster and the fuse wiring), `tools/check_names.py`, the logic harness (four new suites:
+motifs, fuses, the furnace schedule, the geometry), the API and Lua harnesses, and a full `gradlew build`
+against NeoForge 21.1.264 in CI.
+
+**Not** verified: any of it inside a running 1.21.1 client. The geometry is depth-tested world triangles and
+the shader is two lines, which is as close to certain as this gets without a game, but the honest statement
+is that the jar compiles, packages and passes its own suites, and has not been seen in a world.

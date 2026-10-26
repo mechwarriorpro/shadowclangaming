@@ -208,7 +208,7 @@ public final class CinematicFx {
             if (strength <= 0.03F) {
                 continue;
             }
-            BlastMotif.Motif motif = BlastMotif.forWarhead(entry.warheadId());
+            BlastMotif.Motif motif = BlastMotif.forWarhead(entry.warheadId);
             out.add(new Effect(entry.x, entry.y, entry.z, Math.max(6, entry.radius),
                     entry.progress(), Math.min(1.0F, strength), motif,
                     (long) (entry.x * 31.0D + entry.z * 17.0D), 0));
@@ -280,7 +280,7 @@ public final class CinematicFx {
                 continue;
             }
             float progress = entry.progress();
-            BlastMotif.Motif motif = BlastMotif.forWarhead(entry.warheadId());
+            BlastMotif.Motif motif = BlastMotif.forWarhead(entry.apex.id());
             emit(mc, motif, entry.x, entry.y, entry.z, Math.max(6, entry.radius), progress, scale,
                     entry.age);
         }
