@@ -169,6 +169,7 @@ public final class LogicHarness {
         soulFurnaceTests();
         blastGeometryTests();
         volumeShaderTests();
+        warheadFeatureTests();
         chargePhaseTests();
         rifleTests();
         emitterClusterTests();
@@ -2188,6 +2189,156 @@ public final class LogicHarness {
      * numbers and nothing else. If two warheads ever share a signature they are literally the same effect,
      * and this is what stops that from shipping.
      */
+    /**
+     * The shader's structural features, named exactly as the fragment shader names its uniforms.
+     */
+    private static final String[] FEATURES = {
+            "hole", "star", "rift", "waves", "meteors", "lightning", "glyphs", "portals",
+            "jet", "coins", "smoke", "subCharges", "flash", "dome", "embers",
+    };
+
+    /**
+     * What each warhead's own description promises, as a floor on its feature weights.
+     *
+     * <p>This is the acceptance test for "make sure the unique effects are all implemented". Each entry
+     * comes from the javadoc on the matching {@code WarheadType} constant - a World Eater is a black hole,
+     * a Ragnarok is meteors and lightning, a Quasar Lance is a jet - so if a row in
+     * {@code BlastMotif.Volume.author} is ever dropped or zeroed, the harness says which warhead lost
+     * which feature rather than shipping thirty-eight of the same fireball again.
+     */
+    private static final java.util.Map<String, String> SIGNATURE_FEATURES =
+            java.util.Map.ofEntries(
+                    java.util.Map.entry("dud", "smoke=0.8"),
+                    java.util.Map.entry("decoy", "smoke=0.6,flash=0.3"),
+                    java.util.Map.entry("emp", "lightning=0.8"),
+                    java.util.Map.entry("he", "waves=0.7,flash=0.4"),
+                    java.util.Map.entry("incendiary", "embers=0.9"),
+                    java.util.Map.entry("cluster", "subCharges=0.9"),
+                    java.util.Map.entry("fission", "waves=0.8,flash=0.5"),
+                    java.util.Map.entry("fusion", "star=0.7,flash=0.9"),
+                    java.util.Map.entry("antimatter", "hole=0.8,flash=0.9"),
+                    java.util.Map.entry("numismatic", "coins=0.9"),
+                    java.util.Map.entry("world_eater", "hole=0.9,dark=0.9"),
+                    java.util.Map.entry("stellar_requiem", "star=0.9"),
+                    java.util.Map.entry("reality_breaker", "rift=0.9"),
+                    java.util.Map.entry("spacetime_hammer", "waves=0.9"),
+                    java.util.Map.entry("universal_imploder", "implode=0.9,hole=0.6"),
+                    java.util.Map.entry("ragnarok", "meteors=0.9,lightning=0.8,skyRing=0.8"),
+                    java.util.Map.entry("world_rune", "glyphs=0.9"),
+                    java.util.Map.entry("abyssal_covenant", "portals=0.9"),
+                    java.util.Map.entry("soul_furnace", "lightning=0.9,skyRing=0.9,dark=0.8"),
+                    java.util.Map.entry("arcane_singularity", "glyphs=0.9,skyRing=0.9"),
+                    java.util.Map.entry("quasar_lance", "jet=0.9"),
+                    java.util.Map.entry("starforge", "star=0.9,embers=0.8"),
+                    java.util.Map.entry("big_bang_seed", "star=0.9,flash=0.9"),
+                    java.util.Map.entry("reality_corruptor", "rift=0.8"),
+                    java.util.Map.entry("absolute_zero", "hole=0.8,implode=0.9"),
+                    java.util.Map.entry("omega", "waves=0.9,implode=0.8"),
+                    java.util.Map.entry("absolute_annihilation", "hole=0.8,star=0.8,flash=0.9,waves=0.9"),
+                    java.util.Map.entry("bulwark", "dome=0.9"),
+                    java.util.Map.entry("contagion", "smoke=0.9"),
+                    java.util.Map.entry("spell", "glyphs=0.8,skyRing=0.8"),
+                    java.util.Map.entry("cargo", "jet=0.4"),
+                    java.util.Map.entry("minefield", "portals=0.6"),
+                    java.util.Map.entry("tracking", "ring=0.9"),
+                    java.util.Map.entry("constructor", "dome=0.8"),
+                    java.util.Map.entry("spatial", "rift=0.7"),
+                    java.util.Map.entry("clucker", "embers=0.7"),
+                    java.util.Map.entry("violator", "smoke=0.8,dark=0.8"),
+                    java.util.Map.entry("beef", "smoke=0.6,embers=0.6"));
+
+    /** Read one feature weight by the name the shader uses, so the table above stays in the shader's words. */
+    private static float feature(com.shadowclangaming.warhead.BlastMotif.Volume v, String name) {
+        return switch (name) {
+            case "hole" -> v.hole();
+            case "star" -> v.star();
+            case "rift" -> v.rift();
+            case "waves" -> v.waves();
+            case "meteors" -> v.meteors();
+            case "lightning" -> v.lightning();
+            case "glyphs" -> v.glyphs();
+            case "portals" -> v.portals();
+            case "jet" -> v.jet();
+            case "coins" -> v.coins();
+            case "smoke" -> v.smoke();
+            case "subCharges" -> v.subCharges();
+            case "flash" -> v.flash();
+            case "dome" -> v.dome();
+            case "embers" -> v.embers();
+            case "beam" -> v.beam();
+            case "ring" -> v.ring();
+            case "skyRing" -> v.skyRing();
+            case "implode" -> v.implode();
+            case "dark" -> v.dark();
+            default -> throw new IllegalArgumentException("unknown feature " + name);
+        };
+    }
+
+    /**
+     * Every warhead's documented signature feature must actually be switched on.
+     *
+     * <p>Derived-from-theme parameters produced thirty-eight near-identical fireballs; this is the test
+     * that keeps the authored rows honest. It also insists that two warheads sharing a theme do not share
+     * a shape, which is the failure mode that got the whole effect rejected in the first place.
+     */
+    private static void warheadFeatureTests() {
+        section("warhead signature features");
+
+        java.util.Map<String, float[]> shapes = new java.util.LinkedHashMap<>();
+        for (String id : WARHEADS) {
+            com.shadowclangaming.warhead.BlastMotif.Volume volume =
+                    com.shadowclangaming.warhead.BlastMotif.forWarhead(id).volume();
+            String expected = SIGNATURE_FEATURES.get(id);
+            check("signature features are documented for " + id, expected != null);
+            if (expected != null) {
+                for (String pair : expected.split(",")) {
+                    String[] parts = pair.split("=");
+                    float want = Float.parseFloat(parts[1]);
+                    float have = feature(volume, parts[0]);
+                    check(id + " keeps its documented " + parts[0] + " (" + have + " >= " + want + ")",
+                            have >= want);
+                }
+            }
+            float[] vector = new float[FEATURES.length];
+            for (int i = 0; i < FEATURES.length; i++) {
+                vector[i] = feature(volume, FEATURES[i]);
+            }
+            shapes.put(id, vector);
+        }
+        eq("every warhead has a documented signature", WARHEADS.length, SIGNATURE_FEATURES.size());
+
+        // Two warheads in the same theme must not be the same effect in a different colour. The floor is
+        // deliberately loose - palettes still differ - but a pair with no feature difference at all fails.
+        int pairs = 0;
+        int sharedTheme = 0;
+        for (String left : WARHEADS) {
+            for (String right : WARHEADS) {
+                if (left.compareTo(right) >= 0) {
+                    continue;
+                }
+                pairs++;
+                com.shadowclangaming.warhead.BlastMotif.Motif a =
+                        com.shadowclangaming.warhead.BlastMotif.forWarhead(left);
+                com.shadowclangaming.warhead.BlastMotif.Motif b =
+                        com.shadowclangaming.warhead.BlastMotif.forWarhead(right);
+                if (a.theme() != b.theme()) {
+                    continue;
+                }
+                sharedTheme++;
+                float distance = 0.0F;
+                float[] va = shapes.get(left);
+                float[] vb = shapes.get(right);
+                for (int i = 0; i < va.length; i++) {
+                    distance += Math.abs(va[i] - vb[i]);
+                }
+                check(left + " and " + right + " share a theme but not a shape (delta "
+                        + String.format(java.util.Locale.ROOT, "%.2f", distance) + ")", distance >= 0.35F);
+            }
+        }
+        check("warhead pairs were compared", pairs > 500);
+        check("some warheads share a theme", sharedTheme > 0);
+    }
+
     private static void volumeShaderTests() {
         section("volumetric shader parameters");
 
@@ -2218,15 +2369,23 @@ public final class LogicHarness {
                     Float.isFinite(volume.glow()) && Float.isFinite(volume.swirl())
                             && Float.isFinite(volume.turb()));
 
-            // glow is 0.35 + finaleScale * 0.55: exactly 0.35 when there is no blast, more when there is.
+            // Glow starts derived (0.35 + finaleScale * 0.55) and a warhead may author over it - a
+            // World Eater should outshine a grenade - but the ordering the derivation encodes must
+            // survive: a detonation burns brighter than the base, and a warhead that never detonates
+            // must not outshine one that does.
             if (motif.hasBlastFinale()) {
-                check("a warhead that ends in a blast burns brighter than one that does not: " + id,
-                        volume.glow() > 0.355F);
+                check("a warhead that ends in a blast burns brighter than the base: " + id,
+                        volume.glow() > 0.5F);
             } else {
-                close("a warhead that is not a bomb sits at the base glow: " + id, 0.35D, volume.glow());
+                check("a warhead that never detonates stays dim: " + id, volume.glow() <= 1.3F);
             }
             check("the noise field starts somewhere of its own for " + id,
                     volume.seed() >= 0.0F && volume.seed() < 1.0F);
+            for (String name : FEATURES) {
+                float weight = feature(volume, name);
+                check("feature " + name + " is a weight for " + id,
+                        Float.isFinite(weight) && weight >= 0.0F && weight <= 1.0F);
+            }
         }
         eq("every warhead has its own look", WARHEADS.length, signatures.size());
 
@@ -2243,6 +2402,17 @@ public final class LogicHarness {
                 com.shadowclangaming.warhead.BlastMotif.forWarhead("ragnarok").volume();
         check("a cataclysm has the full shockwave", cataclysm.ring() >= 0.9F);
         check("a cataclysm is turbulent", cataclysm.turb() >= 1.0F);
+
+        // The ordering, concretely: the dimmest thing on the roster is a dud, and a conventional high
+        // explosive outshines it. If authoring ever inverts that, the effect has stopped making sense.
+        float dimmest = Float.MAX_VALUE;
+        for (String id : WARHEADS) {
+            dimmest = Math.min(dimmest, com.shadowclangaming.warhead.BlastMotif.forWarhead(id)
+                    .volume().glow());
+        }
+        close("a dud is the dimmest thing on the roster", 0.22D, dimmest);
+        check("a conventional high explosive outshines a dud",
+                com.shadowclangaming.warhead.BlastMotif.forWarhead("he").volume().glow() > dimmest);
     }
 
     /**

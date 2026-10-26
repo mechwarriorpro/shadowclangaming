@@ -138,6 +138,20 @@ public class AutoTraderBlockEntity extends BlockEntity {
         return energyView;
     }
 
+    /**
+     * EMP: empty the buffer outright. See {@code LaunchPadBlockEntity#empDrain} - the receive-only view
+     * this machine advertises means the capability route cannot reach in here.
+     *
+     * @return the FE that was in the buffer
+     */
+    public int empDrain() {
+        int drained = energy.extractEnergy(Integer.MAX_VALUE, false);
+        if (drained > 0) {
+            setChanged();
+        }
+        return drained;
+    }
+
     public ItemStack getSlot(int slot) {
         return slots[slot];
     }

@@ -546,13 +546,123 @@ def check_world_shaders():
             fail("core shader %s: fragment shader has no fragColor output" % name)
 
         driver = read(os.path.join(JAVA, drivers[name]))
-        for uniform in set(re.findall(r'safe?[gG]etUniform\("([^"]+)"\)', driver)):
+        # Both idioms this package uses: safeGetUniform("X") directly, and the private set(program, "X", ...)
+        # helpers that wrap it so no file here has to name the uniform class.
+        looked_up = set(re.findall(r'safe?[gG]etUniform\("([^"]+)"\)', driver))
+        looked_up |= set(re.findall(r'\bset\(program, "([^"]+)"', driver))
+        for uniform in sorted(looked_up):
             if uniform not in declared_uniforms:
                 fail("core shader %s: %s looks up uniform %s that the program does not declare"
                      % (name, drivers[name], uniform))
+        # The reverse join matters more. A uniform nobody sets just keeps its JSON default - silently,
+        # with no warning anywhere - so a feature weight Java forgets to push leaves that warhead
+        # missing the one thing its description asked for. ColorModulator is exempt: ShaderInstance
+        # fills that one itself from RenderSystem.getShaderColor() and never lets the mod touch it.
+        for uniform in sorted(declared_uniforms - {"ColorModulator"}):
+            if uniform not in looked_up:
+                fail("core shader %s: nothing in %s ever sets uniform %s, so it is stuck at its "
+                     "JSON default" % (name, drivers[name], uniform))
         count += 1
     print("core world shaders: %d" % count)
     return count
+
+
+def check_emp_drain():
+    """An EMP must empty every machine in its radius, and the way in has to actually work.
+
+    Three separate things have to line up here, and any one of them can silently break the others:
+
+    1. Our own launch pad and auto-trader advertise a *receive-only* energy capability - their
+       extractEnergy returns 0 on purpose, so nothing can pull power back out of them. An EMP that only
+       used the capability would therefore drain every other mod's machine and none of ours, which is the
+       opposite of the requirement. So empPulse has to call empDrain() on those two types directly.
+    2. Everything else is drained through the capability, which is what makes "any machine" true rather
+       than "any machine this mod happens to know about".
+    3. The pad's internal EnergyStorage must not be built with maxExtract 0. fundFromEnergy() spends the
+       buffer with extractEnergy, and with maxExtract 0 NeoForge hands back 0 - the launch paid out
+       funding for energy it never consumed, every launch, for free. The same 0 would also make
+       empDrain() a no-op.
+    """
+    before = len(problems)
+    warhead_type = read(os.path.join(JAVA, "com/shadowclangaming/warhead/WarheadType.java"))
+    pulse = warhead_type[warhead_type.index("private static void empPulse("):]
+    pulse = pulse[:pulse.index("\n    private static ") if "\n    private static " in pulse[10:] else len(pulse)]
+
+    for typed, call in (("LaunchPadBlockEntity", "pad.empDrain()"),
+                        ("AutoTraderBlockEntity", "trader.empDrain()")):
+        if call not in pulse:
+            fail("empPulse never calls %s, so an EMP cannot empty a %s - the capability it advertises "
+                 "is receive-only" % (call, typed))
+    if "drainEnergy(level, p, blockEntity)" not in pulse:
+        fail("empPulse no longer drains through the energy capability, so other mods' machines in the "
+             "radius keep their FE")
+
+    for name in ("LaunchPadBlockEntity", "AutoTraderBlockEntity"):
+        source = read(os.path.join(JAVA, "com/shadowclangaming/block/%s.java" % name))
+        if "public int empDrain()" not in source:
+            fail("%s has no empDrain(); empPulse calls it" % name)
+
+    pad = read(os.path.join(JAVA, "com/shadowclangaming/block/LaunchPadBlockEntity.java"))
+    storage = re.search(r"new EnergyStorage\(([^)]*)\)", pad)
+    if storage is None:
+        fail("LaunchPadBlockEntity no longer constructs an EnergyStorage; check_emp_drain cannot verify "
+             "maxExtract")
+    else:
+        args = [argument.strip() for argument in storage.group(1).split(",")]
+        if len(args) < 3 or args[2] in ("0", "0L"):
+            fail("LaunchPadBlockEntity builds its EnergyStorage with maxExtract %s: fundFromEnergy() "
+                 "cannot spend the buffer (free funding on every launch) and empDrain() cannot empty it"
+                 % (args[2] if len(args) >= 3 else "<missing>"))
+    if len(problems) == before:
+        print("emp drain: typed for 2 of our machines, capability for everything else")
+    return 1
+
+
+def check_glsl_defined():
+    """smoothstep(edge0, edge1, x) is undefined when edge0 > edge1, and drivers disagree about what it does.
+
+    Some ramp backwards, some return 0, some return NaN - and a NaN in a density field turns one warhead
+    into black or white pixels on one graphics card and works fine on the next. The result only shows up
+    in game, on the user's machine, so it is worth catching here over a regex.
+    """
+    problems = 0
+    checked = 0
+    for path in sorted(os.listdir(os.path.join(ASSETS, "shaders/core"))):
+        if not path.endswith(".fsh"):
+            continue
+        source = read(os.path.join(ASSETS, "shaders/core", path))
+        for match in re.finditer(r"smoothstep\(\s*([-\d.e]+)\s*,\s*([-\d.e]+)\s*,", source):
+            checked += 1
+            edge0, edge1 = float(match.group(1)), float(match.group(2))
+            if edge0 > edge1:
+                line = source[:match.start()].count("\n") + 1
+                fail("%s line %d: smoothstep(%g, %g, ...) is undefined when edge0 > edge1"
+                     % (path, line, edge0, edge1))
+                problems += 1
+    print("glsl smoothstep edges: %d checked, %d reversed" % (checked, problems))
+    return checked
+
+
+def check_proxy_box():
+    """The proxy cube the fragment shader marches must be the cube the Java draws.
+
+    Both files define the half-extent in blast radii and nothing connects them, so if one moves the
+    shader either marches empty space around a smaller cube (a visible box edge on every blast) or
+    clips the effect to the inside of a bigger one. Cheap to check, miserable to debug in game.
+    """
+    fsh = read(os.path.join(ASSETS, "shaders/core/world_blast_volume.fsh"))
+    driver = read(os.path.join(JAVA, "com/shadowclangaming/client/VolumetricFx.java"))
+    shader_box = re.search(r"const\s+float\s+PROXY_BOX\s*=\s*([\d.]+);", fsh)
+    java_box = re.search(r"double\s+PROXY_BOX\s*=\s*([\d.]+)D;", driver)
+    if shader_box is None or java_box is None:
+        fail("check_proxy_box cannot find PROXY_BOX in %s"
+             % ("the fragment shader" if shader_box is None else "VolumetricFx"))
+        return 0
+    if abs(float(shader_box.group(1)) - float(java_box.group(1))) > 0.0001:
+        fail("the volumetric proxy cube disagrees with itself: the shader marches %s radii but "
+             "VolumetricFx draws %s" % (shader_box.group(1), java_box.group(1)))
+    print("volumetric proxy box: %s radii" % shader_box.group(1))
+    return 1
 
 
 def check_event_subscribers():
@@ -660,17 +770,32 @@ def check_motifs():
     roster = re.findall(r'"([a-z_]+)"',
                         motif_source[motif_source.index("ROSTER = List.of(")
                                      :motif_source.index(");", motif_source.index("ROSTER = List.of("))])
-    cases = re.findall(r'case "([a-z_]+)" ->', motif_source)
+    # BlastMotif now switches over warhead id twice: once to build the motif, once in Volume.author to
+    # say what that warhead's effect actually looks like. Count them separately, and insist on exactly
+    # one of each - a warhead that silently falls through Volume.author's default keeps only its theme
+    # baseline, which is precisely how thirty-eight warheads end up looking like one another.
+    author_start = motif_source.index("private static void author(")
+    author_end = motif_source.index("One string per warhead", author_start)
+    author_section = motif_source[author_start:author_end]
+    motif_section = motif_source[:author_start] + motif_source[author_end:]
+    cases = re.findall(r'case "([a-z_]+)" ->', motif_section)
+    authored = re.findall(r'case "([a-z_]+)" ->', author_section)
     for warhead in warhead_ids():
         if warhead not in cases:
             fail("motif: warhead %s has no case in BlastMotif" % warhead)
         if warhead not in roster:
             fail("motif: warhead %s is missing from BlastMotif.ROSTER" % warhead)
+        if warhead not in authored:
+            fail("motif: warhead %s has no row in Volume.author, so it inherits its theme baseline and "
+                 "will read as the same fireball as its neighbours" % warhead)
     for extra in roster:
         if extra not in warhead_ids():
             fail("motif: ROSTER lists %s, which is not a warhead" % extra)
     if len(set(cases)) != len(cases):
         fail("motif: duplicate warhead cases in BlastMotif")
+    if len(set(authored)) != len(authored):
+        fail("motif: duplicate warhead cases in Volume.author")
+    print("authored warhead looks: %d" % len(set(authored)))
 
     # The fuse is the effect: ExplosivePackaging must derive it from the motif, not from a constant.
     packaging = read(os.path.join(JAVA, "com/shadowclangaming/warhead/ExplosivePackaging.java"))
@@ -692,6 +817,9 @@ def main():
     check_world_shaders()
     check_charge_wiring()
     subscribers = check_event_subscribers()
+    check_proxy_box()
+    check_glsl_defined()
+    check_emp_drain()
     blocks, items = check_assets()
     check_entities()
     check_particles()

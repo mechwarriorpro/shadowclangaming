@@ -1454,3 +1454,124 @@ from the pose stack, and the volumetric cost on a real GPU is unmeasured — `St
 blasts and at most four volumes are marched in a frame, but that is arithmetic, not a frame time. What can
 be said honestly is that it compiles, the joins are checked, and the fallbacks mean a machine that cannot
 run the raymarcher still gets the warhead.
+
+---
+
+## Round 48 — thirty-eight different weapons, and an EMP that empties the grid
+
+Two pieces of feedback, both fair. *"They all look almost identical and I want way more spectacular and
+flair."* And: *"re-read the unique effects and make sure they are all implemented."*
+
+They were the same complaint. Round 46 built one raymarched fireball and parameterised it over seventeen
+themes — beam, ring, turbulence, rise, palette. Thirty-eight warheads therefore differed by a palette and
+a handful of floats on the *same* field, which is exactly how they read: the same explosion in
+thirty-eight colours. No amount of extra floats on one field fixes that. A World Eater does not need a
+different fireball, it needs a black hole.
+
+### 1. The field is a composition, not a preset
+
+`world_blast_volume.fsh` grew from 243 lines to 431 by adding **fifteen structural primitives**,
+each a separate branch of the density field with its own 0..1 weight, summed:
+
+| feature | what it adds | who asks for it |
+| --- | --- | --- |
+| `Hole` | an event horizon that *removes* density, with an accretion disc and a hot rim | World Eater, Antimatter, Absolute Zero, Universal Imploder, Omega, Soul Furnace, Absolute Annihilation |
+| `Star` | a blinding core with a spiky corona | Stellar Requiem, Starforge, Fusion, Big Bang Seed, Absolute Annihilation |
+| `Rift` | a noise-displaced vertical tear, bright at the edges | Reality Breaker, Reality Corruptor, Spatial, Abyssal Covenant |
+| `Waves` | three concentric shockwave shells on staggered clocks | Spacetime Hammer, Omega, HE, Fusion, Fission, Antimatter |
+| `Meteors` | five streaks falling in from above, hashed per warhead | Ragnarok |
+| `Lightning` | ridged-noise bolts radiating from the core, flickering at 23 Hz | Ragnarok, Soul Furnace, EMP, Absolute Zero, Violator |
+| `Glyphs` | spokes and bands cut into the ground | World Rune, Arcane Singularity, Spell, Bulwark, Constructor |
+| `SkyRing` | rings turning overhead | Ragnarok, Soul Furnace, Arcane Singularity, Spell, Tracking |
+| `Portals` | six scattered dark discs with bright rims | Abyssal Covenant, Minefield, Spatial |
+| `Jet` | a narrow pillar up to 2.7 radii with a bow shock | Quasar Lance, Cargo, Constructor |
+| `Coins` | seven flat gold discs tumbling on a spiral | Numismatic, Beef |
+| `Smoke` | heavy low-lying puff that also dims the emission | Dud, Decoy, Contagion, Violator, Beef, Clucker |
+| `SubCharges` | six sub-spheres, each with its own clock | Cluster, Minefield |
+| `Flash` | one hard white kick in the first 16 % of the detonation | Fusion, Antimatter, Big Bang Seed, Omega, Absolute Annihilation |
+| `Dome` | a hollow faceted shell, flat on the bottom | Bulwark, Constructor |
+| `Embers` | a rising fire column | Incendiary, Starforge, Fission, Ragnarok, Clucker, Beef |
+
+### 2. Every warhead is authored, none is derived
+
+`BlastMotif.Volume.author` is a switch with **one explicit case per warhead**, written against the
+javadoc on the matching `WarheadType` constant. The theme supplies a baseline so a new warhead still
+works before anybody authors it; the case then says what that warhead actually is:
+
+```java
+case "ragnarok"         -> shape.meteors(1.0F).lightning(0.9F).skyRing(0.9F).waves(0.7F)
+                                 .embers(0.6F).glow(1.75F);
+case "world_eater"      -> shape.hole(1.0F).swirlUp(1.0F).dark(1.0F).implode(1.0F)
+                                 .glow(1.9F).smoke(0.0F).waves(0.35F).rise(-0.4F);
+case "quasar_lance"     -> shape.jet(1.0F).waves(0.7F).streaks(0.6F).glow(1.8F);
+case "numismatic"       -> shape.coins(1.0F).ring(0.6F).rise(0.7F);
+```
+
+Brightness went up with it: the authored apex glows are 1.5–1.95 against a derived 0.90–1.06, the proxy
+cube grew from 3.0 to 3.4 radii so meteors and jets are not clipped, and the fireball hollows out as it
+ages instead of staying a solid ball.
+
+### 3. What stops it regressing
+
+Three new machine checks, each injected with its own failure and confirmed to catch it before shipping:
+
+* **`warheadFeatureTests()`** in the logic harness holds a floor per warhead for its documented
+  signature feature — `ragnarok → meteors ≥ 0.9, lightning ≥ 0.8, skyRing ≥ 0.8` — so dropping a row
+  says which warhead lost which feature. It also compares every same-theme pair's feature vector and
+  fails below an L1 distance of 0.35; the closest pair now is Reality Breaker / Reality Corruptor at
+  0.50.
+* **`sweep.py`** insists every warhead has a row in `Volume.author`. A warhead that silently falls
+  through to the default keeps only its theme baseline — precisely how thirty-eight warheads end up
+  looking like one another.
+* **`sweep.py`** joins the program JSON to the Java in *both* directions now. The old check caught a
+  uniform the Java asked for that the program did not declare; the new one catches the reverse, which is
+  worse: a uniform nobody sets keeps its JSON default of 0, silently, so a forgotten feature weight
+  costs that warhead the one thing its description asked for. Removing the `Meteors` push was verified
+  to fail the build.
+
+Two more, found while writing the shader rather than by testing it:
+
+* **`check_glsl_defined()`** — `smoothstep(edge0, edge1, x)` is undefined when `edge0 > edge1`, and
+  drivers disagree: some ramp backwards, some return NaN. The Reality Breaker's tear had
+  `smoothstep(0.16, 0.05, …)`. That is one warhead rendering as garbage on one graphics card and fine on
+  the next, with no error anywhere. All 46 smoothstep calls are now scanned.
+* **`check_proxy_box()`** — the fragment shader and `VolumetricFx` each define the proxy half-extent and
+  nothing connected them. Move one and every blast grows a visible box edge or gets clipped.
+
+### 4. The EMP drains the grid
+
+`WarheadType.empPulse` now empties the FE of every machine inside its 14-block radius, and reports what
+it took to the players who were standing there (`message.shadowclangaming.emp_drained`, plus an
+`EMP_DRAIN` debug line).
+
+The route matters. It goes through `Capabilities.EnergyStorage.BLOCK`, so a Create dynamo, an AE2
+charger or anything else in the modpack is drained exactly like one of ours — every face is tried,
+because a machine that only exposes its storage on one side is not unusual, and the extraction loops
+until the storage says there is nothing left, because some implementations cap a single call at their
+own transfer rate and would otherwise leave a big buffer mostly full.
+
+**But the capability is not enough for our own machines.** `LaunchPadBlockEntity` and
+`AutoTraderBlockEntity` advertise a deliberately receive-only `IEnergyStorage` — `extractEnergy` returns
+0 so nothing can pull power back out of a pad — which means a capability-only EMP would have drained
+every other mod's machine and none of ours. Those two are drained through their own `empDrain()`
+instead, and `check_emp_drain()` holds both routes in place.
+
+### 5. A bug that fell out of verifying #4
+
+`LaunchPadBlockEntity` built its buffer as `new EnergyStorage(ENERGY_CAPACITY, ENERGY_RECEIVE, 0)`.
+`fundFromEnergy()` converts stored FE into missile funding at 1 unit per FE and then spends it with
+`energy.extractEnergy(capped, false)` — and with `maxExtract` at 0, NeoForge hands back 0 and the buffer
+is never reduced. The launch paid out funding for energy it kept, every launch, for free, since the
+round that added it. `maxExtract` is now the full capacity, which fixes that and is also what makes
+`empDrain()` able to empty the pad. Nothing outside the class gains access: the capability the block
+registers is still the receive-only view.
+
+### 6. What was verified, and what was not
+
+Machine-checked: `tools/sweep.py` (all five new checks negative-tested), `tools/check_names.py`, the
+logic harness, the API and Lua harnesses, and a full `gradlew build` against NeoForge 21.1.264 in CI.
+
+**Not** verified in a running client: the fifteen new primitives have never been compiled by a driver
+here, and how they *look* is not something a sweep can tell you. The feature weights are arithmetic that
+says a Ragnarok has meteors at 1.0; whether those meteors read as meteors is a judgement only the game
+can make.

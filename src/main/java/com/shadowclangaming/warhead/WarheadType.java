@@ -1,6 +1,7 @@
 package com.shadowclangaming.warhead;
 
 import com.shadowclangaming.ShadowClanGaming;
+import com.shadowclangaming.block.AutoTraderBlockEntity;
 import com.shadowclangaming.block.LaunchPadBlockEntity;
 import com.shadowclangaming.perf.BlastScheduler;
 import com.shadowclangaming.perf.FxBudget;
@@ -633,15 +634,39 @@ public enum WarheadType {
         final int radius = 14;
         BlockPos centre = BlockPos.containing(pos.x, pos.y, pos.z);
 
+        long drained = 0;
+        int drainedMachines = 0;
         for (BlockPos p : BlockPos.betweenClosed(
                 centre.offset(-radius, -radius / 2, -radius),
                 centre.offset(radius, radius / 2, radius))) {
             BlockEntity blockEntity = level.getBlockEntity(p);
+            if (blockEntity == null) {
+                continue;
+            }
+            int taken;
             if (blockEntity instanceof LaunchPadBlockEntity pad) {
                 pad.applyEmp(200);
-            } else if (blockEntity instanceof ProcessorBlockEntity processor) {
+                taken = pad.empDrain();
+            } else if (blockEntity instanceof AutoTraderBlockEntity trader) {
+                taken = trader.empDrain();
+            } else {
+                // Everything else electrical in range loses its stored energy, including other mods'
+                // machines: this goes through the capability, not through our own classes. Our pads and
+                // traders are handled above because the capability they advertise is receive-only.
+                taken = drainEnergy(level, p, blockEntity);
+            }
+            if (blockEntity instanceof ProcessorBlockEntity processor) {
                 processor.applyEmp(200);
             }
+            if (taken > 0) {
+                drained += taken;
+                drainedMachines++;
+            }
+        }
+        if (drainedMachines > 0) {
+            com.shadowclangaming.debug.ShadowDebug.log("EMP_DRAIN",
+                    "pos=({}, {}, {}) radius={} machines={} fe={}",
+                    pos.x, pos.y, pos.z, radius, drainedMachines, drained);
         }
 
         AABB box = new AABB(pos, pos).inflate(radius);
@@ -658,12 +683,61 @@ public enum WarheadType {
                 }
                 player.displayClientMessage(
                         Component.translatable("message.shadowclangaming.emp_hit"), true);
+                if (drained > 0L) {
+                    player.displayClientMessage(Component.translatable(
+                            "message.shadowclangaming.emp_drained", drained, drainedMachines), false);
+                }
             }
         }
 
         FxBudget.send(level, ParticleTypes.END_ROD, pos, 60, radius * 0.6, radius * 0.3, radius * 0.6, 0.05);
         level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.LIGHTNING_BOLT_THUNDER,
                 SoundSource.BLOCKS, 1.2F, 1.6F);
+    }
+
+
+    /**
+     * Pull every joule out of one block's energy storage.
+     *
+     * <p>Through the capability, not through our own block entities, so a Create dynamo, an AE2 charger or
+     * anything else in the modpack is drained exactly like a launch pad. Every face is tried, because a
+     * machine that only exposes its storage on one side is not unusual, and the extraction loops until the
+     * storage says there is nothing left - some implementations cap a single call at their own transfer
+     * rate, which would otherwise leave a big buffer mostly full.
+     *
+     * @return the FE actually removed
+     */
+    private static int drainEnergy(ServerLevel level, BlockPos pos, BlockEntity blockEntity) {
+        net.neoforged.neoforge.energy.IEnergyStorage storage =
+                level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK,
+                        pos, null);
+        if (storage == null) {
+            for (net.minecraft.core.Direction side : net.minecraft.core.Direction.values()) {
+                storage = level.getCapability(
+                        net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK, pos, side);
+                if (storage != null) {
+                    break;
+                }
+            }
+        }
+        if (storage == null || storage.getEnergyStored() <= 0) {
+            return 0;
+        }
+        int total = 0;
+        for (int attempt = 0; attempt < 64; attempt++) {
+            int taken = storage.extractEnergy(Integer.MAX_VALUE, false);
+            if (taken <= 0) {
+                break;
+            }
+            total += taken;
+            if (storage.getEnergyStored() <= 0) {
+                break;
+            }
+        }
+        if (total > 0) {
+            blockEntity.setChanged();
+        }
+        return total;
     }
 
     @Override

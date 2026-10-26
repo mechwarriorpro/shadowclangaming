@@ -289,8 +289,23 @@ public final class BlastMotif {
      * from the motif's own layer colours, and {@code swirl} from how fast its layers turn. Thirty-eight
      * warheads therefore produce thirty-eight distinct parameter sets, which the logic harness asserts.
      */
+    /**
+     * The full look of a warhead's in-world effect: shape, motion, palette, and which of the shader's
+     * structural features it asks for.
+     *
+     * <p>The first eleven floats come from the theme and the motif's own layers, as they always did. The
+     * fifteen feature weights after them are AUTHORED, one row per warhead, from that warhead's own
+     * description in {@link WarheadType} - a World Eater gets a black hole, a Ragnarok gets meteors and
+     * lightning, a Quasar Lance gets a jet, a Numismatic blast gets coins. That is what makes thirty-eight
+     * warheads look like thirty-eight different weapons instead of the same fireball in thirty-eight
+     * colours, and {@code tools/sweep.py} plus the logic harness fail the build if a warhead's signature
+     * feature comes back at zero.
+     */
     public record Volume(float beam, float ring, float skyRing, float implode, float turb, float rise,
                          float streaks, float dark, float glow, float swirl, float seed,
+                         float hole, float star, float rift, float waves, float meteors, float lightning,
+                         float glyphs, float portals, float jet, float coins, float smoke,
+                         float subCharges, float flash, float dome, float embers,
                          int colorA, int colorB, int colorC) {
 
         /** Every field clamped, so a bad row cannot make the shader divide by zero or march backwards. */
@@ -306,10 +321,146 @@ public final class BlastMotif {
             glow = Math.max(0.05F, Math.min(2.0F, glow));
             swirl = Math.max(0.0F, Math.min(2.0F, swirl));
             seed = Math.max(0.0F, Math.min(0.999F, seed));
+            hole = (float) clamp01(hole);
+            star = (float) clamp01(star);
+            rift = (float) clamp01(rift);
+            waves = (float) clamp01(waves);
+            meteors = (float) clamp01(meteors);
+            lightning = (float) clamp01(lightning);
+            glyphs = (float) clamp01(glyphs);
+            portals = (float) clamp01(portals);
+            jet = (float) clamp01(jet);
+            coins = (float) clamp01(coins);
+            smoke = (float) clamp01(smoke);
+            subCharges = (float) clamp01(subCharges);
+            flash = (float) clamp01(flash);
+            dome = (float) clamp01(dome);
+            embers = (float) clamp01(embers);
         }
 
-        /** Volume parameters for a motif: theme for shape, the motif's own layers for colour and motion. */
+        /** Volume parameters for a motif: theme baseline, then this warhead's own authored features. */
         static Volume of(String warheadId, Theme theme, List<Spec> specs, float finaleScale) {
+            Shape shape = Shape.baseline(theme == null ? Theme.ORDNANCE : theme, finaleScale);
+            author(shape, warheadId);
+
+            // The palette is the motif's own: the first layer's colour is the hot core, the last is the
+            // cool edge, and the middle is halfway between them.
+            int a = specs.isEmpty() ? 0xFFFFCC66 : specs.get(0).argb();
+            int c = specs.isEmpty() ? 0xFF552200 : specs.get(specs.size() - 1).argb();
+            int b = mix(a, c, 0.5F);
+            // How fast this motif's layers turn, folded into one number the shader uses to shear the
+            // field. Two warheads in the same theme still move differently because of it.
+            double spin = 0.0D;
+            for (Spec spec : specs) {
+                spin += Math.abs(spec.spin());
+            }
+            float swirl = (float) Math.min(2.0D,
+                    Math.max(spin / Math.max(1, specs.size()) * 22.0D, shape.swirl));
+            // Where in the noise field this warhead starts. Two warheads of the same theme would otherwise
+            // share one turbulence pattern; this puts theirs in different places, and because it comes
+            // from the warhead's own id it also keeps all thirty-eight parameter sets provably distinct.
+            float seed = (warheadId == null ? 0 : warheadId.hashCode() & 0x7FFFFFFF)
+                    / (float) Integer.MAX_VALUE;
+            return new Volume(shape.beam, shape.ring, shape.skyRing, shape.implode, shape.turb, shape.rise,
+                    shape.streaks, shape.dark, shape.glow, swirl, seed,
+                    shape.hole, shape.star, shape.rift, shape.waves, shape.meteors, shape.lightning,
+                    shape.glyphs, shape.portals, shape.jet, shape.coins, shape.smoke,
+                    shape.subCharges, shape.flash, shape.dome, shape.embers,
+                    a | 0xFF000000, b | 0xFF000000, c | 0xFF000000);
+        }
+
+        /**
+         * What each warhead actually looks like, taken from its own description.
+         *
+         * <p>One case per warhead, deliberately spelled out rather than derived: the point of this switch
+         * is that a reader can hold the description of a warhead next to the line that draws it. Anything
+         * not listed keeps its theme baseline, so a new warhead still works before anybody authors it.
+         * The logic harness asserts the signature feature of every row below is non-zero.
+         */
+        private static void author(Shape shape, String warheadId) {
+            switch (warheadId == null ? "" : warheadId) {
+                // -- conventional
+                case "dud" -> shape.smoke(0.90F).glow(0.22F).flash(0.0F).turb(0.65F).waves(0.0F);
+                case "decoy" -> shape.smoke(0.75F).flash(0.35F).waves(0.5F).glow(0.45F);
+                case "emp" -> shape.lightning(0.85F).waves(0.8F).dark(0.55F).glow(0.7F)
+                        .turb(0.35F).streaks(0.6F);
+                case "he" -> shape.waves(0.85F).flash(0.55F).smoke(0.45F);
+                case "incendiary" -> shape.embers(0.95F).rise(1.0F).turb(1.2F);
+                case "cluster" -> shape.subCharges(0.95F).waves(0.4F);
+                case "fission" -> shape.waves(0.9F).flash(0.6F).embers(0.7F).streaks(0.55F).smoke(0.5F);
+                case "fusion" -> shape.star(0.8F).flash(1.0F).waves(0.9F).streaks(0.7F);
+                case "antimatter" -> shape.hole(0.9F).flash(1.0F).waves(1.0F).implode(0.8F)
+                        .dark(0.8F).streaks(0.8F);
+                case "numismatic" -> shape.coins(1.0F).ring(0.6F).rise(0.7F);
+                // -- apex, in roster order
+                case "world_eater" -> shape.hole(1.0F).swirlUp(1.0F).dark(1.0F).implode(1.0F)
+                        .glow(1.9F).smoke(0.0F).waves(0.35F).rise(-0.4F);
+                case "stellar_requiem" -> shape.star(1.0F).flash(0.9F).glow(1.85F)
+                        .swirlUp(0.6F).waves(0.5F);
+                case "reality_breaker" -> shape.rift(1.0F).streaks(0.7F).dark(0.6F).turb(0.4F);
+                case "spacetime_hammer" -> shape.waves(1.0F).implode(0.7F).skyRing(0.6F).turb(0.8F);
+                case "universal_imploder" -> shape.hole(0.7F).implode(1.0F).waves(0.75F)
+                        .dark(0.85F).glow(1.7F);
+                case "ragnarok" -> shape.meteors(1.0F).lightning(0.9F).skyRing(0.9F).waves(0.7F)
+                        .embers(0.6F).glow(1.75F);
+                case "world_rune" -> shape.glyphs(1.0F).waves(0.55F).glow(1.6F).skyRing(0.5F);
+                case "abyssal_covenant" -> shape.portals(1.0F).rift(0.45F).dark(0.7F).glow(1.5F);
+                case "soul_furnace" -> shape.lightning(0.95F).skyRing(1.0F).hole(0.6F).dark(0.85F)
+                        .implode(0.8F).swirlUp(1.0F).glow(1.8F);
+                case "arcane_singularity" -> shape.glyphs(0.95F).skyRing(1.0F).hole(0.55F)
+                        .swirlUp(0.9F).glow(1.7F);
+                case "quasar_lance" -> shape.jet(1.0F).waves(0.7F).streaks(0.6F).glow(1.8F);
+                case "starforge" -> shape.star(0.95F).embers(0.9F).flash(0.7F).glow(1.8F)
+                        .ring(0.6F).rise(0.6F);
+                case "big_bang_seed" -> shape.star(1.0F).flash(1.0F).waves(0.95F).streaks(0.9F)
+                        .glow(1.9F).swirlUp(0.8F);
+                case "reality_corruptor" -> shape.rift(0.9F).dark(0.75F).turb(1.5F).hole(0.5F)
+                        .glyphs(0.35F);
+                case "absolute_zero" -> shape.hole(0.85F).implode(1.0F).dark(0.9F).turb(0.25F)
+                        .swirlUp(0.2F).waves(0.6F).glow(1.6F);
+                case "omega" -> shape.waves(1.0F).implode(0.9F).hole(0.7F).flash(0.85F)
+                        .streaks(0.7F).glow(1.9F);
+                case "absolute_annihilation" -> shape.hole(0.9F).star(0.85F).flash(1.0F).waves(1.0F)
+                        .streaks(0.95F).rift(0.5F).glow(1.95F);
+                // -- utility warheads: they are effects, not bombs
+                case "bulwark" -> shape.dome(1.0F).glyphs(0.35F).glow(0.9F).turb(0.2F);
+                case "contagion" -> shape.smoke(1.0F).dark(0.4F).rise(0.9F).glow(0.6F)
+                        .embers(0.25F).waves(0.0F);
+                case "spell" -> shape.glyphs(0.9F).skyRing(0.85F).swirlUp(0.8F).glow(1.2F);
+                case "cargo" -> shape.jet(0.45F).ring(0.4F).glow(0.55F).waves(0.0F).smoke(0.2F);
+                case "minefield" -> shape.portals(0.7F).waves(0.35F).glow(0.7F).subCharges(0.5F);
+                case "tracking" -> shape.ring(1.0F).skyRing(0.6F).streaks(0.5F).glow(0.8F)
+                        .turb(0.3F).waves(0.5F);
+                case "constructor" -> shape.dome(0.9F).jet(0.4F).glyphs(0.3F).glow(0.85F).turb(0.2F);
+                case "spatial" -> shape.rift(0.75F).portals(0.5F).dark(0.5F).glow(1.0F);
+                case "clucker" -> shape.embers(0.8F).smoke(0.4F).rise(0.9F).glow(0.8F);
+                case "violator" -> shape.smoke(0.85F).dark(0.85F).glyphs(0.4F).lightning(0.35F)
+                        .glow(1.1F);
+                case "beef" -> shape.smoke(0.7F).embers(0.7F).coins(0.3F).rise(0.6F).glow(0.75F);
+                default -> { }
+            }
+        }
+
+        /** One string per warhead, so the harness can prove no two warheads share a look. */
+        public String signature() {
+            return String.format(java.util.Locale.ROOT,
+                    "%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.8f/"
+                            + "%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/"
+                            + "%08x/%08x/%08x",
+                    beam, ring, skyRing, implode, turb, rise, streaks, dark, glow, swirl, seed,
+                    hole, star, rift, waves, meteors, lightning, glyphs, portals, jet, coins, smoke,
+                    subCharges, flash, dome, embers,
+                    colorA, colorB, colorC);
+        }
+
+        /**
+         * Mutable scratch for {@link #author}: the theme baseline plus this warhead's overrides.
+         *
+         * <p>Fluent setters that return {@code this}, so a row in {@code author} reads as a sentence about
+         * that warhead. {@code swirlUp} is {@link Volume#swirl} under a different name, so a row can ask
+         * for spin without colliding with the value the motif's own layers supply.
+         */
+        private static final class Shape {
             float beam;
             float ring;
             float skyRing;
@@ -318,55 +469,77 @@ public final class BlastMotif {
             float rise;
             float streaks;
             float dark;
-            switch (theme == null ? Theme.ORDNANCE : theme) {
-                case INFERNO -> { beam = 0.05F; ring = 0.55F; skyRing = 0.00F; implode = -0.50F; turb = 1.15F; rise = 0.85F; streaks = 0.40F; dark = 0.00F; }
-                case NUCLEAR -> { beam = 0.20F; ring = 0.95F; skyRing = 0.00F; implode = -0.40F; turb = 0.90F; rise = 1.00F; streaks = 0.30F; dark = 0.00F; }
-                case ARCANE -> { beam = 0.35F; ring = 0.35F; skyRing = 1.00F; implode = 0.30F; turb = 0.45F; rise = 0.10F; streaks = 0.25F; dark = 0.15F; }
-                case STELLAR -> { beam = 1.00F; ring = 0.40F; skyRing = 0.55F; implode = -0.30F; turb = 0.70F; rise = 0.25F; streaks = 0.85F; dark = 0.00F; }
-                case CATACLYSM -> { beam = 0.45F; ring = 1.00F; skyRing = 0.70F; implode = -0.80F; turb = 1.35F; rise = 0.45F; streaks = 0.75F; dark = 0.10F; }
-                case VOID -> { beam = 0.25F; ring = 0.20F; skyRing = 0.30F; implode = 1.00F; turb = 0.55F; rise = -0.30F; streaks = 0.60F; dark = 1.00F; }
-                case PLAGUE -> { beam = 0.00F; ring = 0.45F; skyRing = 0.15F; implode = -0.20F; turb = 1.25F; rise = 0.70F; streaks = 0.20F; dark = 0.30F; }
-                case CRYO -> { beam = 0.10F; ring = 0.60F; skyRing = 0.20F; implode = -0.10F; turb = 0.85F; rise = 0.15F; streaks = 0.55F; dark = 0.10F; }
-                case MACHINE -> { beam = 0.15F; ring = 0.70F; skyRing = 0.10F; implode = -0.20F; turb = 0.35F; rise = 0.05F; streaks = 0.30F; dark = 0.05F; }
-                case COIN -> { beam = 0.10F; ring = 0.50F; skyRing = 0.10F; implode = -0.30F; turb = 0.60F; rise = 0.55F; streaks = 0.45F; dark = 0.00F; }
-                case BARRIER -> { beam = 0.05F; ring = 0.30F; skyRing = 0.05F; implode = 0.20F; turb = 0.20F; rise = 0.00F; streaks = 0.10F; dark = 0.00F; }
-                case LOGISTICS -> { beam = 0.30F; ring = 0.25F; skyRing = 0.05F; implode = 0.10F; turb = 0.30F; rise = 0.20F; streaks = 0.15F; dark = 0.00F; }
-                case SWARM -> { beam = 0.00F; ring = 0.35F; skyRing = 0.00F; implode = -0.40F; turb = 1.10F; rise = 0.60F; streaks = 0.50F; dark = 0.00F; }
-                case BEAST -> { beam = 0.05F; ring = 0.40F; skyRing = 0.00F; implode = -0.50F; turb = 1.05F; rise = 0.35F; streaks = 0.30F; dark = 0.05F; }
-                case SOUL -> { beam = 0.30F; ring = 0.30F; skyRing = 1.00F; implode = 0.60F; turb = 0.50F; rise = 0.30F; streaks = 0.40F; dark = 0.70F; }
-                case SILENT -> { beam = 0.00F; ring = 0.10F; skyRing = 0.00F; implode = 0.00F; turb = 0.25F; rise = 0.00F; streaks = 0.05F; dark = 0.00F; }
-                default -> { beam = 0.00F; ring = 0.75F; skyRing = 0.00F; implode = -0.60F; turb = 1.00F; rise = 0.30F; streaks = 0.35F; dark = 0.00F; }
-            }
-            // The palette is the motif's own: the first layer's colour is the hot core, the last is the
-            // cool edge, and the middle is halfway between them.
-            int a = specs.isEmpty() ? 0xFFFFCC66 : specs.get(0).argb();
-            int c = specs.isEmpty() ? 0xFF552200 : specs.get(specs.size() - 1).argb();
-            int b = mix(a, c, 0.5F);
-            // Warheads that end in a bigger bang burn brighter; the ones that are not bombs stay dim.
-            float glow = 0.35F + finaleScale * 0.55F;
-            // How fast this motif's layers turn, folded into one number the shader uses to shear the
-            // field. Two warheads in the same theme still move differently because of it.
-            double spin = 0.0D;
-            for (Spec spec : specs) {
-                spin += Math.abs(spec.spin());
-            }
-            float swirl = (float) Math.min(2.0D, spin / Math.max(1, specs.size()) * 22.0D);
-            // Where in the noise field this warhead starts. Two warheads of the same theme would otherwise
-            // be the same effect with a different palette; this puts their turbulence in different places,
-            // and because it comes from the warhead's own id it is also what makes all thirty-eight
-            // parameter sets provably distinct.
-            float seed = (warheadId == null ? 0 : warheadId.hashCode() & 0x7FFFFFFF)
-                    / (float) Integer.MAX_VALUE;
-            return new Volume(beam, ring, skyRing, implode, turb, rise, streaks, dark, glow, swirl, seed,
-                    a | 0xFF000000, b | 0xFF000000, c | 0xFF000000);
-        }
+            float glow;
+            /** Extra spin this warhead asks for on top of what its layers already supply. */
+            float swirl;
+            float hole;
+            float star;
+            float rift;
+            float waves;
+            float meteors;
+            float lightning;
+            float glyphs;
+            float portals;
+            float jet;
+            float coins;
+            float smoke;
+            float subCharges;
+            float flash;
+            float dome;
+            float embers;
 
-        /** One string per warhead, so the harness can prove no two warheads share a look. */
-        public String signature() {
-            return String.format(java.util.Locale.ROOT,
-                    "%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.8f/%08x/%08x/%08x",
-                    beam, ring, skyRing, implode, turb, rise, streaks, dark, glow, swirl, seed,
-                    colorA, colorB, colorC);
+            /** The theme's shape and brightness, before any warhead overrides it. */
+            static Shape baseline(Theme theme, float finaleScale) {
+                Shape s = new Shape();
+                switch (theme) {
+                    case INFERNO -> { s.beam = 0.05F; s.ring = 0.55F; s.implode = -0.50F; s.turb = 1.15F; s.rise = 0.85F; s.streaks = 0.40F; s.embers = 0.4F; }
+                    case NUCLEAR -> { s.beam = 0.20F; s.ring = 0.95F; s.implode = -0.40F; s.turb = 0.90F; s.rise = 1.00F; s.streaks = 0.30F; s.flash = 0.5F; s.waves = 0.4F; }
+                    case ARCANE -> { s.beam = 0.35F; s.ring = 0.35F; s.skyRing = 1.00F; s.implode = 0.30F; s.turb = 0.45F; s.rise = 0.10F; s.streaks = 0.25F; s.dark = 0.15F; s.glyphs = 0.6F; }
+                    case STELLAR -> { s.beam = 1.00F; s.ring = 0.40F; s.skyRing = 0.55F; s.implode = -0.30F; s.turb = 0.70F; s.rise = 0.25F; s.streaks = 0.85F; s.star = 0.6F; s.jet = 0.3F; }
+                    case CATACLYSM -> { s.beam = 0.45F; s.ring = 1.00F; s.skyRing = 0.70F; s.implode = -0.80F; s.turb = 1.35F; s.rise = 0.45F; s.streaks = 0.75F; s.dark = 0.10F; s.waves = 0.55F; }
+                    case VOID -> { s.beam = 0.25F; s.ring = 0.20F; s.skyRing = 0.30F; s.implode = 1.00F; s.turb = 0.55F; s.rise = -0.30F; s.streaks = 0.60F; s.dark = 1.00F; s.hole = 0.55F; }
+                    case PLAGUE -> { s.turb = 1.25F; s.rise = 0.70F; s.streaks = 0.20F; s.dark = 0.30F; s.ring = 0.45F; s.skyRing = 0.15F; s.implode = -0.20F; s.smoke = 0.6F; }
+                    case CRYO -> { s.beam = 0.10F; s.ring = 0.60F; s.skyRing = 0.20F; s.implode = -0.10F; s.turb = 0.85F; s.rise = 0.15F; s.streaks = 0.55F; s.dark = 0.10F; }
+                    case MACHINE -> { s.beam = 0.15F; s.ring = 0.70F; s.skyRing = 0.10F; s.implode = -0.20F; s.turb = 0.35F; s.rise = 0.05F; s.streaks = 0.30F; s.dark = 0.05F; s.waves = 0.4F; }
+                    case COIN -> { s.beam = 0.10F; s.ring = 0.50F; s.skyRing = 0.10F; s.implode = -0.30F; s.turb = 0.60F; s.rise = 0.55F; s.streaks = 0.45F; s.coins = 0.4F; }
+                    case BARRIER -> { s.beam = 0.05F; s.ring = 0.30F; s.skyRing = 0.05F; s.implode = 0.20F; s.turb = 0.20F; s.streaks = 0.10F; s.dome = 0.7F; }
+                    case LOGISTICS -> { s.beam = 0.30F; s.ring = 0.25F; s.skyRing = 0.05F; s.implode = 0.10F; s.turb = 0.30F; s.rise = 0.20F; s.streaks = 0.15F; }
+                    case SWARM -> { s.ring = 0.35F; s.implode = -0.40F; s.turb = 1.10F; s.rise = 0.60F; s.streaks = 0.50F; s.subCharges = 0.5F; }
+                    case BEAST -> { s.beam = 0.05F; s.ring = 0.40F; s.implode = -0.50F; s.turb = 1.05F; s.rise = 0.35F; s.streaks = 0.30F; s.dark = 0.05F; }
+                    case SOUL -> { s.beam = 0.30F; s.ring = 0.30F; s.skyRing = 1.00F; s.implode = 0.60F; s.turb = 0.50F; s.rise = 0.30F; s.streaks = 0.40F; s.dark = 0.70F; s.lightning = 0.5F; }
+                    case SILENT -> { s.ring = 0.10F; s.turb = 0.25F; s.streaks = 0.05F; s.smoke = 0.6F; }
+                    default -> { s.ring = 0.75F; s.implode = -0.60F; s.turb = 1.00F; s.rise = 0.30F; s.streaks = 0.35F; s.flash = 0.3F; }
+                }
+                // Warheads that end in a bigger bang burn brighter; the ones that are not bombs stay dim.
+                s.glow = 0.35F + finaleScale * 0.55F;
+                return s;
+            }
+
+            Shape beam(float v) { beam = v; return this; }
+            Shape ring(float v) { ring = v; return this; }
+            Shape skyRing(float v) { skyRing = v; return this; }
+            Shape implode(float v) { implode = v; return this; }
+            Shape turb(float v) { turb = v; return this; }
+            Shape rise(float v) { rise = v; return this; }
+            Shape streaks(float v) { streaks = v; return this; }
+            Shape dark(float v) { dark = v; return this; }
+            Shape glow(float v) { glow = v; return this; }
+            Shape swirlUp(float v) { swirl = v; return this; }
+            Shape hole(float v) { hole = v; return this; }
+            Shape star(float v) { star = v; return this; }
+            Shape rift(float v) { rift = v; return this; }
+            Shape waves(float v) { waves = v; return this; }
+            Shape meteors(float v) { meteors = v; return this; }
+            Shape lightning(float v) { lightning = v; return this; }
+            Shape glyphs(float v) { glyphs = v; return this; }
+            Shape portals(float v) { portals = v; return this; }
+            Shape jet(float v) { jet = v; return this; }
+            Shape coins(float v) { coins = v; return this; }
+            Shape smoke(float v) { smoke = v; return this; }
+            Shape subCharges(float v) { subCharges = v; return this; }
+            Shape flash(float v) { flash = v; return this; }
+            Shape dome(float v) { dome = v; return this; }
+            Shape embers(float v) { embers = v; return this; }
         }
 
         private static int mix(int argb0, int argb1, float t) {

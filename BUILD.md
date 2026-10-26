@@ -700,3 +700,35 @@ Full write-up in `docs/WARHEADS.md` §Round 46. Short version:
 - Verified: CI build against NeoForge 21.1.264, the sweeps (including two new ones: the core-shader joins
   and the charge wiring) and the logic harness at 4011 assertions. Not verified: a single frame of it
   inside a running client.
+
+### Round 48 — thirty-eight distinct effects, and an EMP that empties the grid
+
+Full write-up in `docs/WARHEADS.md` §Round 48. Short version:
+
+- Round 46 drew one fireball per theme, so the 38 warheads differed mainly by palette. `world_blast_volume.fsh`
+  now composes **fifteen structural primitives** — hole, star, rift, shockwave shells, meteors, lightning,
+  ground glyphs, sky rings, portals, jet, coins, smoke, sub-charges, flash, dome, embers — each weighted 0..1
+  and summed. 243 lines became 431.
+- `BlastMotif.Volume.author` is a switch with **one explicit case per warhead**, written against the javadoc
+  on its `WarheadType` constant. The theme supplies a baseline; the case says what that warhead actually is.
+  Nothing is derived any more.
+- The proxy cube grew from 3.0 to 3.4 radii so meteors and jets are not clipped, and the authored apex glows
+  are 1.5–1.95 against a derived 0.90–1.06.
+- Five new machine checks, **each injected with its own failure and confirmed to catch it**:
+  - `warheadFeatureTests()` — a floor per warhead for its documented signature feature, plus an L1 ≥ 0.35
+    distance between every same-theme pair (closest now: 0.50).
+  - `check_emp_drain()` — the EMP drains our two receive-only machines by type *and* everything else through
+    the capability, and the pad's `EnergyStorage` is not built with `maxExtract` 0.
+  - `check_glsl_defined()` — `smoothstep` is undefined when `edge0 > edge1`, and the Reality Breaker's tear
+    had exactly that. All 46 calls scanned.
+  - `check_proxy_box()` — the shader and `VolumetricFx` each define the proxy half-extent and nothing
+    connected them.
+  - the core-shader join now runs in **both** directions: a uniform nobody sets keeps its JSON default of 0,
+    silently, so a forgotten feature weight costs that warhead the one thing its description asked for.
+- `WarheadType.empPulse` drains all FE from every machine in its 14-block radius — ours via `empDrain()`,
+  everyone else's via `Capabilities.EnergyStorage.BLOCK` — and reports the total.
+- **Bug fixed while verifying that**: `LaunchPadBlockEntity` built its buffer with `maxExtract` 0, so
+  `fundFromEnergy()` granted missile funding for FE it never consumed — free money on every launch, since the
+  round that added it.
+- Verified: CI build against NeoForge 21.1.264, all sweeps, all three harnesses. Not verified: a single frame
+  of the fifteen new primitives inside a running client, or how any of them reads to the eye.

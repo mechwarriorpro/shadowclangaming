@@ -204,3 +204,40 @@ application) and, above 64 blocks, `StrategicBlasts` (persistent scars, scrubbed
 - Every derived budget (meteors, tendrils, portals, rune strokes, lance length/width, soul value) scales
   with radius **and** is capped.
 - Power and radius agree on the mod's own curve (`radius × 0.8`).
+
+## Round 48 — the seventeen endgame weapons each get their own effect
+
+Round 46's volumetric shader drew one fireball and recoloured it per theme, so the seventeen apex
+weapons were distinguishable mainly by palette. Round 48 replaces the presets with a composition: the
+fragment shader has fifteen structural primitives and each warhead authors its own weights against the
+javadoc on its `WarheadType` constant.
+
+| warhead | what it now draws |
+| --- | --- |
+| World Eater | a hole that removes density, accretion disc, everything falling inward |
+| Stellar Requiem | a blinding core with a spiky corona and a white kick |
+| Reality Breaker | a jagged vertical tear, bright at the edges |
+| Spacetime Hammer | three shockwave shells on staggered clocks |
+| Universal Imploder | collapse to a hole, then one pulse out |
+| Ragnarok | meteors falling in, lightning, rings overhead, a burning column |
+| World Rune | spokes and bands cut into the ground, plus a shockwave |
+| Abyssal Covenant | six scattered portals with bright rims, and a tear behind them |
+| Soul Furnace | black-violet lightning, red sky circles, a hungry dark core |
+| Arcane Singularity | ground glyphs and sky rings around a hole, turning fast |
+| Quasar Lance | a narrow pillar 2.7 radii tall with a bow shock |
+| Starforge | a corona over a rising fire column that reaches the ground |
+| Big Bang Seed | a point of light that becomes a star, then a flash and a shell |
+| Reality Corruptor | a tear plus a hole and high turbulence |
+| Absolute Zero | a cold hole that absorbs, minimal motion, then release |
+| Omega | a full shockwave set, a hole, and a hard flash |
+| Absolute Annihilation | hole and star and flash and shells and a tear, at once |
+
+The full table including the twenty-one conventional and utility warheads is in
+[WARHEADS.md](WARHEADS.md#round-48--thirty-eight-different-weapons-and-an-emp-that-empties-the-grid).
+
+Every warhead's documented unique effect being present is now machine enforced, rather than a claim:
+`warheadFeatureTests()` in the logic harness holds a floor per warhead for its signature feature
+(`ragnarok → meteors ≥ 0.9, lightning ≥ 0.8, skyRing ≥ 0.8`), compares every same-theme pair's feature
+vector and fails below an L1 distance of 0.35, and `sweep.py` fails if any warhead has no row in
+`Volume.author` — a warhead that silently falls through to the theme default is how thirty-eight weapons
+end up looking like one another.

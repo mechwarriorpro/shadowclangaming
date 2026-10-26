@@ -26,8 +26,11 @@ import java.util.List;
  *
  * <p>WHAT IT IS. For every live effect this draws one cube the size of the blast around the detonation
  * point and hands the frame to {@code world_blast_volume.fsh}, which marches a domain-warped value-noise
- * field through that cube: fireball, shockwave ring, pillar of light, overhead circle, radial streaks,
- * all of it computed per pixel from the warhead's own parameters. There are no textures, no sprites and
+ * field through that cube and composes fifteen structural features - fireball, shockwave shells, black
+ * hole, stellar corona, spacetime tear, meteors, lightning, ground runes, sky circles, portals, jet,
+ * coins, smoke, sub-charges, flash, dome, embers - all computed per pixel from the warhead's own
+ * authored parameters, so a World Eater is a hole with an accretion disc and a Numismatic blast is made
+ * of tumbling gold. There are no textures, no sprites and
  * no billboards in this path - the shape is a function, evaluated on the GPU, so it holds up from any
  * angle, at any distance, and at any size.
  *
@@ -52,7 +55,7 @@ public final class VolumetricFx {
             ResourceLocation.fromNamespaceAndPath(ShadowClanGaming.MOD_ID, "world_blast_volume");
 
     /** Half-extent of the proxy cube in blast radii. Must match PROXY_BOX in the fragment shader. */
-    public static final double PROXY_BOX = 3.0D;
+    public static final double PROXY_BOX = 3.4D;
 
     /** How many volumes may be marched in one frame. Each is a full-screen-ish raymarch; this is the cap. */
     public static final int MAX_VOLUMES = 4;
@@ -196,6 +199,24 @@ public final class VolumetricFx {
         set(program, "Glow", v.glow() * effect.strength());
         set(program, "Swirl", v.swirl());
         set(program, "Seed", v.seed());
+        // The fifteen structural features. Every one is authored per warhead in BlastMotif.Volume.author;
+        // the shader sums whatever is non-zero, so this list is what turns one fireball into thirty-eight
+        // different weapons.
+        set(program, "Hole", v.hole());
+        set(program, "Star", v.star());
+        set(program, "Rift", v.rift());
+        set(program, "Waves", v.waves());
+        set(program, "Meteors", v.meteors());
+        set(program, "Lightning", v.lightning());
+        set(program, "Glyphs", v.glyphs());
+        set(program, "Portals", v.portals());
+        set(program, "Jet", v.jet());
+        set(program, "Coins", v.coins());
+        set(program, "Smoke", v.smoke());
+        set(program, "SubCharges", v.subCharges());
+        set(program, "Flash", v.flash());
+        set(program, "Dome", v.dome());
+        set(program, "Embers", v.embers());
     }
 
     /** The proxy cube: six faces, two triangles each, in world coordinates. */

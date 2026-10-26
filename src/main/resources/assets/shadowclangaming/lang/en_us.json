@@ -901,5 +901,6 @@
   "message.shadowclangaming.vest_loaded": "Vest loaded with %s",
   "message.shadowclangaming.vest_cleared": "Vest payload removed",
   "message.shadowclangaming.designator_tuned_pad": "Channel %s written to this silo - designator paired",
-  "tooltip.shadowclangaming.charge": "Charging - the blast lands when the effect ends"
+  "tooltip.shadowclangaming.charge": "Charging - the blast lands when the effect ends",
+  "message.shadowclangaming.emp_drained": "EMP drained %s FE from %s machine(s)"
 }

@@ -267,7 +267,15 @@ public class LaunchPadBlockEntity extends BlockEntity implements com.shadowclang
         }
     }
 
-    private final EnergyStorage energy = new EnergyStorage(ENERGY_CAPACITY, ENERGY_RECEIVE, 0);
+    /**
+     * The buffer. maxExtract is the full capacity, not zero, and that matters twice over:
+     * {@link #fundFromEnergy} spends it by calling extractEnergy - with maxExtract 0 NeoForge returns 0
+     * and the FE is never consumed, so every launch paid out funding for energy it kept, which is free
+     * money on repeat - and an EMP empties it. Nothing outside this class can pull from it anyway: the
+     * capability this block advertises is {@link #energyView}, which is receive-only by design.
+     */
+    private final EnergyStorage energy =
+            new EnergyStorage(ENERGY_CAPACITY, ENERGY_RECEIVE, ENERGY_CAPACITY);
     private final IEnergyStorage energyView = new IEnergyStorage() {
         @Override
         public int receiveEnergy(int toReceive, boolean simulate) {
@@ -302,6 +310,22 @@ public class LaunchPadBlockEntity extends BlockEntity implements com.shadowclang
 
     public IEnergyStorage energy() {
         return energyView;
+    }
+
+    /**
+     * EMP: empty the buffer outright.
+     *
+     * <p>The capability this machine advertises returns 0 from {@code extractEnergy}, so an EMP cannot
+     * drain it the way it drains another mod's machine - it has to come in this way instead.
+     *
+     * @return the FE that was in the buffer
+     */
+    public int empDrain() {
+        int drained = energy.extractEnergy(Integer.MAX_VALUE, false);
+        if (drained > 0) {
+            setChanged();
+        }
+        return drained;
     }
 
     public LaunchPadBlockEntity(BlockPos pos, BlockState state) {
