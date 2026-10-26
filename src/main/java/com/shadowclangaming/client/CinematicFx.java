@@ -1,7 +1,6 @@
 package com.shadowclangaming.client;
 
 import com.mojang.blaze3d.platform.GlStateManager;
-import com.mojang.blaze3d.shader.Uniform;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
@@ -128,14 +127,8 @@ public final class CinematicFx {
         // the pose stack (see WorldMatrices). One translation, applied once.
         Matrix4f view = WorldMatrices.view(event.getCamera());
         Matrix4f projection = WorldMatrices.projection();
-        Uniform viewUniform = active.getUniform("ScgView");
-        Uniform projUniform = active.getUniform("ScgProj");
-        if (viewUniform != null) {
-            viewUniform.set(view);
-        }
-        if (projUniform != null) {
-            projUniform.set(projection);
-        }
+        active.safeGetUniform("ScgView").set(view);
+        active.safeGetUniform("ScgProj").set(projection);
 
         RenderSystem.enableDepthTest();
         RenderSystem.depthMask(false);

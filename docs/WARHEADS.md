@@ -1339,3 +1339,118 @@ against NeoForge 21.1.264 in CI.
 **Not** verified: any of it inside a running 1.21.1 client. The geometry is depth-tested world triangles and
 the shader is two lines, which is as close to certain as this gets without a game, but the honest statement
 is that the jar compiles, packages and passes its own suites, and has not been seen in a world.
+
+## Round 46 — the effects are raymarched on the GPU now, and the blast lands when the effect ends
+
+Two corrections, both structural. "I'm looking for custom GPU shader effects and procedural
+volumetric-style rendering with huge effects and stunning visuals" — round 45 drew real triangles, but
+triangles with a flat colour per vertex are not a volumetric fireball. And the fuse model was backwards:
+a charge burned silently for its whole fuse and then produced the blast *and* the effect together, so the
+long fuse was a wait with nothing in it.
+
+### 1. A real volumetric effect
+
+`shaders/core/world_blast_volume` is a GPU program in three files. `client/VolumetricFx` draws a cube the
+size of the blast around the detonation point and hands the frame to the fragment shader, which marches a
+procedural density field through that cube:
+
+```
+for each step along the ray:
+    warp the sample point by two cheap fbm fields
+    n     = fbm(warped)                       the turbulence
+    body  = a turbulent ball that hollows out as it ages
+          | a pillar of light, for the warheads that end in one
+          | a shockwave ring racing out along the ground
+          | the giant circle overhead, banded and turning
+          | radial streaks thrown out along the blast's own spokes
+    emit  = palette(hot core -> mid -> cool edge), darkened for the void and soul themes
+    accumulate emission, attenuate transmittance, stop when it goes opaque
+```
+
+There is not a texture in it. No sampler, no sprite, no billboard, no noise map: the fireball is a
+function evaluated per pixel, which is why it holds up from any angle, at any distance, and at any size —
+a grenade and a two-kilometre cataclysm are the same maths with different numbers.
+
+It is drawn at `AFTER_PARTICLES`, **depth-tested against the terrain** with no depth write, so a hill
+occludes it, a doorway frames it, and standing inside one puts you inside the fireball rather than
+clipping it away. The shader works out for itself whether the camera is outside the proxy cube or inside
+it (`gl_FrontFacing` plus a containment test) and shades each pixel exactly once either way.
+
+**One code path serves all thirty-eight warheads.** Nothing in the GLSL branches per warhead, so there is
+nothing to fall out of sync. What differs arrives as uniforms, and they are derived, not authored:
+`warhead/BlastMotif.Volume` takes the shape numbers from the warhead's theme, the palette from the
+motif's own layer colours, the motion from how fast its layers turn, and a per-warhead offset into the
+noise field from its id — so two weapons of the same theme do not produce the same fireball in a
+different colour.
+
+| theme | pillar | ring | sky circle | turbulence | rise | dark core |
+|---|---|---|---|---|---|---|
+| ordnance | – | 0.75 | – | 1.00 | 0.30 | – |
+| inferno | 0.05 | 0.55 | – | 1.15 | 0.85 | – |
+| nuclear | 0.20 | 0.95 | – | 0.90 | 1.00 | – |
+| arcane | 0.35 | 0.35 | 1.00 | 0.45 | 0.10 | 0.15 |
+| stellar | 1.00 | 0.40 | 0.55 | 0.70 | 0.25 | – |
+| cataclysm | 0.45 | 1.00 | 0.70 | 1.35 | 0.45 | 0.10 |
+| void | 0.25 | 0.20 | 0.30 | 0.55 | −0.30 | 1.00 |
+| soul | 0.30 | 0.30 | 1.00 | 0.50 | 0.30 | 0.70 |
+
+Brightness follows the warhead too: `glow = 0.35 + finaleScale × 0.55`, so the eleven warheads that are
+not bombs sit at the base value and a Ragnarok is nearly twice as bright as an HE charge. The logic
+harness asserts that all thirty-eight parameter sets are distinct — if two warheads ever shared one, they
+would be literally the same effect, and the build fails.
+
+Three levels of redundancy, because a visual that fails silently is how this got rejected twice:
+
+1. the volumetric raymarcher;
+2. `client/CinematicFx` — the same motifs as CPU triangles, drawn if the program will not compile;
+3. `CinematicFx.tickParticles` — world particles from the same table, which need no shader at all.
+
+### 2. The effect is the fuse
+
+The order used to be: silent fuse → blast + effect together. It is now: **effect → blast**, on one clock.
+
+| form | when the charge effect starts | how long it plays | what happens at the end |
+|---|---|---|---|
+| placed block | the tick it is primed | its fuse | the warhead detonates |
+| grenade | the tick it lands and sticks | its fuse | the warhead detonates |
+| minecart | the tick it is lit | its fuse | the warhead detonates |
+| missile impact | the tick it lands | the same warhead's block-form fuse | the warhead detonates |
+
+The anticipation is not a new number. It is `ExplosivePackaging.fuseTicks` — the same per-warhead table
+the fuses already read — so a Big Bang Seed that lands from orbit cooks for exactly as long as a Big Bang
+Seed you put on the ground yourself, and a dud is over in 2.8 seconds because there is nothing to charge.
+`warhead/ChargeSequence` holds the armed-but-not-yet-detonated warheads for the forms that arrive armed,
+ticking them on the server next to the other staged weapons and discarding them on shutdown.
+
+The two halves look different, because they are different things. A **charge** converges: the sphere
+swells towards full size, the turbulence pulls inward, the palette pulses, and the particles fall in from
+the blast radius towards the point where the warhead is going to go off, harder as the fuse runs down. An
+**impact** does the reverse and throws everything outward with an upward plume. On the client this is one
+packet field (`phase`), one motif with two layer sets (`chargeSpecs()` is the impact's own layers
+re-staged: same shapes, same colours, staggered in, 55 % of the size, spinning the other way), and one
+renderer.
+
+Warheads that were never going to explode — the eleven with `finaleScale == 0` — play their effect and
+then simply stop. A Cargo round lands, plays out, and delivers.
+
+### 3. What was verified, and what was not
+
+Machine-checked: `tools/sweep.py` (assets, lang, recipes, shader chains, motif roster, fuse derivation,
+**the new core-shader joins**, **the new charge wiring**), `tools/check_names.py`, the logic harness (six
+new suites across the last two rounds: motifs, fuses, the furnace schedule, the geometry, the volumetric
+parameters, the charge phase), the API and Lua harnesses, and a full `gradlew build` against
+NeoForge 21.1.264 in CI.
+
+The core-shader check is worth a line of its own. It joins the program JSON to the GLSL to the Java that
+drives it: every attribute the JSON declares must exist in the vertex shader, every varying must be read
+by the fragment shader, and **every uniform name the Java looks up must exist in the program**. It caught
+`ColorModulator` missing from the volumetric JSON on its first run — a uniform that is not declared is a
+uniform that stays at zero, and every pixel would have been multiplied by zero. Invisible effects, no
+error, no log line.
+
+**Not** verified: any of it inside a running 1.21.1 client. The shader is 243 lines of GLSL that has
+never been compiled by a driver here, the matrices are built from first principles rather than borrowed
+from the pose stack, and the volumetric cost on a real GPU is unmeasured — `Steps` is lowered for distant
+blasts and at most four volumes are marched in a frame, but that is arithmetic, not a frame time. What can
+be said honestly is that it compiles, the joins are checked, and the fallbacks mean a machine that cannot
+run the raymarcher still gets the warhead.

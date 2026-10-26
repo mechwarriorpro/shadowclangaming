@@ -295,14 +295,14 @@ public final class BlastMotif {
 
         /** Every field clamped, so a bad row cannot make the shader divide by zero or march backwards. */
         public Volume {
-            beam = clamp01(beam);
-            ring = clamp01(ring);
-            skyRing = clamp01(skyRing);
+            beam = (float) clamp01(beam);
+            ring = (float) clamp01(ring);
+            skyRing = (float) clamp01(skyRing);
             implode = Math.max(-1.0F, Math.min(1.0F, implode));
             turb = Math.max(0.05F, Math.min(2.0F, turb));
             rise = Math.max(-1.0F, Math.min(1.0F, rise));
-            streaks = clamp01(streaks);
-            dark = clamp01(dark);
+            streaks = (float) clamp01(streaks);
+            dark = (float) clamp01(dark);
             glow = Math.max(0.05F, Math.min(2.0F, glow));
             swirl = Math.max(0.0F, Math.min(2.0F, swirl));
             seed = Math.max(0.0F, Math.min(0.999F, seed));

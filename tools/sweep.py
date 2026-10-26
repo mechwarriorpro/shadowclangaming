@@ -546,7 +546,7 @@ def check_world_shaders():
             fail("core shader %s: fragment shader has no fragColor output" % name)
 
         driver = read(os.path.join(JAVA, drivers[name]))
-        for uniform in set(re.findall(r'getUniform\("([^"]+)"\)', driver)):
+        for uniform in set(re.findall(r'safe?[gG]etUniform\("([^"]+)"\)', driver)):
             if uniform not in declared_uniforms:
                 fail("core shader %s: %s looks up uniform %s that the program does not declare"
                      % (name, drivers[name], uniform))

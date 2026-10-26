@@ -1,7 +1,6 @@
 package com.shadowclangaming.client;
 
 import com.mojang.blaze3d.platform.GlStateManager;
-import com.mojang.blaze3d.shader.Uniform;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
@@ -63,10 +62,6 @@ public final class VolumetricFx {
     private static boolean loadFailed;
     private static long frames;
 
-    /** Cached uniform handles, rebuilt whenever the program instance changes. */
-    private static Uniforms uniforms;
-    private static ShaderInstance uniformsFor;
-
     private VolumetricFx() {
     }
 
@@ -122,7 +117,6 @@ public final class VolumetricFx {
         RenderSystem.disableCull();
         int drawn = 0;
         try {
-            Uniforms u = uniforms(shader);
             Vec3 cam = event.getCamera().getPosition();
             Matrix4f view = WorldMatrices.view(event.getCamera());
             Matrix4f projection = WorldMatrices.projection();
@@ -140,7 +134,7 @@ public final class VolumetricFx {
                 double distance = Math.sqrt((effect.x - cam.x) * (effect.x - cam.x)
                         + (effect.y - cam.y) * (effect.y - cam.y)
                         + (effect.z - cam.z) * (effect.z - cam.z));
-                setUniforms(u, effect, cam, view, projection, time, distance);
+                setUniforms(shader, effect, cam, view, projection, time, distance);
                 drawProxy(effect.x, effect.y, effect.z, effect.radius * PROXY_BOX);
                 drawn++;
             }
@@ -165,33 +159,41 @@ public final class VolumetricFx {
 
     // ------------------------------------------------------------------ one volume
 
-    private static void setUniforms(Uniforms u, CinematicFx.Effect effect, Vec3 cam, Matrix4f view,
-                                    Matrix4f projection, float time, double distance) {
+    /**
+     * Push one effect's parameters into the program.
+     *
+     * Looked up by name on every draw rather than cached, because the uniform type is not something this
+     * mod can import portably across shader renames - {@code ShaderInstance#safeGetUniform} is the API the
+     * rest of this package already uses, it never returns null, and a couple of dozen map lookups a frame
+     * is nothing next to a raymarch.
+     */
+    private static void setUniforms(ShaderInstance program, CinematicFx.Effect effect, Vec3 cam,
+                                    Matrix4f view, Matrix4f projection, float time, double distance) {
         BlastMotif.Volume v = effect.motif.volume();
-        set(u.scgView, view);
-        set(u.scgProj, projection);
-        set(u.center, (float) effect.x, (float) effect.y, (float) effect.z);
-        set(u.camPos, (float) cam.x, (float) cam.y, (float) cam.z);
-        set(u.colorA, v.colorA(), effect.strength);
-        set(u.colorB, v.colorB(), effect.strength);
-        set(u.colorC, v.colorC(), effect.strength);
-        set(u.radius, (float) Math.max(1.0D, effect.radius));
-        set(u.progress, effect.progress);
-        set(u.phase, effect.charging() ? 0.0F : 1.0F);
-        set(u.time, time);
+        set(program, "ScgView", view);
+        set(program, "ScgProj", projection);
+        set(program, "Center", (float) effect.x, (float) effect.y, (float) effect.z);
+        set(program, "CamPos", (float) cam.x, (float) cam.y, (float) cam.z);
+        set(program, "ColorA", v.colorA(), effect.strength);
+        set(program, "ColorB", v.colorB(), effect.strength);
+        set(program, "ColorC", v.colorC(), effect.strength);
+        set(program, "Radius", (float) Math.max(1.0D, effect.radius));
+        set(program, "Progress", effect.progress);
+        set(program, "Phase", effect.charging() ? 0.0F : 1.0F);
+        set(program, "Time", time);
         // Fewer steps for distant volumes: the same march over a blast on the horizon is wasted work.
-        set(u.steps, (float) Math.max(MIN_STEPS, BASE_STEPS - (int) (distance / 48.0D)));
-        set(u.beam, v.beam());
-        set(u.ring, v.ring());
-        set(u.skyRing, v.skyRing());
-        set(u.implode, v.implode());
-        set(u.turb, v.turb());
-        set(u.rise, v.rise());
-        set(u.streaks, v.streaks());
-        set(u.dark, v.dark());
-        set(u.glow, v.glow() * effect.strength);
-        set(u.swirl, v.swirl());
-        set(u.seed, v.seed());
+        set(program, "Steps", (float) Math.max(MIN_STEPS, BASE_STEPS - (int) (distance / 48.0D)));
+        set(program, "Beam", v.beam());
+        set(program, "Ring", v.ring());
+        set(program, "SkyRing", v.skyRing());
+        set(program, "Implode", v.implode());
+        set(program, "Turb", v.turb());
+        set(program, "Rise", v.rise());
+        set(program, "Streaks", v.streaks());
+        set(program, "Dark", v.dark());
+        set(program, "Glow", v.glow() * effect.strength);
+        set(program, "Swirl", v.swirl());
+        set(program, "Seed", v.seed());
     }
 
     /** The proxy cube: six faces, two triangles each, in world coordinates. */
@@ -224,93 +226,26 @@ public final class VolumetricFx {
     }
 
     // ------------------------------------------------------------------ uniform plumbing
+    //
+    // By name, through safeGetUniform, so this file never has to name the uniform class: it has moved
+    // packages between Minecraft versions and a wrong import is a build failure rather than a warning.
 
-    /** Uniform handles are looked up once per program instance; a missing one is simply never set. */
-    private static Uniforms uniforms(ShaderInstance instance) {
-        if (uniforms == null || uniformsFor != instance) {
-            uniforms = new Uniforms(instance);
-            uniformsFor = instance;
-        }
-        return uniforms;
+    private static void set(ShaderInstance program, String name, float value) {
+        program.safeGetUniform(name).set(value);
     }
 
-    private static void set(Uniform uniform, float value) {
-        if (uniform != null) {
-            uniform.set(value);
-        }
+    private static void set(ShaderInstance program, String name, float x, float y, float z) {
+        program.safeGetUniform(name).set(x, y, z);
     }
 
-    private static void set(Uniform uniform, float x, float y, float z) {
-        if (uniform != null) {
-            uniform.set(x, y, z);
-        }
-    }
-
-    private static void set(Uniform uniform, Matrix4f matrix) {
-        if (uniform != null) {
-            uniform.set(matrix);
-        }
+    private static void set(ShaderInstance program, String name, Matrix4f matrix) {
+        program.safeGetUniform(name).set(matrix);
     }
 
     /** Palette entry as a vec4, with the effect's own strength folded into the alpha. */
-    private static void set(Uniform uniform, int argb, float strength) {
-        if (uniform == null) {
-            return;
-        }
+    private static void set(ShaderInstance program, String name, int argb, float strength) {
         float scale = 1.0F / 255.0F;
-        uniform.set(((argb >>> 16) & 0xFF) * scale, ((argb >>> 8) & 0xFF) * scale,
+        program.safeGetUniform(name).set(((argb >>> 16) & 0xFF) * scale, ((argb >>> 8) & 0xFF) * scale,
                 (argb & 0xFF) * scale, Math.max(0.0F, Math.min(1.0F, strength)));
-    }
-
-    private static final class Uniforms {
-        private final Uniform scgView;
-        private final Uniform scgProj;
-        private final Uniform center;
-        private final Uniform camPos;
-        private final Uniform colorA;
-        private final Uniform colorB;
-        private final Uniform colorC;
-        private final Uniform radius;
-        private final Uniform progress;
-        private final Uniform phase;
-        private final Uniform time;
-        private final Uniform steps;
-        private final Uniform beam;
-        private final Uniform ring;
-        private final Uniform skyRing;
-        private final Uniform implode;
-        private final Uniform turb;
-        private final Uniform rise;
-        private final Uniform streaks;
-        private final Uniform dark;
-        private final Uniform glow;
-        private final Uniform swirl;
-        private final Uniform seed;
-
-        Uniforms(ShaderInstance instance) {
-            scgView = instance.getUniform("ScgView");
-            scgProj = instance.getUniform("ScgProj");
-            center = instance.getUniform("Center");
-            camPos = instance.getUniform("CamPos");
-            colorA = instance.getUniform("ColorA");
-            colorB = instance.getUniform("ColorB");
-            colorC = instance.getUniform("ColorC");
-            radius = instance.getUniform("Radius");
-            progress = instance.getUniform("Progress");
-            phase = instance.getUniform("Phase");
-            time = instance.getUniform("Time");
-            steps = instance.getUniform("Steps");
-            beam = instance.getUniform("Beam");
-            ring = instance.getUniform("Ring");
-            skyRing = instance.getUniform("SkyRing");
-            implode = instance.getUniform("Implode");
-            turb = instance.getUniform("Turb");
-            rise = instance.getUniform("Rise");
-            streaks = instance.getUniform("Streaks");
-            dark = instance.getUniform("Dark");
-            glow = instance.getUniform("Glow");
-            swirl = instance.getUniform("Swirl");
-            seed = instance.getUniform("Seed");
-        }
     }
 }
