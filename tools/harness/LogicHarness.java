@@ -141,6 +141,21 @@ public final class LogicHarness {
 
     private static int checks;
     private static int failures;
+    /**
+     * Every failed label, kept so they can be printed again at the very end.
+     *
+     * <p>The CI job posts the last 170 lines of this log back onto the commit, because the runner's own
+     * log sits on blob storage a sandbox cannot fetch. Inline "FAIL" lines from an early suite therefore
+     * fall off the front and the comment says only "1 FAILURE(S) of 5648 assertions" with no idea which -
+     * which is how a float widened to double once cost a round to find.
+     */
+    private static final java.util.List<String> failedLabels = new java.util.ArrayList<>();
+
+    private static void record(String detail) {
+        if (failedLabels.size() < 40) {
+            failedLabels.add(detail);
+        }
+    }
 
     public static void main(String[] args) {
         budgetTests();
@@ -175,6 +190,13 @@ public final class LogicHarness {
         chargePhaseTests();
         rifleTests();
         emitterClusterTests();
+        if (!failedLabels.isEmpty()) {
+            System.out.println();
+            System.out.println("--- " + failedLabels.size() + " FAILED ASSERTION(S) ---");
+            for (String label : failedLabels) {
+                System.out.println("FAIL " + label);
+            }
+        }
         System.out.println();
         System.out.println(failures == 0
                 ? "ALL TESTS PASS (" + checks + " assertions)"
@@ -2197,6 +2219,7 @@ public final class LogicHarness {
         if (!ok) {
             failures++;
             System.out.println("FAIL " + label + ": expected " + expected + " but was " + actual);
+            record(label + ": expected " + expected + " but was " + actual);
         } else {
             System.out.println("ok   " + label);
         }
@@ -2595,6 +2618,7 @@ public final class LogicHarness {
         if (!condition) {
             failures++;
             System.out.println("FAIL " + label);
+            record(label);
         } else {
             System.out.println("ok   " + label);
         }
@@ -2605,6 +2629,7 @@ public final class LogicHarness {
         if (Math.abs(expected - actual) > 0.01D) {
             failures++;
             System.out.println("FAIL " + label + ": expected " + expected + " but was " + actual);
+            record(label + ": expected " + expected + " but was " + actual);
         } else {
             System.out.println("ok   " + label);
         }

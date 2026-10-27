@@ -60,7 +60,10 @@ public final class SoulFurnacePlan {
      * that boundary is consumed on the next check anyway; the extra ring is the one that matters, since
      * it is where a spawn would land and then walk in.
      */
-    public static final float SUPPRESS_MULTIPLIER = 1.2F;
+    // A double, not a float: it is compared against squared block distances, and 1.2F widened to double
+    // is 1.2000000476837158 - so a furnace of radius 80 would suppress out to 96.00000381469727 blocks
+    // rather than 96. Harmless in world, but it makes the number impossible to assert on exactly.
+    public static final double SUPPRESS_MULTIPLIER = 1.2D;
 
     /** Effect lifetime before any souls are counted. */
     public static final int BASE_EFFECT_TICKS = 240;
@@ -129,7 +132,7 @@ public final class SoulFurnacePlan {
      * the area - which is the point, since that is also three times the area something could walk in from.
      */
     public static double suppressionRadius(int baseRadius, int checks) {
-        return radius(baseRadius, checks) * (double) SUPPRESS_MULTIPLIER;
+        return radius(baseRadius, checks) * SUPPRESS_MULTIPLIER;
     }
 
     /** Effect lifetime in ticks for a furnace that has eaten {@code souls}. */
