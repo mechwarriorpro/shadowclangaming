@@ -93,6 +93,15 @@ uniform float Sky;
 uniform float SkyBox;
 uniform float SkyPass;
 
+// --- the orbital strike shaft. 1.0 while the shaft volume is being drawn. Distinct from Beam above,
+// which is the narrow jet column rising out of the blast itself; this is the shaft arriving from orbit.
+// ShaftHalf is the half-height of the cube client/VolumetricFx actually drew, in blocks, and the shaft
+// runs from Center.y - ShaftHalf (the impact) to Center.y + ShaftHalf. ShaftWidth is its radius in blocks.
+uniform float ShaftPass;
+uniform float ShaftHalf;
+uniform float ShaftWidth;
+uniform float Shaft;
+
 out vec4 fragColor;
 
 // Half-extent of the proxy cube, in blast radii. client/VolumetricFx draws a cube this size, so the two
@@ -181,6 +190,32 @@ float sampleField(vec3 wp, out vec3 emission) {
     // It is evaluated from DIRECTION ONLY. A skybox is a dome at infinity: sampling it by distance
     // would make the nebula drift as you walk, which is the tell of a fake one. Every sample along a
     // ray looks the same way, so the stars stay pinned to the sky exactly as real ones do.
+    // --- the shaft from orbit. Collimated: the same width the whole way down, because a beam that
+    // spreads is a cone and reads as an explosion rather than a weapon. Drawn as its own tall volume above
+    // the blast rather than as triangles, so it gets the same bloom halo and the same occlusion by terrain
+    // as everything else - a solid shaft you can stand behind and lose sight of.
+    if (ShaftPass > 0.5) {
+        float radial = length(wp.xz - Center.xz);
+        // Turbulence on the edge only. A mathematically straight cylinder reads as a texture pasted into
+        // the world; a boundary that boils reads as a discharge.
+        float wobble = fbm(vec3(wp.xz * 0.35, wp.y * 0.06 - Time * 2.2)
+                           + vec3(Seed * 53.0, Seed * 17.0, Seed * 71.0)) - 0.5;
+        float edge = max(ShaftWidth * (1.0 + wobble * 0.35), 0.05);
+        float wall = 1.0 - smoothstep(edge * 0.30, edge, radial);
+        float core = 1.0 - smoothstep(0.0, edge * 0.34, radial);
+        // Current running down the shaft, so it reads as a discharge and not a rod.
+        float bands = 0.70 + 0.30 * sin(wp.y * 0.45 + Time * 9.0);
+        // Pinch it at the impact and let the top dissolve: a shaft that stops dead in the air looks like a
+        // bug, and one that flares where it meets the crater looks like it is feeding the blast.
+        float along = clamp((wp.y - (Center.y - ShaftHalf)) / max(ShaftHalf * 2.0, 1.0), 0.0, 1.0);
+        float ends = smoothstep(0.0, 0.14, along) * (1.0 - smoothstep(0.70, 1.0, along));
+        float flare = 1.0 + 1.6 * (1.0 - smoothstep(0.0, 0.10, along));
+        float fade = charging ? mix(0.30, 1.0, t) : 1.0 - smoothstep(0.60, 1.0, t) * 0.9;
+        float body = Shaft * ends * bands * flare * (wall * 0.9 + core * 2.4);
+        emission = mix(ColorA.rgb, ColorC.rgb, core) * Glow * (1.0 + 2.4 * core) * Strength;
+        return clamp(body * fade, 0.0, 4.0);
+    }
+
     if (SkyPass > 0.5) {
         vec3 dir = normalize(wp - Center + vec3(0.0001));
         float cloudA = fbm(dir * 2.4 + vec3(Seed * 31.0, Seed * 7.0, Seed * 19.0));
@@ -684,7 +719,10 @@ void main() {
     float radius = max(Radius, 0.5);
     // SkyBox is derived from the cube client/VolumetricFx actually drew, so it is used as-is:
     // flooring it here would march a box the geometry does not cover.
-    float boxRadius = radius * (SkyPass > 0.5 ? SkyBox : PROXY_BOX);
+    // The shaft cube is stated in blocks, not as a multiple of the blast radius: a shaft from orbit is the
+    // same width whether the warhead it feeds is a grenade or a cataclysm.
+    float boxRadius = ShaftPass > 0.5 ? max(ShaftHalf, 1.0)
+                                      : radius * (SkyPass > 0.5 ? SkyBox : PROXY_BOX);
     bool inside = all(lessThan(abs(CamPos - Center), vec3(boxRadius)));
     bool shade = inside ? !gl_FrontFacing : gl_FrontFacing;
     if (!shade) {
@@ -710,7 +748,8 @@ void main() {
     }
 
     // The sky is smooth and its box is huge, so it needs a fraction of the steps the fireball does.
-    int steps = int(clamp(SkyPass > 0.5 ? Steps * 0.4 : Steps, 8.0, 128.0));
+    int steps = int(clamp(ShaftPass > 0.5 ? Steps * 1.6
+                          : (SkyPass > 0.5 ? Steps * 0.4 : Steps), 8.0, 160.0));
     float stepLen = (tExit - tEnter) / float(steps);
     vec3 pos = ro + rd * (tEnter + stepLen * 0.5);
 
@@ -724,7 +763,7 @@ void main() {
     vec3 peakPos = pos;
     // Optical depth in units of the blast radius, so a grenade and a kilometre-wide cataclysm are equally
     // solid instead of one being fog and the other a brick.
-    float densityScale = 2.2 / max(radius, 1.0);
+    float densityScale = ShaftPass > 0.5 ? 1.7 / max(ShaftWidth, 1.0) : 2.2 / max(radius, 1.0);
 
     for (int i = 0; i < steps; i++) {
         vec3 emission;
@@ -752,7 +791,7 @@ void main() {
     // "it is transparent" complaint: not the blend mode, but that nothing in the image says "surface".
     // Taking the gradient of the field at the thickest sample gives the volume a facing, which is what an
     // explosion needs to read as an object rather than a tint.
-    if (SkyPass < 0.5 && peak > 0.02 && opacity > 0.04) {
+    if (SkyPass < 0.5 && ShaftPass < 0.5 && peak > 0.02 && opacity > 0.04) {
         float eps = max(stepLen * 0.55, 0.02);
         vec3 throwaway;
         float gx = sampleField(peakPos + vec3(eps, 0.0, 0.0), throwaway)

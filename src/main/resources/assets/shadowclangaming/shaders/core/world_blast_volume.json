@@ -515,6 +515,34 @@
       "values": [
         0
       ]
+    },
+    {
+      "name": "ShaftPass",
+      "type": "float",
+      "values": [
+        0.0
+      ]
+    },
+    {
+      "name": "ShaftHalf",
+      "type": "float",
+      "values": [
+        170.0
+      ]
+    },
+    {
+      "name": "ShaftWidth",
+      "type": "float",
+      "values": [
+        7.0
+      ]
+    },
+    {
+      "name": "Shaft",
+      "type": "float",
+      "values": [
+        0.0
+      ]
     }
   ]
 }

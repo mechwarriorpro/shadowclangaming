@@ -65,6 +65,12 @@ public final class VolumetricFx {
      * across, which is past the render distance and past the point where float vertex positions are
      * still precise. Past the cap the sky is the same sky, so it is simply not drawn any bigger.
      */
+    /** Half-height of the orbital shaft's volume, in blocks. The shaft runs twice this, impact to sky. */
+    public static final double SHAFT_HALF = 170.0D;
+
+    /** Shaft radius in blocks. Not scaled by the blast - see the shader. */
+    public static final double SHAFT_WIDTH = 7.0D;
+
     public static final double SKY_BOX_RADII = 48.0D;
     // Was 3000, which quietly deleted the skybox from exactly the warheads that were supposed to have it.
     // skyBoxRadii() refuses to draw when the cap leaves the sky inside the blast's own cube, and that cube
@@ -166,6 +172,20 @@ public final class VolumetricFx {
                 // depth, so drawing in this order puts the fireball in front of the sky it is
                 // silhouetted against - the other way round the nebula would cover the explosion.
                 BlastMotif.Volume vol = effect.motif().volume();
+                // The shaft from orbit, first: it is the tallest thing drawn here and the blast sits at its
+                // foot, so painting it before the others puts the fireball in front of the shaft feeding it
+                // rather than the other way round. Center has to move up to the middle of the shaft's own
+                // cube and be put back afterwards - the sky and blast passes both want the impact point.
+                if (vol.shaft() > 0.01F) {
+                    set(shader, "ShaftPass", 1.0F);
+                    set(shader, "Shaft", vol.shaft());
+                    set(shader, "Center", (float) effect.x(), (float) (effect.y() + SHAFT_HALF),
+                            (float) effect.z());
+                    drawProxy(effect.x(), effect.y() + SHAFT_HALF, effect.z(), SHAFT_HALF);
+                    set(shader, "ShaftPass", 0.0F);
+                    set(shader, "Shaft", 0.0F);
+                    set(shader, "Center", (float) effect.x(), (float) effect.y(), (float) effect.z());
+                }
                 // The shader marches radius * SkyBox and the geometry covers skyHalf, so those two have
                 // to be the same number or the march samples space the cube does not cover. SkyBox is
                 // therefore derived from skyHalf and never floored or clamped afterwards - and if the
@@ -276,6 +296,10 @@ public final class VolumetricFx {
         set(program, "Circle", v.circle());
         set(program, "Sky", v.sky());
         // Set per draw by render(), not here: the same program draws the skybox and the blast.
+        set(program, "ShaftPass", 0.0F);
+        set(program, "Shaft", 0.0F);
+        set(program, "ShaftHalf", (float) SHAFT_HALF);
+        set(program, "ShaftWidth", (float) SHAFT_WIDTH);
         set(program, "SkyPass", 0.0F);
         set(program, "SkyBox", (float) SKY_BOX_RADII);
         // Scales density as well as glow, so the volume thins out as the effect ends instead of turning

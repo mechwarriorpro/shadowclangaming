@@ -2241,7 +2241,7 @@ public final class LogicHarness {
             "jet", "coins", "smoke", "subCharges", "flash", "dome", "embers",
             "cap", "debris", "dust", "vortex", "cracks", "sparks", "halo",
             "disc", "lens", "granule", "prominence", "shell", "nebula", "cone",
-            "circle", "sky",
+            "circle", "sky", "shaft",
     };
 
     /**
@@ -2328,6 +2328,7 @@ public final class LogicHarness {
             case "cone" -> v.cone();
             case "circle" -> v.circle();
             case "sky" -> v.sky();
+            case "shaft" -> v.shaft();
             case "beam" -> v.beam();
             case "ring" -> v.ring();
             case "skyRing" -> v.skyRing();
