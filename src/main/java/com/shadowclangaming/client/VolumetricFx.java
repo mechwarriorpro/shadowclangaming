@@ -8,6 +8,7 @@ import com.mojang.blaze3d.vertex.BufferUploader;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.blaze3d.vertex.VertexSorting;
 import com.shadowclangaming.ShadowClanGaming;
 import com.shadowclangaming.config.SCGConfig;
 import com.shadowclangaming.warhead.BlastMotif;
@@ -190,7 +191,7 @@ public final class VolumetricFx {
         }
         // Before the availability checks on purpose: the probe has to be drawable in exactly the states
         // where the volumetric pass is not.
-        drawProbe(event.getCamera().getPosition());
+        drawProbe(event, event.getCamera().getPosition());
         if (!available() || !SCGConfig.cinematicShadersEnabled()) {
             return false;
         }
@@ -220,8 +221,8 @@ public final class VolumetricFx {
         int drawn = 0;
         try {
             Vec3 cam = event.getCamera().getPosition();
-            Matrix4f view = WorldMatrices.view(event.getCamera());
-            Matrix4f projection = WorldMatrices.projection();
+            Matrix4f view = WorldMatrices.view(event);
+            Matrix4f projection = WorldMatrices.projection(event);
             float time = (float) ((mc.level.getGameTime() % 72000L)
                     + event.getPartialTick().getGameTimeDeltaPartialTick(false)) / 20.0F;
 
@@ -415,16 +416,19 @@ public final class VolumetricFx {
      * same way and nothing appears however correct the geometry is. A perspective projection has m32 == -1
      * and a non-zero m11; identity or a stale ortho matrix has neither, and that is the tell.
      */
-    private static String matrices() {
-        Matrix4f proj = RenderSystem.getProjectionMatrix();
-        Matrix4f view = RenderSystem.getModelViewMatrix();
-        if (proj == null || view == null) {
-            return "projection=" + (proj == null ? "NULL" : "set")
-                    + " modelView=" + (view == null ? "NULL" : "set");
-        }
+    private static String matrices(RenderLevelStageEvent event) {
+        Matrix4f proj = event.getProjectionMatrix();
+        Matrix4f view = event.getModelViewMatrix();
+        Matrix4f stale = RenderSystem.getProjectionMatrix();
+        // A view matrix keeps its translation in COLUMN 3 (m03/m13/m23); the previous version of this
+        // diagnostic printed row 3, which is zeros by construction and told us nothing.
         return String.format(java.util.Locale.ROOT,
-                "proj m00=%.4f m11=%.4f m32=%.4f (perspective needs m32=-1.0000) | view m30=%.2f m31=%.2f m32=%.2f",
-                proj.m00(), proj.m11(), proj.m32(), view.m30(), view.m31(), view.m32());
+                "event proj m00=%.4f m11=%.4f m32=%.4f (perspective needs -1.0000) | RenderSystem proj m32=%.4f"
+                        + " | event view m03=%.2f m13=%.2f m23=%.2f",
+                proj == null ? 0.0F : proj.m00(), proj == null ? 0.0F : proj.m11(),
+                proj == null ? 0.0F : proj.m32(), stale == null ? 0.0F : stale.m32(),
+                view == null ? 0.0F : view.m03(), view == null ? 0.0F : view.m13(),
+                view == null ? 0.0F : view.m23());
     }
 
     /** Read by fx status: did the probe reach a draw call, or not? */
@@ -437,7 +441,7 @@ public final class VolumetricFx {
                 : "no probe run";
     }
 
-    private static void drawProbe(Vec3 cam) {
+    private static void drawProbe(RenderLevelStageEvent event, Vec3 cam) {
         if (probeFrames <= 0) {
             return;
         }
@@ -466,11 +470,18 @@ public final class VolumetricFx {
         colourQuad(buffer, x0, y0, z1, x1, y0, z1, x1, y0, z0, x0, y0, z0, argb);
         colourQuad(buffer, x0, y1, z0, x1, y1, z0, x1, y1, z1, x0, y1, z1, argb);
         if (probeDrawn == 0) {
-            probeMatrices = matrices();
+            probeMatrices = matrices(event);
             ShadowClanGaming.LOGGER.info("SCG probe matrices: {}", probeMatrices);
         }
+        // Vanilla's shader reads the projection out of RenderSystem, so hand it the level's for the
+        // duration of this one draw. This is the same correction the raymarcher gets from the event.
+        Matrix4f savedProjection = RenderSystem.getProjectionMatrix();
+        RenderSystem.setProjectionMatrix(event.getProjectionMatrix(), VertexSorting.DISTANCE_TO_ORIGIN);
         RenderSystem.setShader(GameRenderer::getPositionColorShader);
         BufferUploader.drawWithShader(buffer.buildOrThrow());
+        if (savedProjection != null) {
+            RenderSystem.setProjectionMatrix(savedProjection, VertexSorting.DISTANCE_TO_ORIGIN);
+        }
         probeDrawn++;
         RenderSystem.enableDepthTest();
         RenderSystem.depthMask(true);

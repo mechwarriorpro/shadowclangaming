@@ -1,7 +1,6 @@
 package com.shadowclangaming.client;
 
-import com.mojang.blaze3d.systems.RenderSystem;
-import net.minecraft.client.Camera;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import org.joml.Matrix4f;
 
 /**
@@ -31,14 +30,23 @@ public final class WorldMatrices {
      * a shader that renders nothing: the frame counter climbs either way. The camera argument stays in the
      * signature so callers read the same, but the engine's matrix is the source of truth now.
      */
-    public static Matrix4f view(Camera camera) {
-        Matrix4f modelView = RenderSystem.getModelViewMatrix();
+    /**
+     * The view matrix the level itself is being drawn with this frame.
+     *
+     * <p>Taken from the event, not from RenderSystem. Measured in-game, RenderSystem's projection at
+     * AFTER_PARTICLES had m32 = -0.1000 where a perspective projection has -1.0000 - it is not the level's
+     * matrix at that stage, so anything drawn with it lands off-screen. The event carries the exact
+     * model-view and projection LevelRenderer is using, which is why both come from it now.
+     */
+    public static Matrix4f view(RenderLevelStageEvent event) {
+        Matrix4f modelView = event.getModelViewMatrix();
         return modelView != null ? new Matrix4f(modelView) : new Matrix4f();
     }
 
     /** The projection matrix Minecraft is drawing the level with this frame. */
-    public static Matrix4f projection() {
-        Matrix4f projection = RenderSystem.getProjectionMatrix();
+    /** @see #view(RenderLevelStageEvent) for why this is not RenderSystem's. */
+    public static Matrix4f projection(RenderLevelStageEvent event) {
+        Matrix4f projection = event.getProjectionMatrix();
         return projection != null ? new Matrix4f(projection) : new Matrix4f();
     }
 }
