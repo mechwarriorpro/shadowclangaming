@@ -46,7 +46,22 @@ public final class ChargeSequence {
     public static int start(ServerLevel level, WarheadType type, Vec3 pos, float power, long funding,
                             com.shadowclangaming.spell.Spell spell, List<ItemStack> cargo, int sliderRadius,
                             long buildSeed) {
-        int ticks = chargeTicks(type);
+        return start(level, type, pos, power, funding, spell, cargo, sliderRadius, buildSeed,
+                chargeTicks(type));
+    }
+
+    /**
+     * The same, for a delivery form whose fuse is not the block form's.
+     *
+     * <p>A grenade cooks for a third of the block fuse and a minecart for half, and the effect has to be
+     * exactly as long as the form's own fuse or the blast lands before or after the thing you watched.
+     *
+     * @param ticks the anticipation length, in ticks
+     */
+    public static int start(ServerLevel level, WarheadType type, Vec3 pos, float power, long funding,
+                            com.shadowclangaming.spell.Spell spell, List<ItemStack> cargo, int sliderRadius,
+                            long buildSeed, int ticks) {
+        ticks = Math.max(1, ticks);
         BlastFx.emitCharge(level, type, pos, power, ticks);
         level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.BEACON_ACTIVATE, SoundSource.BLOCKS,
                 2.0F, 0.7F);

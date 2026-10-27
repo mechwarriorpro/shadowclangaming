@@ -782,6 +782,40 @@ def check_event_subscribers():
             fail("BlastClientEvents never calls %s.render - the world effect would never be drawn" % renderer)
     return len(subscribers)
 
+def check_fuse_ownership():
+    """No delivery form may count its fuse on an entity that can be removed mid-count.
+
+    A grenade used to do exactly that. super.onHit() runs first, vanilla's ThrowableItemProjectile
+    .onHitBlock ends by discarding a throwable that lands on a block, so tick() was never called again:
+    the grenade armed, played its whole charge effect, and then did not exist. Nothing in any log said
+    so, because the code was correct - it was just attached to an entity that had already been removed.
+
+    The rule: a fuse is either a scheduled block tick, or it belongs to ChargeSequence (a server-side
+    list). A mutable countdown field decremented in an entity's tick() is the failure mode.
+    """
+    entities = os.path.join(JAVA, "com/shadowclangaming/entity")
+    problems = 0
+    for name in sorted(os.listdir(entities)):
+        if not name.endswith(".java"):
+            continue
+        source = read(os.path.join(entities, name))
+        counts_down = re.search(r"^\s*(?:fuse|scgFuse|ticksLeft|fuseLeft)\s*--;", source, re.M)
+        if counts_down is None:
+            continue
+        line = source[:counts_down.start()].count("\n") + 1
+        # WarheadMinecart is the deliberate exception: nothing discards it, and it says so.
+        if name == "WarheadMinecart.java" and "nothing is discarded here" in source:
+            print("fuse ownership: %s counts its own fuse and documents why that is safe" % name)
+            continue
+        fail("%s line %d decrements a fuse inside an entity tick - if vanilla removes the entity "
+             "mid-count the warhead never detonates. Use ChargeSequence or a scheduled block tick."
+             % (name, line))
+        problems += 1
+    if problems == 0:
+        print("fuse ownership: no entity counts a fuse it could lose")
+    return problems
+
+
 def check_charge_wiring():
     """The effect plays first; the blast lands when it ends. Prove that is still wired up.
 
@@ -794,7 +828,9 @@ def check_charge_wiring():
                        ("entity/GrenadeEntity.java", "Form.GRENADE"),
                        ("entity/WarheadMinecart.java", "Form.MINECART")):
         source = read(os.path.join(JAVA, "com/shadowclangaming/" + path))
-        if "BlastFx.emitCharge" not in source:
+        # Either it announces the effect itself, or it hands the whole thing to ChargeSequence, which
+        # announces it and holds the clock. Both are correct; a form that does neither plays in silence.
+        if "BlastFx.emitCharge" not in source and "ChargeSequence.start" not in source:
             fail("%s never announces its charge effect - the fuse would play in silence" % path)
         if form not in source:
             fail("%s does not derive its fuse from %s" % (path, form))
@@ -897,6 +933,7 @@ def main():
     shaders = check_shaders()
     check_world_shaders()
     check_charge_wiring()
+    check_fuse_ownership()
     subscribers = check_event_subscribers()
     check_proxy_box()
     check_glsl_defined()

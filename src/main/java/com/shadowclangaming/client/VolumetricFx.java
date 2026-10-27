@@ -57,6 +57,17 @@ public final class VolumetricFx {
     /** Half-extent of the proxy cube in blast radii. Must match PROXY_BOX in the fragment shader. */
     public static final double PROXY_BOX = 3.4D;
 
+    /**
+     * Half-extent of the SKYBOX cube, in blast radii, and the cap on it in blocks.
+     *
+     * <p>Much larger than the blast, because a sky has to reach the horizon: a grenade still gets a
+     * ~380-block dome over it, and a kilometre-wide cataclysm would otherwise want one 28,000 blocks
+     * across, which is past the render distance and past the point where float vertex positions are
+     * still precise. Past the cap the sky is the same sky, so it is simply not drawn any bigger.
+     */
+    public static final double SKY_BOX_RADII = 48.0D;
+    public static final double SKY_BOX_MAX_BLOCKS = 3000.0D;
+
     /** How many volumes may be marched in one frame. Each is a full-screen-ish raymarch; this is the cap. */
     public static final int MAX_VOLUMES = 4;
 
@@ -145,6 +156,26 @@ public final class VolumetricFx {
                         + (effect.y() - cam.y) * (effect.y() - cam.y)
                         + (effect.z() - cam.z) * (effect.z() - cam.z));
                 setUniforms(shader, effect, cam, view, projection, time, distance);
+                // Skybox FIRST, then the blast over it. Both are premultiplied and neither writes
+                // depth, so drawing in this order puts the fireball in front of the sky it is
+                // silhouetted against - the other way round the nebula would cover the explosion.
+                BlastMotif.Volume vol = effect.motif().volume();
+                // The shader marches radius * SkyBox and the geometry covers skyHalf, so those two have
+                // to be the same number or the march samples space the cube does not cover. SkyBox is
+                // therefore derived from skyHalf and never floored or clamped afterwards - and if the
+                // block cap leaves no room outside the blast's own cube, there is no sky to draw.
+                double skyRadii = BlastMotif.skyBoxRadii(effect.radius(), SKY_BOX_RADII,
+                        SKY_BOX_MAX_BLOCKS, PROXY_BOX);
+                if (vol.sky() > 0.01F && skyRadii > 0.0D) {
+                    double skyHalf = skyRadii * Math.max(1.0D, effect.radius());
+                    set(shader, "SkyPass", 1.0F);
+                    set(shader, "SkyBox", (float) skyRadii);
+                    set(shader, "Steps", (float) Math.max(MIN_STEPS, BASE_STEPS - (int) (distance / 96.0D)));
+                    drawProxy(effect.x(), effect.y(), effect.z(), skyHalf);
+                    set(shader, "SkyPass", 0.0F);
+                    set(shader, "Steps",
+                            (float) Math.max(MIN_STEPS, BASE_STEPS - (int) (distance / 48.0D)));
+                }
                 drawProxy(effect.x(), effect.y(), effect.z(), effect.radius() * PROXY_BOX);
                 drawn++;
             }
@@ -204,7 +235,7 @@ public final class VolumetricFx {
         set(program, "Glow", v.glow() * effect.strength());
         set(program, "Swirl", v.swirl());
         set(program, "Seed", v.seed());
-        // The twenty-nine structural features. Every one is authored per warhead in BlastMotif.Volume.author;
+        // The thirty-one structural features. Every one is authored per warhead in BlastMotif.Volume.author;
         // the shader sums whatever is non-zero, so this list is what turns one fireball into thirty-eight
         // different weapons.
         set(program, "Hole", v.hole());
@@ -236,6 +267,11 @@ public final class VolumetricFx {
         set(program, "Shell", v.shell());
         set(program, "Nebula", v.nebula());
         set(program, "Cone", v.cone());
+        set(program, "Circle", v.circle());
+        set(program, "Sky", v.sky());
+        // Set per draw by render(), not here: the same program draws the skybox and the blast.
+        set(program, "SkyPass", 0.0F);
+        set(program, "SkyBox", (float) SKY_BOX_RADII);
         // Scales density as well as glow, so the volume thins out as the effect ends instead of turning
         // into an opaque black ball that sits there after the fire is gone.
         set(program, "Strength", Math.max(0.0F, Math.min(1.0F, effect.strength())));

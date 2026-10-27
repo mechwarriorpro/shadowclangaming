@@ -23,10 +23,15 @@ import net.minecraft.world.phys.Vec3;
  * on impact. The warhead comes from the stack, so one entity type serves all 38 grenades.
  *
  * <p>IMPACT LIGHTS IT; IT DOES NOT DETONATE IT. This used to go off the instant it touched anything, which
- * made every grenade identical and made the declared form fuse a lie. Now impact starts a timer whose
- * length is that warhead's own effect duration in grenade form ({@link ExplosivePackaging#fuseTicks}) -
- * short for a grenade, but real: you can bounce an incendiary off a wall and still get clear, and a heavy
- * warhead's grenade visibly cooks before it goes.
+ * made every grenade identical and made the declared form fuse a lie. Now impact hands a timer to
+ * {@code warhead/ChargeSequence} whose length is that warhead's own effect duration in grenade form
+ * ({@link ExplosivePackaging#fuseTicks}) - short for a grenade, but real: you can bounce an incendiary
+ * off a wall and still get clear, and a heavy warhead's grenade visibly cooks before it goes.
+ *
+ * <p>WHY THE TIMER IS NOT A FIELD ON THIS CLASS. It was, and it never ran: vanilla's
+ * {@code ThrowableItemProjectile.onHitBlock} discards a throwable that lands on a block, so {@code tick()}
+ * was never called again and the countdown stopped at whatever it was armed with. A grenade showed its
+ * whole charge effect and then nothing happened.
  */
 public class GrenadeEntity extends ThrowableItemProjectile {
 
@@ -69,51 +74,40 @@ public class GrenadeEntity extends ThrowableItemProjectile {
         if (!(level() instanceof net.minecraft.server.level.ServerLevel level)) {
             return;
         }
+        WarheadType warhead = warheadOf();
         fuse = fuseTicks();
         // It has landed: stop it rolling away while it burns.
         setDeltaMovement(Vec3.ZERO);
-        // And the effect starts here, running for exactly the fuse: a grenade charges visibly for as long
-        // as it is still a grenade, then goes off.
-        com.shadowclangaming.warhead.BlastFx.emitCharge(level, warheadOf(), position(),
-                ExplosivePackaging.power(warheadOf().basePower(), ExplosivePackaging.Form.GRENADE), fuse);
+        // THE TIMER CANNOT LIVE ON THIS ENTITY. super.onHit() above has already run, and for a throwable
+        // that lands on a block vanilla's onHitBlock ends by discarding the entity - so tick() was never
+        // called again, the fuse counted down to nothing, and detonate() never ran. The grenade armed,
+        // played its charge effect for the whole fuse, and then did not exist. Every form now hands its
+        // clock to ChargeSequence, which is a server-side list ticked from ShadowClanGaming and does not
+        // care whether the entity that started it is still in the world.
+        com.shadowclangaming.warhead.ChargeSequence.start(level, warhead, position(),
+                ExplosivePackaging.power(warhead.basePower(), ExplosivePackaging.Form.GRENADE),
+                0L, null, java.util.List.of(), -1, 0L, fuse);
         level.playSound(null, position().x, position().y, position().z, SoundEvents.TNT_PRIMED,
                 SoundSource.NEUTRAL, 1.0F, 1.3F);
         level.sendParticles(ParticleTypes.SMOKE, position().x, position().y, position().z, 12,
                 0.4D, 0.4D, 0.4D, 0.02D);
     }
 
+    /**
+     * Sparks while it cooks, if it is still in the world to be seen. The countdown itself is not here -
+     * see {@link #onHit}. This is decoration only, so it is harmless if the entity has already been
+     * removed by the time it would have run.
+     */
     @Override
     public void tick() {
         super.tick();
-        if (level().isClientSide || fuse < 0) {
+        if (level().isClientSide || fuse <= 0 || age % 4 != 0) {
             return;
         }
-        if (fuse > 0) {
-            fuse--;
-            if (fuse % 4 == 0 && level() instanceof net.minecraft.server.level.ServerLevel server) {
-                server.sendParticles(ParticleTypes.ELECTRIC_SPARK, getX(), getY() + 0.2D, getZ(),
-                        3, 0.15D, 0.15D, 0.15D, 0.0D);
-            }
-            return;
+        if (level() instanceof net.minecraft.server.level.ServerLevel server) {
+            server.sendParticles(ParticleTypes.ELECTRIC_SPARK, getX(), getY() + 0.2D, getZ(),
+                    3, 0.15D, 0.15D, 0.15D, 0.0D);
         }
-        detonate();
-    }
-
-    /** The warhead goes off, wherever the grenade ended up. */
-    private void detonate() {
-        if (!(level() instanceof net.minecraft.server.level.ServerLevel level)) {
-            discard();
-            return;
-        }
-        WarheadType warhead = warheadOf();
-        Vec3 at = position();
-        float power = ExplosivePackaging.power(warhead.basePower(),
-                ExplosivePackaging.Form.GRENADE);
-        level.sendParticles(ParticleTypes.SMOKE, at.x, at.y, at.z, 12, 0.4D, 0.4D, 0.4D, 0.02D);
-        warhead.detonate(level, at, power, 0L, null, java.util.List.of(), -1, 0L);
-        level.playSound(null, at.x, at.y, at.z, SoundEvents.GENERIC_EXPLODE, SoundSource.NEUTRAL,
-                warhead == WarheadType.DECOY ? 2.0F : 1.0F, 1.4F);
-        discard();
     }
 
     /**

@@ -309,7 +309,7 @@ public final class BlastMotif {
                          float cap, float debris, float dust, float vortex, float cracks,
                          float sparks, float halo,
                          float disc, float lens, float granule, float prominence, float shell,
-                         float nebula, float cone,
+                         float nebula, float cone, float circle, float sky,
                          int colorA, int colorB, int colorC) {
 
         /** Every field clamped, so a bad row cannot make the shader divide by zero or march backwards. */
@@ -354,6 +354,8 @@ public final class BlastMotif {
             shell = (float) clamp01(shell);
             nebula = (float) clamp01(nebula);
             cone = (float) clamp01(cone);
+            circle = (float) clamp01(circle);
+            sky = (float) clamp01(sky);
         }
 
         /** Volume parameters for a motif: theme baseline, then this warhead's own authored features. */
@@ -387,7 +389,7 @@ public final class BlastMotif {
                     shape.cap, shape.debris, shape.dust, shape.vortex, shape.cracks,
                     shape.sparks, shape.halo,
                     shape.disc, shape.lens, shape.granule, shape.prominence, shape.shell,
-                    shape.nebula, shape.cone,
+                    shape.nebula, shape.cone, shape.circle, shape.sky,
                     a | 0xFF000000, b | 0xFF000000, c | 0xFF000000);
         }
 
@@ -409,55 +411,55 @@ public final class BlastMotif {
                 case "he" -> shape.waves(0.85F).flash(0.55F).smoke(0.45F).debris(0.6F).dust(0.7F).cracks(0.35F).halo(0.45F).shell(0.35F);
                 case "incendiary" -> shape.embers(0.95F).rise(1.0F).turb(1.2F).sparks(0.6F).dust(0.3F).nebula(0.25F);
                 case "cluster" -> shape.subCharges(0.95F).waves(0.4F).debris(0.8F).dust(0.5F).shell(0.3F);
-                case "fission" -> shape.waves(0.9F).flash(0.6F).embers(0.7F).streaks(0.55F).smoke(0.5F).cap(0.95F).dust(0.8F).debris(0.5F).halo(0.5F).shell(0.7F).nebula(0.3F);
-                case "fusion" -> shape.star(0.8F).flash(1.0F).waves(0.9F).streaks(0.7F).cap(0.7F).halo(0.8F).sparks(0.6F).debris(0.5F).granule(0.7F).shell(0.7F).nebula(0.4F);
+                case "fission" -> shape.waves(0.9F).flash(0.6F).embers(0.7F).streaks(0.55F).smoke(0.5F).cap(0.95F).dust(0.8F).debris(0.5F).halo(0.5F).shell(0.7F).nebula(0.3F).sky(0.4F);
+                case "fusion" -> shape.star(0.8F).flash(1.0F).waves(0.9F).streaks(0.7F).cap(0.7F).halo(0.8F).sparks(0.6F).debris(0.5F).granule(0.7F).shell(0.7F).nebula(0.4F).sky(0.6F);
                 case "antimatter" -> shape.hole(0.9F).flash(1.0F).waves(1.0F).implode(0.8F)
-                        .dark(0.8F).streaks(0.8F).halo(0.7F).cracks(0.6F).debris(0.6F).vortex(0.4F).disc(0.8F).lens(0.9F).shell(0.6F).nebula(0.5F);
+                        .dark(0.8F).streaks(0.8F).halo(0.7F).cracks(0.6F).debris(0.6F).vortex(0.4F).disc(0.8F).lens(0.9F).shell(0.6F).nebula(0.5F).sky(0.5F);
                 case "numismatic" -> shape.coins(1.0F).ring(0.6F).rise(0.7F).sparks(0.7F).halo(0.5F).nebula(0.3F);
                 // -- apex, in roster order
                 case "world_eater" -> shape.hole(1.0F).swirlUp(1.0F).dark(1.0F).implode(1.0F)
-                        .glow(1.9F).smoke(0.0F).waves(0.35F).rise(-0.4F).vortex(0.9F).cracks(0.7F).halo(0.6F).sparks(0.4F).disc(1.0F).lens(1.0F).nebula(0.5F);
+                        .glow(1.9F).smoke(0.0F).waves(0.35F).rise(-0.4F).vortex(0.9F).cracks(0.7F).halo(0.6F).sparks(0.4F).disc(1.0F).lens(1.0F).nebula(0.5F).sky(0.7F);
                 case "stellar_requiem" -> shape.star(1.0F).flash(0.9F).glow(1.85F)
-                        .swirlUp(0.6F).waves(0.5F).halo(0.9F).sparks(0.6F).debris(0.4F).granule(1.0F).prominence(0.9F).nebula(0.6F).lens(0.4F);
-                case "reality_breaker" -> shape.rift(1.0F).streaks(0.7F).dark(0.6F).turb(0.4F).cracks(0.9F).vortex(0.5F).sparks(0.5F).nebula(0.6F).shell(0.4F);
-                case "spacetime_hammer" -> shape.waves(1.0F).implode(0.7F).skyRing(0.6F).turb(0.8F).dust(0.9F).cracks(0.8F).debris(0.5F).halo(0.5F).shell(0.8F).lens(0.5F).nebula(0.4F);
+                        .swirlUp(0.6F).waves(0.5F).halo(0.9F).sparks(0.6F).debris(0.4F).granule(1.0F).prominence(0.9F).nebula(0.6F).lens(0.4F).sky(1.0F);
+                case "reality_breaker" -> shape.rift(1.0F).streaks(0.7F).dark(0.6F).turb(0.4F).cracks(0.9F).vortex(0.5F).sparks(0.5F).nebula(0.6F).shell(0.4F).circle(0.3F).sky(0.6F);
+                case "spacetime_hammer" -> shape.waves(1.0F).implode(0.7F).skyRing(0.6F).turb(0.8F).dust(0.9F).cracks(0.8F).debris(0.5F).halo(0.5F).shell(0.8F).lens(0.5F).nebula(0.4F).sky(0.6F);
                 case "universal_imploder" -> shape.hole(0.7F).implode(1.0F).waves(0.75F)
-                        .dark(0.85F).glow(1.7F).vortex(0.7F).cracks(0.6F).halo(0.5F).disc(0.7F).lens(0.9F).shell(0.5F);
+                        .dark(0.85F).glow(1.7F).vortex(0.7F).cracks(0.6F).halo(0.5F).disc(0.7F).lens(0.9F).shell(0.5F).sky(0.5F);
                 case "ragnarok" -> shape.meteors(1.0F).lightning(0.9F).skyRing(0.9F).waves(0.7F)
-                        .embers(0.6F).glow(1.75F).cap(0.5F).dust(0.9F).debris(0.7F).cracks(0.8F).halo(0.6F).sparks(0.5F).nebula(0.7F).shell(0.5F);
-                case "world_rune" -> shape.glyphs(1.0F).waves(0.55F).glow(1.6F).skyRing(0.5F).cracks(1.0F).halo(0.5F).sparks(0.5F).nebula(0.3F);
-                case "abyssal_covenant" -> shape.portals(1.0F).rift(0.45F).dark(0.7F).glow(1.5F).vortex(0.7F).sparks(0.6F).cracks(0.5F).nebula(0.8F);
+                        .embers(0.6F).glow(1.75F).cap(0.5F).dust(0.9F).debris(0.7F).cracks(0.8F).halo(0.6F).sparks(0.5F).nebula(0.7F).shell(0.5F).sky(0.85F);
+                case "world_rune" -> shape.glyphs(1.0F).waves(0.55F).glow(1.6F).skyRing(0.5F).cracks(1.0F).halo(0.5F).sparks(0.5F).nebula(0.3F).circle(1.0F);
+                case "abyssal_covenant" -> shape.portals(1.0F).rift(0.45F).dark(0.7F).glow(1.5F).vortex(0.7F).sparks(0.6F).cracks(0.5F).nebula(0.8F).circle(0.6F).sky(0.6F);
                 case "soul_furnace" -> shape.lightning(0.95F).skyRing(1.0F).hole(0.6F).dark(0.85F)
-                        .implode(0.8F).swirlUp(1.0F).glow(1.8F).vortex(1.0F).sparks(0.7F).cracks(0.6F).halo(0.5F).nebula(0.6F).disc(0.5F);
+                        .implode(0.8F).swirlUp(1.0F).glow(1.8F).vortex(1.0F).sparks(0.7F).cracks(0.6F).halo(0.5F).nebula(0.6F).disc(0.5F).circle(0.8F).sky(0.7F);
                 case "arcane_singularity" -> shape.glyphs(0.95F).skyRing(1.0F).hole(0.55F)
-                        .swirlUp(0.9F).glow(1.7F).vortex(0.8F).sparks(0.8F).halo(0.6F).lens(0.7F).disc(0.6F).nebula(0.5F);
-                case "quasar_lance" -> shape.jet(1.0F).waves(0.7F).streaks(0.6F).glow(1.8F).halo(0.7F).sparks(0.6F).dust(0.6F).cracks(0.5F).cone(1.0F).disc(0.8F).lens(0.5F).nebula(0.6F);
+                        .swirlUp(0.9F).glow(1.7F).vortex(0.8F).sparks(0.8F).halo(0.6F).lens(0.7F).disc(0.6F).nebula(0.5F).circle(1.0F).sky(0.5F);
+                case "quasar_lance" -> shape.jet(1.0F).waves(0.7F).streaks(0.6F).glow(1.8F).halo(0.7F).sparks(0.6F).dust(0.6F).cracks(0.5F).cone(1.0F).disc(0.8F).lens(0.5F).nebula(0.6F).sky(0.9F);
                 case "starforge" -> shape.star(0.95F).embers(0.9F).flash(0.7F).glow(1.8F)
-                        .ring(0.6F).rise(0.6F).halo(0.8F).dust(0.7F).cracks(0.6F).sparks(0.5F).granule(1.0F).prominence(1.0F).cone(0.3F).nebula(0.5F);
+                        .ring(0.6F).rise(0.6F).halo(0.8F).dust(0.7F).cracks(0.6F).sparks(0.5F).granule(1.0F).prominence(1.0F).cone(0.3F).nebula(0.5F).sky(0.9F);
                 case "big_bang_seed" -> shape.star(1.0F).flash(1.0F).waves(0.95F).streaks(0.9F)
-                        .glow(1.9F).swirlUp(0.8F).halo(1.0F).debris(0.8F).dust(0.8F).sparks(0.7F).shell(1.0F).nebula(0.9F).granule(0.6F).lens(0.5F);
+                        .glow(1.9F).swirlUp(0.8F).halo(1.0F).debris(0.8F).dust(0.8F).sparks(0.7F).shell(1.0F).nebula(0.9F).granule(0.6F).lens(0.5F).sky(1.0F);
                 case "reality_corruptor" -> shape.rift(0.9F).dark(0.75F).turb(1.5F).hole(0.5F)
-                        .glyphs(0.35F).cracks(0.9F).vortex(0.6F).sparks(0.4F).nebula(0.7F).shell(0.5F);
+                        .glyphs(0.35F).cracks(0.9F).vortex(0.6F).sparks(0.4F).nebula(0.7F).shell(0.5F).sky(0.6F);
                 case "absolute_zero" -> shape.hole(0.85F).implode(1.0F).dark(0.9F).turb(0.25F)
-                        .swirlUp(0.2F).waves(0.6F).glow(1.6F).cracks(0.7F).sparks(0.6F).halo(0.4F).lens(0.8F).disc(0.5F).nebula(0.4F);
+                        .swirlUp(0.2F).waves(0.6F).glow(1.6F).cracks(0.7F).sparks(0.6F).halo(0.4F).lens(0.8F).disc(0.5F).nebula(0.4F).sky(0.4F);
                 case "omega" -> shape.waves(1.0F).implode(0.9F).hole(0.7F).flash(0.85F)
-                        .streaks(0.7F).glow(1.9F).dust(0.9F).debris(0.8F).cracks(0.7F).cap(0.6F).halo(0.7F).shell(1.0F).lens(0.7F).disc(0.5F);
+                        .streaks(0.7F).glow(1.9F).dust(0.9F).debris(0.8F).cracks(0.7F).cap(0.6F).halo(0.7F).shell(1.0F).lens(0.7F).disc(0.5F).sky(0.7F);
                 case "absolute_annihilation" -> shape.hole(0.9F).star(0.85F).flash(1.0F).waves(1.0F)
-                        .streaks(0.95F).rift(0.5F).glow(1.95F).cap(0.9F).dust(1.0F).debris(1.0F).cracks(0.9F).halo(1.0F).sparks(0.8F).shell(1.0F).disc(0.9F).lens(1.0F).nebula(0.9F).granule(0.6F);
+                        .streaks(0.95F).rift(0.5F).glow(1.95F).cap(0.9F).dust(1.0F).debris(1.0F).cracks(0.9F).halo(1.0F).sparks(0.8F).shell(1.0F).disc(0.9F).lens(1.0F).nebula(0.9F).granule(0.6F).sky(0.9F);
                 // -- utility warheads: they are effects, not bombs
-                case "bulwark" -> shape.dome(1.0F).glyphs(0.35F).glow(0.9F).turb(0.2F).halo(0.5F).cracks(0.4F);
+                case "bulwark" -> shape.dome(1.0F).glyphs(0.35F).glow(0.9F).turb(0.2F).halo(0.5F).cracks(0.4F).circle(0.3F);
                 case "contagion" -> shape.smoke(1.0F).dark(0.4F).rise(0.9F).glow(0.6F)
                         .embers(0.25F).waves(0.0F).dust(0.8F).vortex(0.4F).sparks(0.3F);
-                case "spell" -> shape.glyphs(0.9F).skyRing(0.85F).swirlUp(0.8F).glow(1.2F).vortex(0.6F).sparks(0.7F).cracks(0.5F);
+                case "spell" -> shape.glyphs(0.9F).skyRing(0.85F).swirlUp(0.8F).glow(1.2F).vortex(0.6F).sparks(0.7F).cracks(0.5F).circle(0.9F);
                 case "cargo" -> shape.jet(0.45F).ring(0.4F).glow(0.55F).waves(0.0F).smoke(0.2F).dust(0.5F).sparks(0.3F);
                 case "minefield" -> shape.portals(0.7F).waves(0.35F).glow(0.7F).subCharges(0.5F).debris(0.6F).dust(0.6F).sparks(0.4F);
                 case "tracking" -> shape.ring(1.0F).skyRing(0.6F).streaks(0.5F).glow(0.8F)
                         .turb(0.3F).waves(0.5F).sparks(0.6F).cracks(0.4F);
-                case "constructor" -> shape.dome(0.9F).jet(0.4F).glyphs(0.3F).glow(0.85F).turb(0.2F).cracks(0.6F).sparks(0.5F);
+                case "constructor" -> shape.dome(0.9F).jet(0.4F).glyphs(0.3F).glow(0.85F).turb(0.2F).cracks(0.6F).sparks(0.5F).circle(0.4F);
                 case "spatial" -> shape.rift(0.75F).portals(0.5F).dark(0.5F).glow(1.0F).vortex(0.6F).sparks(0.5F).cracks(0.5F);
                 case "clucker" -> shape.embers(0.8F).smoke(0.4F).rise(0.9F).glow(0.8F).sparks(0.5F).dust(0.5F);
                 case "violator" -> shape.smoke(0.85F).dark(0.85F).glyphs(0.4F).lightning(0.35F)
-                        .glow(1.1F).cracks(0.7F).vortex(0.5F).sparks(0.4F);
+                        .glow(1.1F).cracks(0.7F).vortex(0.5F).sparks(0.4F).circle(0.4F);
                 case "beef" -> shape.smoke(0.7F).embers(0.7F).coins(0.3F).rise(0.6F).glow(0.75F).dust(0.6F).sparks(0.5F);
                 default -> { }
             }
@@ -470,11 +472,12 @@ public final class BlastMotif {
                             + "%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/"
                             + "%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/"
                             + "%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/%.2f/"
+                            + "%.2f/%.2f/"
                             + "%08x/%08x/%08x",
                     beam, ring, skyRing, implode, turb, rise, streaks, dark, glow, swirl, seed,
                     hole, star, rift, waves, meteors, lightning, glyphs, portals, jet, coins, smoke,
                     subCharges, flash, dome, embers, cap, debris, dust, vortex, cracks, sparks, halo,
-                    disc, lens, granule, prominence, shell, nebula, cone,
+                    disc, lens, granule, prominence, shell, nebula, cone, circle, sky,
                     colorA, colorB, colorC);
         }
 
@@ -526,6 +529,8 @@ public final class BlastMotif {
             float shell;
             float nebula;
             float cone;
+            float circle;
+            float sky;
 
             /** The theme's shape and brightness, before any warhead overrides it. */
             static Shape baseline(Theme theme, float finaleScale) {
@@ -533,8 +538,8 @@ public final class BlastMotif {
                 switch (theme) {
                     case INFERNO -> { s.beam = 0.05F; s.ring = 0.55F; s.implode = -0.50F; s.turb = 1.15F; s.rise = 0.85F; s.streaks = 0.40F; s.embers = 0.4F;  s.dust = 0.30F; s.sparks = 0.40F; s.halo = 0.30F; }
                     case NUCLEAR -> { s.beam = 0.20F; s.ring = 0.95F; s.implode = -0.40F; s.turb = 0.90F; s.rise = 1.00F; s.streaks = 0.30F; s.flash = 0.5F; s.waves = 0.4F;  s.cap = 0.80F; s.dust = 0.60F; s.debris = 0.40F; s.halo = 0.50F; s.sparks = 0.30F; }
-                    case ARCANE -> { s.beam = 0.35F; s.ring = 0.35F; s.skyRing = 1.00F; s.implode = 0.30F; s.turb = 0.45F; s.rise = 0.10F; s.streaks = 0.25F; s.dark = 0.15F; s.glyphs = 0.6F;  s.vortex = 0.35F; s.sparks = 0.50F; s.halo = 0.40F; s.cracks = 0.40F; }
-                    case STELLAR -> { s.beam = 1.00F; s.ring = 0.40F; s.skyRing = 0.55F; s.implode = -0.30F; s.turb = 0.70F; s.rise = 0.25F; s.streaks = 0.85F; s.star = 0.6F; s.jet = 0.3F;  s.halo = 0.60F; s.sparks = 0.40F; s.debris = 0.30F; }
+                    case ARCANE -> { s.beam = 0.35F; s.ring = 0.35F; s.skyRing = 1.00F; s.implode = 0.30F; s.turb = 0.45F; s.rise = 0.10F; s.streaks = 0.25F; s.dark = 0.15F; s.glyphs = 0.6F;  s.vortex = 0.35F; s.sparks = 0.50F; s.halo = 0.40F; s.cracks = 0.40F;  s.circle = 0.60F; }
+                    case STELLAR -> { s.beam = 1.00F; s.ring = 0.40F; s.skyRing = 0.55F; s.implode = -0.30F; s.turb = 0.70F; s.rise = 0.25F; s.streaks = 0.85F; s.star = 0.6F; s.jet = 0.3F;  s.halo = 0.60F; s.sparks = 0.40F; s.debris = 0.30F;  s.sky = 0.60F; }
                     case CATACLYSM -> { s.beam = 0.45F; s.ring = 1.00F; s.skyRing = 0.70F; s.implode = -0.80F; s.turb = 1.35F; s.rise = 0.45F; s.streaks = 0.75F; s.dark = 0.10F; s.waves = 0.55F;  s.dust = 0.70F; s.debris = 0.60F; s.cracks = 0.50F; s.halo = 0.55F; s.cap = 0.40F; }
                     case VOID -> { s.beam = 0.25F; s.ring = 0.20F; s.skyRing = 0.30F; s.implode = 1.00F; s.turb = 0.55F; s.rise = -0.30F; s.streaks = 0.60F; s.dark = 1.00F; s.hole = 0.55F;  s.vortex = 0.50F; s.halo = 0.40F; s.cracks = 0.30F; s.sparks = 0.30F; }
                     case PLAGUE -> { s.turb = 1.25F; s.rise = 0.70F; s.streaks = 0.20F; s.dark = 0.30F; s.ring = 0.45F; s.skyRing = 0.15F; s.implode = -0.20F; s.smoke = 0.6F;  s.dust = 0.50F; s.vortex = 0.30F; s.sparks = 0.30F; }
@@ -545,7 +550,7 @@ public final class BlastMotif {
                     case LOGISTICS -> { s.beam = 0.30F; s.ring = 0.25F; s.skyRing = 0.05F; s.implode = 0.10F; s.turb = 0.30F; s.rise = 0.20F; s.streaks = 0.15F;  s.dust = 0.30F; s.sparks = 0.25F; }
                     case SWARM -> { s.ring = 0.35F; s.implode = -0.40F; s.turb = 1.10F; s.rise = 0.60F; s.streaks = 0.50F; s.subCharges = 0.5F;  s.debris = 0.60F; s.sparks = 0.50F; s.dust = 0.35F; }
                     case BEAST -> { s.beam = 0.05F; s.ring = 0.40F; s.implode = -0.50F; s.turb = 1.05F; s.rise = 0.35F; s.streaks = 0.30F; s.dark = 0.05F;  s.dust = 0.40F; s.debris = 0.40F; s.sparks = 0.30F; }
-                    case SOUL -> { s.beam = 0.30F; s.ring = 0.30F; s.skyRing = 1.00F; s.implode = 0.60F; s.turb = 0.50F; s.rise = 0.30F; s.streaks = 0.40F; s.dark = 0.70F; s.lightning = 0.5F;  s.vortex = 0.80F; s.sparks = 0.50F; s.halo = 0.45F; s.cracks = 0.40F; }
+                    case SOUL -> { s.beam = 0.30F; s.ring = 0.30F; s.skyRing = 1.00F; s.implode = 0.60F; s.turb = 0.50F; s.rise = 0.30F; s.streaks = 0.40F; s.dark = 0.70F; s.lightning = 0.5F;  s.vortex = 0.80F; s.sparks = 0.50F; s.halo = 0.45F; s.cracks = 0.40F;  s.circle = 0.50F; s.sky = 0.40F; }
                     case SILENT -> { s.ring = 0.10F; s.turb = 0.25F; s.streaks = 0.05F; s.smoke = 0.6F;  s.dust = 0.30F; }
                     default -> { s.dust = 0.50F; s.debris = 0.45F; s.cracks = 0.20F; s.halo = 0.35F; s.ring = 0.75F; s.implode = -0.60F; s.turb = 1.00F; s.rise = 0.30F; s.streaks = 0.35F; s.flash = 0.3F; }
                 }
@@ -593,6 +598,8 @@ public final class BlastMotif {
             Shape shell(float v) { shell = v; return this; }
             Shape nebula(float v) { nebula = v; return this; }
             Shape cone(float v) { cone = v; return this; }
+            Shape circle(float v) { circle = v; return this; }
+            Shape sky(float v) { sky = v; return this; }
         }
 
         private static int mix(int argb0, int argb1, float t) {
@@ -637,6 +644,30 @@ public final class BlastMotif {
     public static float impactEnvelope(float t) {
         float u = Math.max(0.0F, Math.min(1.0F, (t - 0.75F) / 0.25F));
         return 1.0F - u * u * (3.0F - 2.0F * u);
+    }
+
+    /**
+     * How big the skybox volume is for a blast of this size, in blast radii - or 0 for "do not draw one".
+     *
+     * <p>One function, because the shader marches {@code radius * SkyBox} while the renderer draws a cube
+     * {@code skyHalf} across, and if those two are derived separately they drift. Here {@code skyHalf} is
+     * computed first, then divided back out, so {@code radius * skyBoxRadii(...)} is exactly the cube that
+     * was drawn by construction - there is no second number to get wrong.
+     *
+     * <p>Returns 0 when the blast is already so wide that the block cap leaves no room outside its own
+     * cube. A kilometre-wide fireball has no skybox around it, which is correct: it IS the sky.
+     *
+     * @param blastRadius   the blast radius in blocks
+     * @param preferredRadii how many blast radii the sky should span when nothing caps it
+     * @param maxBlocks     the cap on the sky cube's half-extent, in blocks
+     * @param proxyRadii    the blast cube's own half-extent in radii; the sky must be bigger to be worth drawing
+     */
+    public static double skyBoxRadii(double blastRadius, double preferredRadii, double maxBlocks,
+                                     double proxyRadii) {
+        double radius = Math.max(1.0D, blastRadius);
+        double skyHalf = Math.min(radius * Math.max(0.0D, preferredRadii), Math.max(0.0D, maxBlocks));
+        double radii = skyHalf / radius;
+        return radii > proxyRadii ? radii : 0.0D;
     }
 
     /**

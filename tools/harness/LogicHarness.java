@@ -171,6 +171,7 @@ public final class LogicHarness {
         volumeShaderTests();
         warheadFeatureTests();
         impactEnvelopeTests();
+        skyBoxTests();
         chargePhaseTests();
         rifleTests();
         emitterClusterTests();
@@ -2198,6 +2199,7 @@ public final class LogicHarness {
             "jet", "coins", "smoke", "subCharges", "flash", "dome", "embers",
             "cap", "debris", "dust", "vortex", "cracks", "sparks", "halo",
             "disc", "lens", "granule", "prominence", "shell", "nebula", "cone",
+            "circle", "sky",
     };
 
     /**
@@ -2222,25 +2224,25 @@ public final class LogicHarness {
                     java.util.Map.entry("antimatter", "hole=0.8,flash=0.9,halo=0.7,disc=0.8,lens=0.9"),
                     java.util.Map.entry("numismatic", "coins=0.9"),
                     java.util.Map.entry("world_eater", "hole=0.9,dark=0.9,vortex=0.9,disc=1.0,lens=1.0"),
-                    java.util.Map.entry("stellar_requiem", "star=0.9,granule=1.0,prominence=0.9"),
+                    java.util.Map.entry("stellar_requiem", "star=0.9,granule=1.0,prominence=0.9,sky=1.0"),
                     java.util.Map.entry("reality_breaker", "rift=0.9"),
                     java.util.Map.entry("spacetime_hammer", "waves=0.9,shell=0.8"),
                     java.util.Map.entry("universal_imploder", "implode=0.9,hole=0.6,lens=0.9"),
-                    java.util.Map.entry("ragnarok", "meteors=0.9,lightning=0.8,skyRing=0.8,dust=0.9,cracks=0.8,nebula=0.7"),
-                    java.util.Map.entry("world_rune", "glyphs=0.9,cracks=1.0"),
+                    java.util.Map.entry("ragnarok", "meteors=0.9,lightning=0.8,skyRing=0.8,dust=0.9,cracks=0.8,nebula=0.7,sky=0.85"),
+                    java.util.Map.entry("world_rune", "glyphs=0.9,cracks=1.0,circle=1.0"),
                     java.util.Map.entry("abyssal_covenant", "portals=0.9,nebula=0.8"),
-                    java.util.Map.entry("soul_furnace", "lightning=0.9,skyRing=0.9,dark=0.8,vortex=1.0"),
-                    java.util.Map.entry("arcane_singularity", "glyphs=0.9,skyRing=0.9,lens=0.7"),
-                    java.util.Map.entry("quasar_lance", "jet=0.9,cone=1.0,disc=0.8"),
-                    java.util.Map.entry("starforge", "star=0.9,embers=0.8,granule=1.0,prominence=1.0"),
-                    java.util.Map.entry("big_bang_seed", "star=0.9,flash=0.9,halo=1.0,shell=1.0,nebula=0.9"),
+                    java.util.Map.entry("soul_furnace", "lightning=0.9,skyRing=0.9,dark=0.8,vortex=1.0,circle=0.8,sky=0.7"),
+                    java.util.Map.entry("arcane_singularity", "glyphs=0.9,skyRing=0.9,lens=0.7,circle=1.0,sky=0.5"),
+                    java.util.Map.entry("quasar_lance", "jet=0.9,cone=1.0,disc=0.8,sky=0.9"),
+                    java.util.Map.entry("starforge", "star=0.9,embers=0.8,granule=1.0,prominence=1.0,sky=0.9"),
+                    java.util.Map.entry("big_bang_seed", "star=0.9,flash=0.9,halo=1.0,shell=1.0,nebula=0.9,sky=1.0"),
                     java.util.Map.entry("reality_corruptor", "rift=0.8"),
                     java.util.Map.entry("absolute_zero", "hole=0.8,implode=0.9,cracks=0.7,lens=0.8"),
                     java.util.Map.entry("omega", "waves=0.9,implode=0.8,dust=0.9,shell=1.0"),
-                    java.util.Map.entry("absolute_annihilation", "hole=0.8,star=0.8,flash=0.9,waves=0.9,dust=1.0,halo=1.0,shell=1.0,disc=0.9,lens=1.0,nebula=0.9"),
+                    java.util.Map.entry("absolute_annihilation", "hole=0.8,star=0.8,flash=0.9,waves=0.9,dust=1.0,halo=1.0,shell=1.0,disc=0.9,lens=1.0,nebula=0.9,sky=0.9"),
                     java.util.Map.entry("bulwark", "dome=0.9"),
                     java.util.Map.entry("contagion", "smoke=0.9"),
-                    java.util.Map.entry("spell", "glyphs=0.8,skyRing=0.8"),
+                    java.util.Map.entry("spell", "glyphs=0.8,skyRing=0.8,circle=0.9"),
                     java.util.Map.entry("cargo", "jet=0.4"),
                     java.util.Map.entry("minefield", "portals=0.6"),
                     java.util.Map.entry("tracking", "ring=0.9"),
@@ -2282,6 +2284,8 @@ public final class LogicHarness {
             case "shell" -> v.shell();
             case "nebula" -> v.nebula();
             case "cone" -> v.cone();
+            case "circle" -> v.circle();
+            case "sky" -> v.sky();
             case "beam" -> v.beam();
             case "ring" -> v.ring();
             case "skyRing" -> v.skyRing();
@@ -2298,6 +2302,38 @@ public final class LogicHarness {
      * that keeps the authored rows honest. It also insists that two warheads sharing a theme do not share
      * a shape, which is the failure mode that got the whole effect rejected in the first place.
      */
+    /**
+     * The skybox geometry, which has one invariant that is easy to break and invisible when broken.
+     *
+     * <p>The shader marches {@code radius * SkyBox}; the renderer draws a cube {@code skyHalf} across.
+     * Derive those two separately and the march samples space the cube does not cover, which shows up as
+     * a hard box edge on the sky - on big warheads only, which are the ones hardest to set up a test for.
+     */
+    private static void skyBoxTests() {
+        section("skybox geometry");
+
+        for (double radius : new double[] {1.0D, 8.0D, 40.0D, 469.0D, 1237.0D, 4096.0D}) {
+            double radii = com.shadowclangaming.warhead.BlastMotif.skyBoxRadii(radius, 48.0D, 3000.0D, 3.4D);
+            if (radii <= 0.0D) {
+                check("no skybox is drawn when the blast already fills the cap: radius " + radius,
+                        radius * 48.0D > 3000.0D);
+                continue;
+            }
+            double skyHalf = radii * Math.max(1.0D, radius);
+            check("the marched box equals the drawn cube at radius " + radius,
+                    Math.abs(radii * Math.max(1.0D, radius) - skyHalf) < 1e-9D);
+            check("the sky cube obeys the block cap at radius " + radius, skyHalf <= 3000.0D + 1e-9D);
+            check("the sky is bigger than the blast cube at radius " + radius, radii > 3.4D);
+            check("the sky never exceeds its preferred span at radius " + radius, radii <= 48.0D + 1e-9D);
+        }
+        close("a grenade still gets a full-size sky", 48.0D,
+                com.shadowclangaming.warhead.BlastMotif.skyBoxRadii(8.0D, 48.0D, 3000.0D, 3.4D));
+        check("a warhead wider than the cap gets no skybox",
+                com.shadowclangaming.warhead.BlastMotif.skyBoxRadii(1237.0D, 48.0D, 3000.0D, 3.4D) == 0.0D);
+        check("a degenerate radius does not divide by zero",
+                com.shadowclangaming.warhead.BlastMotif.skyBoxRadii(0.0D, 48.0D, 3000.0D, 3.4D) >= 0.0D);
+    }
+
     /**
      * The brightness curve of a detonation, and how far away you can be and still get one.
      *

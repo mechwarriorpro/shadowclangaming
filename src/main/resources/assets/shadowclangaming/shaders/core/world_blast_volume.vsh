@@ -10,10 +10,18 @@ in vec3 Position;
 
 uniform mat4 ScgProj;
 uniform mat4 ScgView;
+// 1.0 while the skybox volume is being drawn, 0.0 for the blast itself. See the fragment shader.
+uniform float SkyPass;
 
 out vec3 vWorld;
 
 void main() {
     vWorld = Position;
     gl_Position = ScgProj * ScgView * vec4(Position, 1.0);
+    if (SkyPass > 0.5) {
+        // Park the skybox on the far plane. With the depth test still on and no depth write, it then
+        // draws only where the depth buffer is still clear - so terrain, buildings and hills occlude it
+        // exactly as they should. Without this a box that size would be a wall of nebula in your face.
+        gl_Position.z = gl_Position.w;
+    }
 }

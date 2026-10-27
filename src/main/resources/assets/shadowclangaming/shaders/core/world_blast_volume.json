@@ -483,6 +483,38 @@
       "values": [
         0
       ]
+    },
+    {
+      "name": "Circle",
+      "type": "float",
+      "count": 1,
+      "values": [
+        0
+      ]
+    },
+    {
+      "name": "Sky",
+      "type": "float",
+      "count": 1,
+      "values": [
+        0
+      ]
+    },
+    {
+      "name": "SkyBox",
+      "type": "float",
+      "count": 1,
+      "values": [
+        48
+      ]
+    },
+    {
+      "name": "SkyPass",
+      "type": "float",
+      "count": 1,
+      "values": [
+        0
+      ]
     }
   ]
 }

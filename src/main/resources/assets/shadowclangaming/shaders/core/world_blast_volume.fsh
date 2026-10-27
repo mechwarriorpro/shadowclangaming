@@ -6,10 +6,14 @@
 //
 // THE FIELD IS A COMPOSITION, NOT A PRESET. Twenty-nine structural features - hole, star, rift,
 // shockwave shells, meteors, lightning, runes, sky rings, portals, jet, coins, smoke, sub-charges,
-// flash, dome, embers, mushroom cap, debris, dust, vortex, ground cracks, sparks, halo, and the seven
+// flash, dome, embers, mushroom cap, debris, dust, vortex, ground cracks, sparks, halo, the seven
 // space-physics ones (Doppler-beamed accretion disc, photon ring, photospheric granulation,
-// prominences, Rayleigh-Taylor supernova shell, nebula wisps, Mach cone) - each weighted 0..1 and
-// summed. Every warhead in BlastMotif.Volume authors its own weights from its own
+// prominences, Rayleigh-Taylor supernova shell, nebula wisps, Mach cone), massive counter-rotating
+// magic circles, and a full skybox - each weighted 0..1 and summed.
+//
+// THE SKYBOX IS A SECOND VOLUME, NOT A FEATURE. It is drawn first, over a box SkyBox radii across
+// instead of PROXY_BOX, and the vertex shader pushes it to the far plane so terrain still occludes it.
+// Its field is evaluated from direction alone, so the stars stay pinned to the sky as you move. Every warhead in BlastMotif.Volume authors its own weights from its own
 // description, so a World Eater is a black hole with an accretion ring, a Quasar Lance is a kilometre of
 // jet, a Ragnarok is meteors and lightning under a blood-red sky, and a Numismatic blast is made of
 // tumbling gold. One code path, thirty-eight compositions, nothing in here branches per warhead.
@@ -82,6 +86,12 @@ uniform float Prominence;
 uniform float Shell;
 uniform float Nebula;
 uniform float Cone;
+// Round 51: a real skybox for the stellar warheads, and the massive circles the arcane ones are
+// described as having. SkyPass switches this program between the two volumes it draws.
+uniform float Circle;
+uniform float Sky;
+uniform float SkyBox;
+uniform float SkyPass;
 
 out vec4 fragColor;
 
@@ -135,6 +145,39 @@ float sampleField(vec3 wp, out vec3 emission) {
     float radius = max(Radius, 0.5);
     float t = clamp(Progress, 0.0, 1.0);
     bool charging = Phase < 0.5;
+
+    // ---- THE SKY PASS. A separate, much larger volume, drawn before the blast so the fireball
+    // composites on top of it, and pushed to the far plane by the vertex shader so terrain still
+    // occludes it - which is what makes it a skybox rather than a big fog cube.
+    //
+    // It is evaluated from DIRECTION ONLY. A skybox is a dome at infinity: sampling it by distance
+    // would make the nebula drift as you walk, which is the tell of a fake one. Every sample along a
+    // ray looks the same way, so the stars stay pinned to the sky exactly as real ones do.
+    if (SkyPass > 0.5) {
+        vec3 dir = normalize(wp - Center + vec3(0.0001));
+        float cloudA = fbm(dir * 2.4 + vec3(Seed * 31.0, Seed * 7.0, Seed * 19.0));
+        float cloudB = fbm(dir * 5.1 - vec3(Seed * 13.0, Seed * 23.0, Seed * 5.0)
+                           + vec3(0.0, Time * 0.01, 0.0));
+        float cloud = pow(max(0.0, cloudA * cloudB * 2.6), 1.8);
+        // A galactic plane, so the sky has structure instead of uniform cloud in every direction.
+        float band = 1.0 - smoothstep(0.0, 0.35,
+                abs(dot(dir, normalize(vec3(0.4, 1.0, 0.25)))));
+        // Stars are hash cells in direction space: points on the dome, not blobs in the volume.
+        vec3 cell = floor(dir * 140.0);
+        float h = hash31(cell + vec3(Seed * 97.0, Seed * 41.0, Seed * 63.0));
+        float star = 0.0;
+        if (h > 0.985) {
+            vec3 cellDir = normalize(cell + 0.5);
+            float angular = length(dir - cellDir);
+            float twinkle = 0.6 + 0.4 * sin(Time * 3.0 + h * 90.0);
+            star = (1.0 - smoothstep(0.0, 0.0035, angular)) * twinkle;
+        }
+        float sky = Sky * (cloud * 0.8 + cloud * band * 0.9 + star * 3.0);
+        float fade = charging ? mix(0.4, 1.0, t) : 1.0 - smoothstep(0.7, 1.0, t) * 0.85;
+        emission = mix(ColorC.rgb, ColorA.rgb, clamp(cloud + star, 0.0, 1.0))
+                 * Glow * (0.8 + 1.6 * star) * Strength;
+        return clamp(sky * fade, 0.0, 3.0);
+    }
 
     // How big it is this instant. A charge swells towards full size and holds; a detonation snaps out,
     // overshoots, then blows apart and fades.
@@ -536,6 +579,37 @@ float sampleField(vec3 wp, out vec3 emission) {
         bright *= mix(1.0, 2.4, Cone * wall * along);
     }
 
+    // --- magic circles: three concentric rings counter-rotating on the ground with rune teeth around
+    // each rim, an inscribed six-lobed figure inside them, and the same construction again overhead,
+    // larger and turning the other way. This is the "massive magic circle" the arcane warheads are
+    // described as having - not a disc with a few lines on it.
+    if (Circle > 0.01) {
+        float ground = 1.0 - smoothstep(0.0, 0.06, abs(q.y + 0.95));
+        for (int i = 0; i < 3; i++) {
+            float fi = float(i);
+            float ringR = 0.55 + fi * 0.45;
+            float spin = Time * (0.25 + fi * 0.15) * (i == 1 ? -1.0 : 1.0);
+            float ang = atan(q.z, q.x) + spin;
+            float rim = 1.0 - smoothstep(0.0, 0.035, abs(rr - ringR));
+            float teeth = pow(max(0.0, sin(ang * (14.0 + fi * 8.0))), 16.0);
+            float spokes = pow(max(0.0, sin(ang * 6.0)), 24.0);
+            float inner = 1.0 - smoothstep(ringR * 0.55, ringR, rr);
+            float lobes = abs(sin(ang * 3.0)) * ringR;
+            float figure = 1.0 - smoothstep(0.0, 0.03, abs(rr - lobes));
+            body += Circle * ground * (rim * 1.6 + teeth * rim * 1.3 + spokes * inner * 0.9 + figure * 1.1);
+            bright *= mix(1.0, 2.4, Circle * ground * rim);
+
+            // Overhead: bigger, thinner, and rotating the opposite way, so the two do not lock together.
+            float plane = 1.0 - smoothstep(0.0, 0.07, abs(q.y - (1.7 + fi * 0.22)));
+            float skyR = ringR * 1.25;
+            float skyRim = 1.0 - smoothstep(0.0, 0.05, abs(rr - skyR));
+            float skyTeeth = pow(max(0.0, sin(-ang * (10.0 + fi * 6.0))), 14.0);
+            float skySpokes = pow(max(0.0, sin(-ang * 8.0)), 20.0);
+            body += Circle * plane * (skyRim * 1.5 + skyTeeth * skyRim * 1.2 + skySpokes * 0.8);
+            bright *= mix(1.0, 2.0, Circle * plane * skyRim);
+        }
+    }
+
     // --- embers: a rising column of fire
     if (Embers > 0.01 || Rise > 0.4) {
         float amount = max(Embers, (Rise - 0.4) * 1.2);
@@ -572,7 +646,9 @@ void main() {
     // One shade per pixel, whether the camera is outside the proxy volume or standing inside it: from
     // outside the near faces are front-facing, from inside the visible faces are back-facing.
     float radius = max(Radius, 0.5);
-    float boxRadius = radius * PROXY_BOX;
+    // SkyBox is derived from the cube client/VolumetricFx actually drew, so it is used as-is:
+    // flooring it here would march a box the geometry does not cover.
+    float boxRadius = radius * (SkyPass > 0.5 ? SkyBox : PROXY_BOX);
     bool inside = all(lessThan(abs(CamPos - Center), vec3(boxRadius)));
     bool shade = inside ? !gl_FrontFacing : gl_FrontFacing;
     if (!shade) {
@@ -597,7 +673,8 @@ void main() {
         discard;
     }
 
-    int steps = int(clamp(Steps, 8.0, 128.0));
+    // The sky is smooth and its box is huge, so it needs a fraction of the steps the fireball does.
+    int steps = int(clamp(SkyPass > 0.5 ? Steps * 0.4 : Steps, 8.0, 128.0));
     float stepLen = (tExit - tEnter) / float(steps);
     vec3 pos = ro + rd * (tEnter + stepLen * 0.5);
 

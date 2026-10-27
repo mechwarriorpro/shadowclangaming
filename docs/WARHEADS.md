@@ -1738,3 +1738,86 @@ Locally re-simulated the authored table: no floor violations, 48 same-theme pair
 it, and told you it was the cause. It was *a* cause. This one is measured rather than inferred: the
 brightness curve is printed above at six points in the effect's life, and the new one is pinned by an
 assertion.
+
+---
+
+## Round 51 — the grenade was counting a fuse on an entity that no longer existed
+
+"I'm using grenades for testing." That was the missing fact. Three rounds of "no blast" and the answer
+was in the delivery form, not the shader.
+
+### 1. No explosive did anything, because a grenade's fuse never ticked
+
+```java
+protected void onHit(HitResult result) {
+    super.onHit(result);      // <- vanilla's onHitBlock ends by calling discard()
+    ...
+    fuse = fuseTicks();       // armed
+}
+
+public void tick() {
+    ...
+    if (fuse > 0) { fuse--; return; }   // never ran again
+    detonate();                          // never reached
+}
+```
+
+A `ThrowableItemProjectile` that lands on a block is discarded by vanilla inside `super.onHit`. The
+grenade armed, announced its charge effect, and was removed from the world — so `tick()` was never
+called again, the countdown stopped at whatever it was armed with, and `detonate()` never ran. **The
+grenade played its entire charge effect and then nothing happened.** Nothing in any log said so, because
+the code was correct; it was just attached to an entity that had already been removed.
+
+Every other form was fine, which is why this survived: the block uses `scheduleTick`, the missile uses
+`ChargeSequence`, the minecart deliberately keeps itself alive and documents why. The grenade was the
+odd one out — and the one being thrown.
+
+The fuse now belongs to `ChargeSequence`, a server-side list ticked from `ShadowClanGaming` that does
+not care whether the entity that started it still exists. `ChargeSequence.start` gained an overload
+taking an explicit tick count, so a grenade cooks for the grenade-form fuse rather than the block-form
+one. `check_fuse_ownership()` fails the build if any entity under `entity/` decrements a fuse field in
+its own `tick()` again; negative-tested against the old grenade.
+
+### 2. A real skybox for the stellar warheads
+
+`Sky` is not a feature inside the blast volume — it is a **second volume**, drawn first:
+
+* The cube is `SkyBox` radii across instead of 3.4, capped at 3000 blocks. A grenade gets a 384-block
+  dome over it; a kilometre-wide cataclysm gets none, because at that point it *is* the sky.
+* The vertex shader parks it on the far plane (`gl_Position.z = gl_Position.w`) with the depth test
+  still on, so terrain, hills and buildings occlude it exactly as they should. Without that, a box that
+  size is a wall of nebula in your face.
+* Its field is evaluated from **direction only**. A skybox is a dome at infinity: sampling it by
+  distance makes the nebula drift as you walk, which is the tell of a fake one. Two octaves multiplied
+  for cloud, a galactic band for structure, and stars as hash cells in direction space so they stay
+  pinned to the sky.
+
+The marched box and the drawn cube have to be the same size or the march samples space the geometry does
+not cover — a hard box edge on the sky, on big warheads only, which are the hardest to test. Both are
+now derived from `BlastMotif.skyBoxRadii`, where the half-extent is computed first and divided back out,
+so they match by construction rather than by luck. `skyBoxTests()` asserts the invariant across radii
+from 1 to 4096. An earlier version of this floored the uniform at `PROXY_BOX + 1`, which silently broke
+it above radius 600 — caught by simulating the numbers locally before pushing.
+
+19 warheads get a skybox: the stellar ones at 0.9–1.0, Ragnarok at 0.85 because a blood-red sky is
+literally in its description, and the rest of the endgame weapons at 0.4–0.7.
+
+### 3. Massive magic circles
+
+`Circle` is three concentric rings counter-rotating on the ground — each with rune teeth around the rim,
+a six-lobed inscribed figure inside, and spokes — plus the same construction again overhead, larger,
+thinner, and turning the opposite way so the two never lock together. World Rune and Arcane Singularity
+run it at 1.0, Spell 0.9, Soul Furnace 0.8. Nine warheads have them.
+
+That takes the shader to 31 features and 58 uniforms.
+
+### 4. What was verified, and what was not
+
+Machine-checked: `tools/sweep.py` with the new `check_fuse_ownership` (negative-tested), all 58 uniforms
+joined JSON ↔ GLSL ↔ Java in both directions, every `smoothstep` edge scanned, every `pow` guarded
+against a negative base, 41 fields / 41 setters, the logic harness with `skyBoxTests` and
+`impactEnvelopeTests`, the API and Lua harnesses, and `gradlew build` against NeoForge 21.1.264 in CI.
+Locally re-simulated the authored table: no floor violations, 48 same-theme pairs clear, closest 1.20.
+
+**Not** verified: a frame. But this round's headline fix is not a visual judgement — it is a control-flow
+fact about which object owns a timer, and it is now enforced by a check rather than by inspection.
