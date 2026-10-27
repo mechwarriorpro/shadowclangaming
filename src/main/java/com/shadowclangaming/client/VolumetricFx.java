@@ -1,6 +1,7 @@
 package com.shadowclangaming.client;
 
 import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.shaders.Uniform;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
@@ -90,6 +91,8 @@ public final class VolumetricFx {
     private static boolean loadFailed;
     /** Why the shader is unusable, for /scg fx status. Null while everything is fine. */
     private static String failureReason;
+    private static boolean drawFailed;
+    private static String drawFailure;
     private static long frames;
     private static int lastDrawn;
 
@@ -157,6 +160,10 @@ public final class VolumetricFx {
      * {@code fx status} already printed said nothing either way.
      */
     public static String statusLine() {
+        if (drawFailed) {
+            return "NOT RUNNING - shader loaded but threw while drawing, so it was disabled: " + drawFailure
+                    + "\n      (full trace in logs/latest.log under 'Volumetric blast draw failed')";
+        }
         if (loadFailed) {
             return "NOT RUNNING - shader failed to load, drawing CPU triangles instead: " + failureReason
                     + "\n      (full trace in logs/latest.log under 'Volumetric blast shader failed to register')";
@@ -266,7 +273,10 @@ public final class VolumetricFx {
             com.shadowclangaming.debug.ShadowDebug.log("VOLUME_FRAME",
                     "frame={} active={} drawn={} program=world_blast_volume", frame, effects.size(), drawn);
         } catch (Throwable ex) {
-            loadFailed = true;
+            // Not loadFailed: the program compiled and is still usable. Recording a draw error as a load
+            // failure is what made fx status report a JSON problem that had already been fixed.
+            drawFailed = true;
+            drawFailure = describe(ex);
             ShadowClanGaming.LOGGER.error("Volumetric blast draw failed; falling back to geometry", ex);
             com.shadowclangaming.debug.ShadowDebug.logThrowable("VOLUME_FAIL", "frame=" + frame, ex);
             return false;
@@ -287,10 +297,9 @@ public final class VolumetricFx {
     /**
      * Push one effect's parameters into the program.
      *
-     * Looked up by name on every draw rather than cached, because the uniform type is not something this
-     * mod can import portably across shader renames - {@code ShaderInstance#safeGetUniform} is the API the
-     * rest of this package already uses, it never returns null, and a couple of dozen map lookups a frame
-     * is nothing next to a raymarch.
+     * Looked up by name on every draw rather than cached; a couple of dozen map lookups a frame is nothing
+     * next to a raymarch. See {@link #uniform} for why that goes through the nullable getter and not
+     * {@code safeGetUniform}.
      */
     private static void setUniforms(ShaderInstance program, CinematicFx.Effect effect, Vec3 cam,
                                     Matrix4f view, Matrix4f projection, float time, double distance) {
@@ -396,25 +405,66 @@ public final class VolumetricFx {
 
     // ------------------------------------------------------------------ uniform plumbing
     //
-    // By name, through safeGetUniform, so this file never has to name the uniform class: it has moved
-    // packages between Minecraft versions and a wrong import is a build failure rather than a warning.
+    // By name. This used to go through safeGetUniform precisely to avoid importing the uniform class -
+    // "it has moved packages between versions and a wrong import is a build failure". That reasoning was
+    // the bug: safeGetUniform's whole behaviour is to hide a missing uniform behind a DUMMY, so the one
+    // thing worth knowing (that the program does not have this uniform) was unreachable, and setting it
+    // threw instead. Naming com.mojang.blaze3d.shaders.Uniform costs one import and buys the distinction.
+
+    /** Uniforms already reported missing, so a per-frame failure logs once instead of 300 times a second. */
+    private static final java.util.Set<String> reportedMissing = new java.util.HashSet<>();
+
+    /**
+     * The named uniform, or null if the program does not have one.
+     *
+     * <p>{@code safeGetUniform} never returns null - when the name is absent it returns a shared DUMMY
+     * built as {@code new Uniform("dummy", -1, 1, null)}, and type -1 allocates neither buffer. Calling
+     * {@code set} on it throws {@code NullPointerException: ... because "this.floatValues" is null}, which
+     * is what was killing every frame: the shader loaded fine, then the first {@code set(program, "Center",
+     * ...)} threw, and the catch-all below recorded it as a load failure and pointed at the JSON.
+     *
+     * <p>So resolve through the nullable getter and say which uniform is missing. A shader with one absent
+     * uniform should lose that uniform, not the entire effect.
+     */
+    private static Uniform uniform(ShaderInstance program, String name) {
+        Uniform found = program.getUniform(name);
+        if (found == null && reportedMissing.add(name)) {
+            ShadowClanGaming.LOGGER.error("Volumetric blast shader has no uniform named '{}'; it is declared "
+                    + "in the JSON but absent from the linked program, so it cannot be set", name);
+            com.shadowclangaming.debug.ShadowDebug.log("VOLUME_UNIFORM_MISSING", "name={}", name);
+        }
+        return found;
+    }
 
     private static void set(ShaderInstance program, String name, float value) {
-        program.safeGetUniform(name).set(value);
+        Uniform target = uniform(program, name);
+        if (target != null) {
+            target.set(value);
+        }
     }
 
     private static void set(ShaderInstance program, String name, float x, float y, float z) {
-        program.safeGetUniform(name).set(x, y, z);
+        Uniform target = uniform(program, name);
+        if (target != null) {
+            target.set(x, y, z);
+        }
     }
 
     private static void set(ShaderInstance program, String name, Matrix4f matrix) {
-        program.safeGetUniform(name).set(matrix);
+        Uniform target = uniform(program, name);
+        if (target != null) {
+            target.set(matrix);
+        }
     }
 
     /** Palette entry as a vec4, with the effect's own strength folded into the alpha. */
     private static void set(ShaderInstance program, String name, int argb, float strength) {
         float scale = 1.0F / 255.0F;
-        program.safeGetUniform(name).set(((argb >>> 16) & 0xFF) * scale, ((argb >>> 8) & 0xFF) * scale,
+        Uniform target = uniform(program, name);
+        if (target == null) {
+            return;
+        }
+        target.set(((argb >>> 16) & 0xFF) * scale, ((argb >>> 8) & 0xFF) * scale,
                 (argb & 0xFF) * scale, Math.max(0.0F, Math.min(1.0F, strength)));
     }
 }
