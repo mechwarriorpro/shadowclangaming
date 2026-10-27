@@ -134,11 +134,12 @@ public final class CinematicFx {
         RenderSystem.disableCull();
         try {
             RenderSystem.setShader(() -> active);
-            // Vertices are world-space; the view matrix is built from the camera here rather than taken
-            // off the pose stack (see WorldMatrices). One translation, applied once. Inside the guard, so
-            // a driver that objects leaves the render state as it found it.
-            active.safeGetUniform("ScgView").set(WorldMatrices.view(event.getCamera()));
-            active.safeGetUniform("ScgProj").set(WorldMatrices.projection());
+            // Vertices are world-space and the shader does the one and only transform, so it needs the
+            // same pair of matrices the level is drawn with. Taken from the event: RenderSystem's
+            // projection at this stage measured m32 = -0.1 in-game, where a perspective projection has
+            // -1.0, so it is not the level's matrix and anything projected with it lands off-screen.
+            active.safeGetUniform("ScgView").set(WorldMatrices.view(event));
+            active.safeGetUniform("ScgProj").set(WorldMatrices.projection(event));
             BufferBuilder buffer = Tesselator.getInstance()
                     .begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
             // Identity, deliberately: vertices stay in world coordinates and the shader's own ScgView
