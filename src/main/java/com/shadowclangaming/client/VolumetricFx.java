@@ -177,7 +177,7 @@ public final class VolumetricFx {
             return "NOT RUNNING - cinematicShaders is off in config, drawing CPU triangles instead";
         }
         return "running, " + frames + " frame(s) drawn, " + lastDrawn + " volume(s) last frame"
-                + "; " + probeLine();
+                + "; " + probeLine() + "; " + solidLine();
     }
 
     /**
@@ -207,6 +207,7 @@ public final class VolumetricFx {
             return true;
         }
 
+        tickSolid();
         ShaderInstance previous = RenderSystem.getShader();
         RenderSystem.enableDepthTest();
         RenderSystem.depthMask(false);
@@ -382,11 +383,14 @@ public final class VolumetricFx {
         // Scales density as well as glow, so the volume thins out as the effect ends instead of turning
         // into an opaque black ball that sits there after the fire is gone.
         set(program, "Strength", Math.max(0.0F, Math.min(1.0F, effect.strength())));
+        set(program, "Solid", solidFrames > 0 ? 1.0F : 0.0F);
     }
 
     /** The proxy cube: six faces, two triangles each, in world coordinates. */
     /** Frames left on the probe cube; see {@link #startProbe}. */
     private static int probeFrames;
+    /** Frames left with the march bypassed; see {@link #startSolid}. */
+    private static int solidFrames;
     /** Probe cubes that actually reached a draw call, so "I saw nothing" can be told apart from "the
      *  command never ran". Reported by fx status. */
     private static int probeDrawn;
@@ -406,6 +410,30 @@ public final class VolumetricFx {
     public static void startProbe(int frames) {
         probeFrames = frames;
         probeDrawn = 0;
+    }
+
+    /**
+     * Bypass the march and write a flat colour for a few seconds.
+     *
+     * <p>The probe cube proved the geometry path works, so what is left is this shader on its own. A flat
+     * colour splits it: a magenta box where the blast should be means the program, matrices, blend and
+     * depth are all fine and the field maths is producing nothing; still nothing means the program is not
+     * drawing at all and the march is not where to look.
+     */
+    public static void startSolid(int frames) {
+        solidFrames = frames;
+    }
+
+    /** Decremented per frame; the blast pass and the sky pass both need it off again afterwards. */
+    static void tickSolid() {
+        if (solidFrames > 0) {
+            solidFrames--;
+        }
+    }
+
+    /** Read by fx status. */
+    public static String solidLine() {
+        return solidFrames > 0 ? solidFrames + " frame(s) of solid output left" : "solid off";
     }
 
     /**

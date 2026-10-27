@@ -62,6 +62,7 @@ public final class SCGCommands {
 
     /** Published from the client at mod construction, same pattern as {@link #volumetricStatus}. */
     public static volatile Runnable volumetricProbe;
+    public static volatile Runnable volumetricSolid;
 
     public static void register(RegisterCommandsEvent event) {
         CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
@@ -121,6 +122,7 @@ public final class SCGCommands {
                         .then(Commands.literal("status").executes(SCGCommands::fxStatus))
                         .then(Commands.literal("motifs").executes(SCGCommands::fxMotifs))
                         .then(Commands.literal("probe").executes(SCGCommands::fxProbe))
+                        .then(Commands.literal("solid").executes(SCGCommands::fxSolid))
                         .then(Commands.literal("fuses").executes(SCGCommands::fxFuses))
                         .then(Commands.literal("test")
                                 .executes(context -> fxTest(context, "flash"))
@@ -365,6 +367,22 @@ public final class SCGCommands {
      * march that computes nothing. If the cube appears, the geometry path is fine and the fault is in the
      * shader's maths; if it does not, the march is not where to look.
      */
+    /** Bypass the raymarch and draw the blast volume as a flat magenta box for a few seconds. */
+    private static int fxSolid(CommandContext<CommandSourceStack> context) {
+        var source = context.getSource();
+        Runnable solid = volumetricSolid;
+        if (solid == null) {
+            source.sendFailure(Component.literal("The client never published a solid hook."));
+            return 0;
+        }
+        solid.run();
+        source.sendSuccess(() -> Component.literal(
+                "March bypassed for 5 seconds. Throw something: a magenta box means the shader program and "
+                        + "its matrices are fine and the field maths is the problem; no box means the "
+                        + "program is not drawing at all."), false);
+        return 1;
+    }
+
     private static int fxProbe(CommandContext<CommandSourceStack> context) {
         var source = context.getSource();
         Runnable probe = volumetricProbe;

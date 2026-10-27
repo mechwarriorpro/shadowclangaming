@@ -102,6 +102,11 @@ uniform float ShaftHalf;
 uniform float ShaftWidth;
 uniform float Shaft;
 
+// Bypasses the march and writes a flat colour. Diagnostic only: it separates "the program,
+// geometry, matrices, blend and depth are all fine" from "the field maths produces nothing",
+// which are otherwise indistinguishable - both look like no effect at all.
+uniform float Solid;
+
 out vec4 fragColor;
 
 // Half-extent of the proxy cube, in blast radii. client/VolumetricFx draws a cube this size, so the two
@@ -706,6 +711,10 @@ float sampleField(vec3 wp, out vec3 emission) {
 }
 
 void main() {
+    if (Solid > 0.5) {
+        fragColor = vec4(1.0, 0.0, 1.0, 1.0);
+        return;
+    }
     vec3 ro = CamPos;
     vec3 rd = vWorld - ro;
     float rayLen = length(rd);
