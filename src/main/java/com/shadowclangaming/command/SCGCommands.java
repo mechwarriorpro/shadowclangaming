@@ -60,6 +60,9 @@ public final class SCGCommands {
      */
     public static volatile java.util.function.Supplier<String> volumetricStatus;
 
+    /** Published from the client at mod construction, same pattern as {@link #volumetricStatus}. */
+    public static volatile Runnable volumetricProbe;
+
     public static void register(RegisterCommandsEvent event) {
         CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
 
@@ -117,6 +120,7 @@ public final class SCGCommands {
                 .then(Commands.literal("fx")
                         .then(Commands.literal("status").executes(SCGCommands::fxStatus))
                         .then(Commands.literal("motifs").executes(SCGCommands::fxMotifs))
+                        .then(Commands.literal("probe").executes(SCGCommands::fxProbe))
                         .then(Commands.literal("fuses").executes(SCGCommands::fxFuses))
                         .then(Commands.literal("test")
                                 .executes(context -> fxTest(context, "flash"))
@@ -353,6 +357,31 @@ public final class SCGCommands {
      * Every warhead has its own shape now (see {@code warhead/BlastMotif}); this prints the whole table so
      * "the effects all look the same" is a claim that can be checked instead of argued about.
      */
+    /**
+     * Draw a solid magenta cube for a few seconds through vanilla's own position-colour shader.
+     *
+     * <p>The raymarcher reports itself running, so loading is ruled out but drawing is not - and a cube
+     * that is depth-rejected, culled, mis-matrixed or projected off-screen is indistinguishable from a
+     * march that computes nothing. If the cube appears, the geometry path is fine and the fault is in the
+     * shader's maths; if it does not, the march is not where to look.
+     */
+    private static int fxProbe(CommandContext<CommandSourceStack> context) {
+        var source = context.getSource();
+        Runnable probe = volumetricProbe;
+        if (probe == null) {
+            source.sendFailure(Component.literal(
+                    "The client never published a probe hook, so this is a dedicated server or the client "
+                            + "mod did not construct."));
+            return 0;
+        }
+        probe.run();
+        source.sendSuccess(() -> Component.literal(
+                "Probe cube drawn for 5 seconds. If you can see a magenta cube, the proxy geometry reaches "
+                        + "the screen and the fault is inside the raymarch; if you cannot, it is not."),
+                false);
+        return 1;
+    }
+
     private static int fxMotifs(CommandContext<CommandSourceStack> context) {
         var source = context.getSource();
         source.sendSuccess(() -> Component.literal(

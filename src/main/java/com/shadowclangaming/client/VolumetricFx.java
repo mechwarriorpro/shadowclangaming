@@ -12,6 +12,7 @@ import com.shadowclangaming.ShadowClanGaming;
 import com.shadowclangaming.config.SCGConfig;
 import com.shadowclangaming.warhead.BlastMotif;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
@@ -186,6 +187,9 @@ public final class VolumetricFx {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) {
             return false;
         }
+        // Before the availability checks on purpose: the probe has to be drawable in exactly the states
+        // where the volumetric pass is not.
+        drawProbe(event.getCamera().getPosition());
         if (!available() || !SCGConfig.cinematicShadersEnabled()) {
             return false;
         }
@@ -379,6 +383,56 @@ public final class VolumetricFx {
     }
 
     /** The proxy cube: six faces, two triangles each, in world coordinates. */
+    /** Frames left on the probe cube; see {@link #startProbe}. */
+    private static int probeFrames;
+
+    /**
+     * Draw a solid magenta cube through Minecraft's own position-colour shader for a few seconds.
+     *
+     * <p>The raymarcher now reports itself running, which rules out loading but not drawing: a wrong view
+     * matrix, a depth-rejected cube, a culled cube and a cube projected off-screen all look identical from
+     * outside the game - nothing appears, and the frame counter climbs anyway. This settles it in one look.
+     * It uses vanilla's shader on the same coordinates {@link #drawProxy} uses, so if the magenta cube is
+     * visible the geometry path is sound and the fault is inside the march; if it is not, the march is not
+     * where to look.
+     */
+    public static void startProbe(int frames) {
+        probeFrames = frames;
+    }
+
+    private static void drawProbe(Vec3 cam) {
+        if (probeFrames <= 0) {
+            return;
+        }
+        probeFrames--;
+        double half = 10.0D;
+        double x = Math.floor(cam.x) + 0.5D;
+        double y = Math.floor(cam.y) + 2.0D;
+        double z = Math.floor(cam.z) + 0.5D;
+        double x0 = x - half, x1 = x + half, y0 = y - half, y1 = y + half, z0 = z - half, z1 = z + half;
+        int argb = 0xFFFF00FF;
+        BufferBuilder buffer = Tesselator.getInstance()
+                .begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+        colourQuad(buffer, x0, y0, z0, x1, y0, z0, x1, y1, z0, x0, y1, z0, argb);
+        colourQuad(buffer, x1, y0, z1, x0, y0, z1, x0, y1, z1, x1, y1, z1, argb);
+        colourQuad(buffer, x0, y0, z1, x0, y0, z0, x0, y1, z0, x0, y1, z1, argb);
+        colourQuad(buffer, x1, y0, z0, x1, y0, z1, x1, y1, z1, x1, y1, z0, argb);
+        colourQuad(buffer, x0, y0, z1, x1, y0, z1, x1, y0, z0, x0, y0, z0, argb);
+        colourQuad(buffer, x0, y1, z0, x1, y1, z0, x1, y1, z1, x0, y1, z1, argb);
+        RenderSystem.setShader(GameRenderer::getPositionColorShader);
+        BufferUploader.drawWithShader(buffer.buildOrThrow());
+    }
+
+    private static void colourQuad(BufferBuilder buffer,
+                                   double ax, double ay, double az, double bx, double by, double bz,
+                                   double cx, double cy, double cz, double dx, double dy, double dz,
+                                   int argb) {
+        buffer.addVertex((float) ax, (float) ay, (float) az).setColor(argb);
+        buffer.addVertex((float) bx, (float) by, (float) bz).setColor(argb);
+        buffer.addVertex((float) cx, (float) cy, (float) cz).setColor(argb);
+        buffer.addVertex((float) dx, (float) dy, (float) dz).setColor(argb);
+    }
+
     private static void drawProxy(double cx, double cy, double cz, double half) {
         float x0 = (float) (cx - half);
         float x1 = (float) (cx + half);

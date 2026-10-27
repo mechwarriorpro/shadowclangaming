@@ -63,6 +63,11 @@ public final class BlastClientEvents {
      * wave, so it reads as a shockwave rather than a camera wobble. The amount is the same strength value the
      * shaders use, so a player who turns shake down to zero still gets everything else.
      */
+    /** How long the camera keeps moving after a blast lands, in seconds. */
+    private static final double SHAKE_SECONDS = 0.75D;
+    private static long shakeStartMs = Long.MIN_VALUE / 4;
+    private static float lastStrength;
+
     @SubscribeEvent
     public static void onCameraAngles(ViewportEvent.ComputeCameraAngles event) {
         if (!SCGConfig.screenShake() || SCGConfig.shakeStrength() <= 0.0D) {
@@ -70,14 +75,29 @@ public final class BlastClientEvents {
         }
         float strength = BlastShaderFx.strength();
         if (strength <= 0.01F) {
+            lastStrength = 0.0F;
             return;
         }
-        float scale = (float) (SCGConfig.shakeStrength() * strength
+        long now = System.currentTimeMillis();
+        // A shockwave is an impulse, not a state. The shake used to track the effect's own strength for
+        // the whole life of the effect, and these run up to 1200 ticks - so the camera shook for a full
+        // minute after every grenade. Restart on a rising edge (a new blast, or a stronger one) and decay
+        // to nothing inside three quarters of a second regardless of how long the effect plays.
+        if (strength > lastStrength + 0.02F) {
+            shakeStartMs = now;
+        }
+        lastStrength = strength;
+        double envelope = 1.0D - (now - shakeStartMs) / 1000.0D / SHAKE_SECONDS;
+        if (envelope <= 0.0D) {
+            return;
+        }
+        envelope *= envelope;
+        float scale = (float) (SCGConfig.shakeStrength() * strength * envelope
                 * BlastShaderFx.overlayStyle().shake() * 1.6F);
         if (scale <= 0.0F) {
             return;
         }
-        double time = (System.currentTimeMillis() % 100_000L) / 1000.0D;
+        double time = (now % 100_000L) / 1000.0D;
         float yaw = (float) (Math.sin(time * 47.0D) * Math.sin(time * 13.0D)) * scale;
         float pitch = (float) (Math.cos(time * 41.0D) * Math.sin(time * 11.0D)) * scale * 0.6F;
         float roll = (float) (Math.sin(time * 29.0D)) * scale * 0.5F;

@@ -2,7 +2,6 @@ package com.shadowclangaming.client;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Camera;
-import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 
 /**
@@ -23,12 +22,18 @@ public final class WorldMatrices {
     }
 
     /** Vanilla's view matrix for this camera: world space in, view space out. */
+    /**
+     * The camera-space transform for this frame, straight from the engine.
+     *
+     * <p>This used to be rebuilt by hand - rotationX(xRot), rotateY(yRot + 180), translate(-cam). That is
+     * only correct if every sign and order convention matches Minecraft's own camera setup, and a single
+     * wrong sign projects the proxy cube off-screen. From outside the game that is indistinguishable from
+     * a shader that renders nothing: the frame counter climbs either way. The camera argument stays in the
+     * signature so callers read the same, but the engine's matrix is the source of truth now.
+     */
     public static Matrix4f view(Camera camera) {
-        Vec3 cam = camera.getPosition();
-        return new Matrix4f()
-                .rotationX((float) Math.toRadians(camera.getXRot()))
-                .rotateY((float) Math.toRadians(camera.getYRot() + 180.0F))
-                .translate((float) -cam.x, (float) -cam.y, (float) -cam.z);
+        Matrix4f modelView = RenderSystem.getModelViewMatrix();
+        return modelView != null ? new Matrix4f(modelView) : new Matrix4f();
     }
 
     /** The projection matrix Minecraft is drawing the level with this frame. */

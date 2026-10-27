@@ -27,6 +27,7 @@ public final class SCGClient {
     @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         // So /scg fx status can say whether the raymarcher is running instead of only printing config.
+        com.shadowclangaming.command.SCGCommands.volumetricProbe = () -> VolumetricFx.startProbe(100);
         com.shadowclangaming.command.SCGCommands.volumetricStatus =
                 com.shadowclangaming.client.VolumetricFx::statusLine;
         event.registerEntityRenderer(SCGEntities.MISSILE.get(), MissileRenderer::new);
