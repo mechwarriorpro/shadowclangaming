@@ -808,6 +808,53 @@ coherent restrict readonly writeonly
 """.split())
 
 
+def check_shader_uniform_counts():
+    """Every uniform in a core shader JSON has a count, and it matches the values array.
+
+    Minecraft parses these at shader load, not at build: a uniform without `count` throws
+    "Invalid ... uniforms[N]: Missing count, expected to find a Int" inside the ShaderInstance
+    constructor. That is a RuntimeException at client startup, so the shader is null, VolumetricFx
+    reports itself unavailable, and the game draws CPU triangles - a green build and a broken effect.
+    glslang cannot see it because it is JSON, and the name-join check cannot see it because the names
+    are correct. This is the check that would have caught it.
+    """
+    hits = 0
+    checked = 0
+    for dirpath, _dirs, names in os.walk(os.path.join(ASSETS, "shaders")):
+        for name in sorted(names):
+            if not name.endswith(".json"):
+                continue
+            path = os.path.join(dirpath, name)
+            try:
+                data = json.loads(read(path))
+            except ValueError:
+                fail("%s is not valid JSON" % os.path.relpath(path, ASSETS))
+                hits += 1
+                continue
+            uniforms = data.get("uniforms")
+            if not isinstance(uniforms, list):
+                continue
+            for index, uniform in enumerate(uniforms):
+                if not isinstance(uniform, dict):
+                    continue
+                checked += 1
+                where = "%s uniforms[%d] (%s)" % (os.path.relpath(path, ASSETS), index,
+                                                  uniform.get("name", "?"))
+                if "count" not in uniform:
+                    fail("%s has no count; Minecraft throws 'Missing count, expected to find a Int' "
+                         "at shader load and the effect silently falls back to CPU triangles" % where)
+                    hits += 1
+                    continue
+                values = uniform.get("values")
+                if isinstance(values, list) and len(values) != uniform["count"]:
+                    fail("%s declares count %s but %d value(s)"
+                         % (where, uniform["count"], len(values)))
+                    hits += 1
+    if hits == 0:
+        print("shader uniform counts: %d uniforms all declare a matching count" % checked)
+    return hits
+
+
 def check_glsl_duplicate_declarations():
     """No identifier declared twice in the same brace scope.
 
@@ -1137,6 +1184,7 @@ def main():
     check_sky_box_reaches_the_big_ones()
     check_glsl_reserved_words()
     check_glsl_duplicate_declarations()
+    check_shader_uniform_counts()
     subscribers = check_event_subscribers()
     check_proxy_box()
     check_glsl_defined()
