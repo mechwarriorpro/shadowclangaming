@@ -4,10 +4,12 @@
 // A cube the size of the blast is drawn around the detonation and this marches a procedural density field
 // through it - no textures, no samplers, no billboards. The fireball is a function, evaluated per pixel.
 //
-// THE FIELD IS A COMPOSITION, NOT A PRESET. Twenty-two structural features - hole, star, rift,
+// THE FIELD IS A COMPOSITION, NOT A PRESET. Twenty-nine structural features - hole, star, rift,
 // shockwave shells, meteors, lightning, runes, sky rings, portals, jet, coins, smoke, sub-charges,
-// flash, dome, embers, mushroom cap, debris, dust, vortex, ground cracks, sparks and halo - are each
-// weighted 0..1 and summed. Every warhead in BlastMotif.Volume authors its own weights from its own
+// flash, dome, embers, mushroom cap, debris, dust, vortex, ground cracks, sparks, halo, and the seven
+// space-physics ones (Doppler-beamed accretion disc, photon ring, photospheric granulation,
+// prominences, Rayleigh-Taylor supernova shell, nebula wisps, Mach cone) - each weighted 0..1 and
+// summed. Every warhead in BlastMotif.Volume authors its own weights from its own
 // description, so a World Eater is a black hole with an accretion ring, a Quasar Lance is a kilometre of
 // jet, a Ragnarok is meteors and lightning under a blood-red sky, and a Numismatic blast is made of
 // tumbling gold. One code path, thirty-eight compositions, nothing in here branches per warhead.
@@ -69,6 +71,17 @@ uniform float Halo;
 // accumulated, so dimming the colour alone would leave a solid black blob hanging in the world
 // after the blast had finished burning.
 uniform float Strength;
+// The space-physics set. Written from what the phenomena actually look like rather than from
+// what is easy: a black hole is lopsided because the approaching side of its disc is beamed, a
+// photosphere is a patchwork of convection cells, and a supernova front is ragged because dense
+// fingers of ejecta mushroom out through the shocked gas.
+uniform float Disc;
+uniform float Lens;
+uniform float Granule;
+uniform float Prominence;
+uniform float Shell;
+uniform float Nebula;
+uniform float Cone;
 
 out vec4 fragColor;
 
@@ -436,6 +449,91 @@ float sampleField(vec3 wp, out vec3 emission) {
         float bloom = 1.0 - smoothstep(0.5, 2.6, r);
         body += Halo * bloom * 0.4;
         bright *= mix(1.0, 1.5, Halo * bloom);
+    }
+
+    // --- accretion disc with relativistic Doppler beaming. The single most recognisable thing about a
+    // real black hole image: the side of the disc swinging toward you is beamed brighter and bluer, the
+    // side swinging away is dim and red, so the ring is lopsided rather than a flat washer.
+    if (Disc > 0.01) {
+        float discY = abs(q.y) + ridge(vec3(q.xz * 3.0, Time * 0.3, Seed)) * 0.03;
+        float plane = 1.0 - smoothstep(0.0, 0.05, discY);
+        float inner = smoothstep(0.34, 0.52, rr);
+        float outer = 1.0 - smoothstep(0.9, 1.9, rr);
+        vec3 radial = normalize(vec3(q.x, 0.0, q.z) + vec3(0.001));
+        vec3 toCam = normalize(CamPos - Center + vec3(0.001));
+        float toward = -dot(radial, toCam);
+        float beam = 0.35 + 1.5 * smoothstep(-1.0, 1.0, toward);
+        float orbit = 0.55 + 0.45 * sin(atan(q.z, q.x) * 5.0 - Time * 2.5 + rr * 9.0);
+        float disc = plane * inner * outer * orbit * beam;
+        body += Disc * disc * 1.6;
+        bright *= mix(1.0, 3.0, Disc * disc);
+        heat = mix(heat, mix(0.15, 1.0, beam), Disc * disc * 0.8);
+    }
+
+    // --- photon ring: light that orbited the horizon before escaping. Thin, white, and bent over the
+    // top and under the bottom of the shadow, which is why a black hole reads as a ring and not a ball.
+    if (Lens > 0.01) {
+        float thin = 1.0 - smoothstep(0.0, 0.035, abs(r - 0.42));
+        float bent = 1.0 - smoothstep(0.0, 0.16, abs(q.y) - rr * 0.35);
+        body += Lens * thin * (1.8 + bent * 0.9);
+        bright *= mix(1.0, 3.4, Lens * thin);
+        heat = mix(heat, 1.0, Lens * thin);
+    }
+
+    // --- photospheric granulation: convection cells boiling across a star's surface, the way a real
+    // photosphere is a patchwork of bright upwellings rather than a smooth ball of light.
+    if (Granule > 0.01) {
+        vec3 dirn = normalize(q + vec3(0.001));
+        float cells = fbm(dirn * 9.0 + vec3(Time * 0.05, 0.0, 0.0) + seedOffset);
+        float grains = cells * cells;
+        float onStar = 1.0 - smoothstep(0.35, 0.85, r);
+        body += Granule * onStar * (0.6 + 1.2 * grains);
+        bright *= mix(1.0, 2.2, Granule * onStar * grains);
+        heat = mix(heat, 1.0, Granule * onStar * grains * 0.7);
+    }
+
+    // --- prominences: loops of plasma anchored at the surface and arcing back down.
+    if (Prominence > 0.01) {
+        float a = atan(q.z, q.x);
+        float loops = pow(max(0.0, sin(a * 5.0 + Seed * 20.0)), 18.0);
+        float arcH = 0.35 + 0.5 * abs(sin(a * 2.0 + Time * 0.3));
+        float tube = 1.0 - smoothstep(0.0, 0.09, abs(rr - 0.45) + abs(abs(q.y) - arcH) * 0.8);
+        float rooted = 1.0 - smoothstep(0.25, 0.6, abs(q.y));
+        body += Prominence * loops * tube * rooted * 1.6;
+        bright *= mix(1.0, 2.6, Prominence * loops * tube);
+    }
+
+    // --- supernova shell with Rayleigh-Taylor fingers. A real remnant is not a smooth bubble: dense
+    // fingers of ejecta mushroom outward through the shocked gas, so the front is ragged by construction.
+    if (Shell > 0.01 && !charging) {
+        float front = mix(0.35, 1.7, smoothstep(0.0, 0.8, t));
+        float fingers = 1.0 + 0.55 * fbm(normalize(q + vec3(0.001)) * 4.5 + seedOffset);
+        float edge = 1.0 - smoothstep(0.0, 0.13, abs(r - front * fingers));
+        float hollowed = smoothstep(0.05, 0.4, r);
+        body += Shell * edge * hollowed * 1.8;
+        bright *= mix(1.0, 2.2, Shell * edge);
+    }
+
+    // --- nebula: very large, very soft wisps. Two octaves multiplied together give the long filaments
+    // that single-octave noise cannot, which is what makes a cloud read as gas rather than as fog.
+    if (Nebula > 0.01) {
+        float wisp = fbm(p * 0.55 + seedOffset * 0.2 + vec3(0.0, Time * 0.04, 0.0));
+        float wisp2 = fbm(p * 1.1 + seedOffset * 0.4 - vec3(Time * 0.03, 0.0, 0.0));
+        float fill = (1.0 - smoothstep(0.3, 2.4, r)) * pow(max(0.0, wisp * wisp2 * 2.2), 1.6);
+        body += Nebula * fill * 1.2;
+        bright *= mix(1.0, 1.4, Nebula * fill);
+    }
+
+    // --- Mach cone: the shock a relativistic jet drags behind it, with standing rings where the flow
+    // re-compresses. This is what separates a quasar jet from a column of light.
+    if (Cone > 0.01) {
+        float height = max(0.0, q.y - 0.4);
+        float coneR = height * 0.42;
+        float wall = 1.0 - smoothstep(0.0, 0.07, abs(rr - coneR));
+        float along = 1.0 - smoothstep(0.35, 2.6, height);
+        float rings = 0.6 + 0.4 * sin(q.y * 14.0 - Time * 6.0);
+        body += Cone * wall * along * rings * 1.5;
+        bright *= mix(1.0, 2.4, Cone * wall * along);
     }
 
     // --- embers: a rising column of fire

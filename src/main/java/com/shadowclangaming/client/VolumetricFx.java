@@ -204,7 +204,7 @@ public final class VolumetricFx {
         set(program, "Glow", v.glow() * effect.strength());
         set(program, "Swirl", v.swirl());
         set(program, "Seed", v.seed());
-        // The twenty-two structural features. Every one is authored per warhead in BlastMotif.Volume.author;
+        // The twenty-nine structural features. Every one is authored per warhead in BlastMotif.Volume.author;
         // the shader sums whatever is non-zero, so this list is what turns one fireball into thirty-eight
         // different weapons.
         set(program, "Hole", v.hole());
@@ -229,6 +229,13 @@ public final class VolumetricFx {
         set(program, "Cracks", v.cracks());
         set(program, "Sparks", v.sparks());
         set(program, "Halo", v.halo());
+        set(program, "Disc", v.disc());
+        set(program, "Lens", v.lens());
+        set(program, "Granule", v.granule());
+        set(program, "Prominence", v.prominence());
+        set(program, "Shell", v.shell());
+        set(program, "Nebula", v.nebula());
+        set(program, "Cone", v.cone());
         // Scales density as well as glow, so the volume thins out as the effect ends instead of turning
         // into an opaque black ball that sits there after the fire is gone.
         set(program, "Strength", Math.max(0.0F, Math.min(1.0F, effect.strength())));

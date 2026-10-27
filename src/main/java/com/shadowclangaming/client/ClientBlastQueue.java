@@ -83,9 +83,10 @@ public final class ClientBlastQueue {
                 // previous version rejected.
                 return Math.max(0.0F, Math.min(1.0F, 0.3F + 0.7F * t));
             }
+            // A three-tick attack, then the shared hold-then-release envelope. Not exp(-3t) over the
+            // whole lifetime: see BlastMotif.impactEnvelope for what that did to a long cinematic.
             float attack = Math.min(1.0F, age / 3.0F);
-            float decay = (float) Math.exp(-3.0D * t);
-            return Math.max(0.0F, Math.min(1.0F, attack * decay));
+            return Math.max(0.0F, Math.min(1.0F, attack * BlastMotif.impactEnvelope(t)));
         }
     }
 

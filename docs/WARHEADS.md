@@ -1654,3 +1654,87 @@ violations, and the closest same-theme pair *widened* from 0.50 to 0.70.
 
 **Not** verified: a frame of it. Whether the core now reads as solid rather than glassy, and whether
 seven more primitives reads as "much more", are both judgements only the game can make.
+
+---
+
+## Round 50 — why the blast was invisible, and the space physics
+
+"Still no blast." Round 49 fixed a real bug — the seventeen apex warheads genuinely never sent an impact
+packet — and it still did not fix the symptom, because there was a second, worse one underneath it.
+
+### 1. The impact faded as `exp(-3t)` across its whole lifetime
+
+```java
+float attack = Math.min(1.0F, age / 3.0F);
+float decay = (float) Math.exp(-3.0D * t);      // t = age / lifetime
+return attack * decay;
+```
+
+That curve was written when an impact was a one-second flash. These are now cinematics that run for tens
+of seconds, and the same formula over a 24.6-second World Eater gives:
+
+| age | fraction of life | brightness |
+| --- | --- | --- |
+| 5 ticks | 0.01 | 0.97 |
+| 123 ticks | 0.25 | 0.47 |
+| 246 ticks | 0.50 | **0.22** |
+| 369 ticks | 0.75 | 0.11 |
+| 492 ticks | 1.00 | 0.05 |
+
+A two-kilometre warhead popped for about a second and then spent twenty-four seconds invisible. Two
+things made it worse, one of them mine:
+
+* Round 49's `Strength` uniform scales **density**, not just glow — which is what makes the core opaque —
+  so the fade now thinned the volume as well as dimming it. The blast evaporated.
+* The distance falloff was squared. A 469-block blast has a 589-block reach, so standing at the edge of
+  your own detonation gave `0.20² = 0.04`, under `VolumetricFx`'s own `strength <= 0.04` skip. The closer
+  you were to a kilometre-wide explosion, the more likely it was to not be drawn at all.
+
+The apex queue immediately below this code already had the right shape, with a comment explaining why:
+*"a linear fade made a ninety-second Soul Furnace invisible for most of its own run."* The blast queue
+never got it.
+
+Both curves now live in `BlastMotif` as pure functions so the harness can assert them instead of
+somebody re-deriving them by eye from a screen recording:
+
+* `impactEnvelope(t)` — full strength for the first 75 % of the effect, smoothstep out of the last 25 %.
+* `distanceFalloff(d, reach)` — `0.30 + 0.70 * proximity`, linear, with a floor. Standing at the edge of
+  the 469-block blast now gives 0.44 instead of 0.04.
+
+`impactEnvelopeTests()` pins the regression by name: *a blast is still at full strength halfway through
+its own effect*, plus monotonicity, the endpoints, and that the falloff never drops under the renderer's
+skip threshold.
+
+### 2. The space physics, written from what the phenomena actually look like
+
+Twenty-two primitives became twenty-nine. The seven new ones are not decoration — each one is the reason
+the real thing reads the way it does:
+
+| feature | the physics it is standing in for |
+| --- | --- |
+| `Disc` | A relativistic accretion disc with **Doppler beaming**: the side swinging toward the camera is beamed brighter *and* hotter, the receding side dim and red, so the ring is lopsided rather than a flat washer. This is the single most recognisable feature of a real black hole image. |
+| `Lens` | The **photon ring** — light that orbited the horizon before escaping — bent over the top and under the bottom of the shadow. It is why a black hole reads as a ring and not a ball. |
+| `Granule` | **Photospheric convection cells** boiling across a star's surface, so a star is a patchwork of bright upwellings rather than a smooth ball of light. |
+| `Prominence` | Loops of plasma anchored at the surface and arcing back down. |
+| `Shell` | A supernova front with **Rayleigh–Taylor fingers**: dense ejecta mushrooming outward through the shocked gas, so the shell is ragged by construction instead of a smooth bubble. |
+| `Nebula` | Two octaves of noise *multiplied* together, which is what produces long filaments — single-octave noise reads as fog, not as gas. |
+| `Cone` | The **Mach cone** a relativistic jet drags behind it, with standing rings where the flow re-compresses. This is what separates a quasar jet from a column of light. |
+
+Authored onto the warheads whose descriptions are astrophysics. A World Eater is now `hole + disc + lens
++ nebula + vortex + cracks + sparks + halo + waves` — nine features, with a beamed lopsided disc and a
+photon ring around the shadow. Absolute Annihilation runs sixteen. The program declares 54 uniforms and
+`world_blast_volume.fsh` is 638 lines.
+
+### 3. What was verified, and what was not
+
+Machine-checked: `tools/sweep.py`, all 54 uniforms joined JSON ↔ GLSL ↔ Java in both directions, 77
+`smoothstep` edges scanned for the undefined `edge0 > edge1` case, both `pow` calls guarded against a
+negative base, `check_shape_authoring` (39 fields, 39 setters), the logic harness with the new
+`impactEnvelopeTests`, the API and Lua harnesses, and `gradlew build` against NeoForge 21.1.264 in CI.
+Locally re-simulated the authored table: no floor violations, 48 same-theme pairs all clear, closest now
+0.90.
+
+**Not** verified: a frame. And note that Round 49's diagnosis was incomplete — I found a real bug, fixed
+it, and told you it was the cause. It was *a* cause. This one is measured rather than inferred: the
+brightness curve is printed above at six points in the effect's life, and the new one is pinned by an
+assertion.

@@ -170,6 +170,7 @@ public final class LogicHarness {
         blastGeometryTests();
         volumeShaderTests();
         warheadFeatureTests();
+        impactEnvelopeTests();
         chargePhaseTests();
         rifleTests();
         emitterClusterTests();
@@ -2196,6 +2197,7 @@ public final class LogicHarness {
             "hole", "star", "rift", "waves", "meteors", "lightning", "glyphs", "portals",
             "jet", "coins", "smoke", "subCharges", "flash", "dome", "embers",
             "cap", "debris", "dust", "vortex", "cracks", "sparks", "halo",
+            "disc", "lens", "granule", "prominence", "shell", "nebula", "cone",
     };
 
     /**
@@ -2215,27 +2217,27 @@ public final class LogicHarness {
                     java.util.Map.entry("he", "waves=0.7,flash=0.4,dust=0.7"),
                     java.util.Map.entry("incendiary", "embers=0.9"),
                     java.util.Map.entry("cluster", "subCharges=0.9"),
-                    java.util.Map.entry("fission", "waves=0.8,flash=0.5,cap=0.9"),
-                    java.util.Map.entry("fusion", "star=0.7,flash=0.9,cap=0.7"),
-                    java.util.Map.entry("antimatter", "hole=0.8,flash=0.9,halo=0.7"),
+                    java.util.Map.entry("fission", "waves=0.8,flash=0.5,cap=0.9,shell=0.7"),
+                    java.util.Map.entry("fusion", "star=0.7,flash=0.9,cap=0.7,granule=0.7,shell=0.7"),
+                    java.util.Map.entry("antimatter", "hole=0.8,flash=0.9,halo=0.7,disc=0.8,lens=0.9"),
                     java.util.Map.entry("numismatic", "coins=0.9"),
-                    java.util.Map.entry("world_eater", "hole=0.9,dark=0.9,vortex=0.9"),
-                    java.util.Map.entry("stellar_requiem", "star=0.9"),
+                    java.util.Map.entry("world_eater", "hole=0.9,dark=0.9,vortex=0.9,disc=1.0,lens=1.0"),
+                    java.util.Map.entry("stellar_requiem", "star=0.9,granule=1.0,prominence=0.9"),
                     java.util.Map.entry("reality_breaker", "rift=0.9"),
-                    java.util.Map.entry("spacetime_hammer", "waves=0.9"),
-                    java.util.Map.entry("universal_imploder", "implode=0.9,hole=0.6"),
-                    java.util.Map.entry("ragnarok", "meteors=0.9,lightning=0.8,skyRing=0.8,dust=0.9,cracks=0.8"),
+                    java.util.Map.entry("spacetime_hammer", "waves=0.9,shell=0.8"),
+                    java.util.Map.entry("universal_imploder", "implode=0.9,hole=0.6,lens=0.9"),
+                    java.util.Map.entry("ragnarok", "meteors=0.9,lightning=0.8,skyRing=0.8,dust=0.9,cracks=0.8,nebula=0.7"),
                     java.util.Map.entry("world_rune", "glyphs=0.9,cracks=1.0"),
-                    java.util.Map.entry("abyssal_covenant", "portals=0.9"),
+                    java.util.Map.entry("abyssal_covenant", "portals=0.9,nebula=0.8"),
                     java.util.Map.entry("soul_furnace", "lightning=0.9,skyRing=0.9,dark=0.8,vortex=1.0"),
-                    java.util.Map.entry("arcane_singularity", "glyphs=0.9,skyRing=0.9"),
-                    java.util.Map.entry("quasar_lance", "jet=0.9"),
-                    java.util.Map.entry("starforge", "star=0.9,embers=0.8"),
-                    java.util.Map.entry("big_bang_seed", "star=0.9,flash=0.9,halo=1.0"),
+                    java.util.Map.entry("arcane_singularity", "glyphs=0.9,skyRing=0.9,lens=0.7"),
+                    java.util.Map.entry("quasar_lance", "jet=0.9,cone=1.0,disc=0.8"),
+                    java.util.Map.entry("starforge", "star=0.9,embers=0.8,granule=1.0,prominence=1.0"),
+                    java.util.Map.entry("big_bang_seed", "star=0.9,flash=0.9,halo=1.0,shell=1.0,nebula=0.9"),
                     java.util.Map.entry("reality_corruptor", "rift=0.8"),
-                    java.util.Map.entry("absolute_zero", "hole=0.8,implode=0.9,cracks=0.7"),
-                    java.util.Map.entry("omega", "waves=0.9,implode=0.8,dust=0.9"),
-                    java.util.Map.entry("absolute_annihilation", "hole=0.8,star=0.8,flash=0.9,waves=0.9,dust=1.0,halo=1.0"),
+                    java.util.Map.entry("absolute_zero", "hole=0.8,implode=0.9,cracks=0.7,lens=0.8"),
+                    java.util.Map.entry("omega", "waves=0.9,implode=0.8,dust=0.9,shell=1.0"),
+                    java.util.Map.entry("absolute_annihilation", "hole=0.8,star=0.8,flash=0.9,waves=0.9,dust=1.0,halo=1.0,shell=1.0,disc=0.9,lens=1.0,nebula=0.9"),
                     java.util.Map.entry("bulwark", "dome=0.9"),
                     java.util.Map.entry("contagion", "smoke=0.9"),
                     java.util.Map.entry("spell", "glyphs=0.8,skyRing=0.8"),
@@ -2273,6 +2275,13 @@ public final class LogicHarness {
             case "cracks" -> v.cracks();
             case "sparks" -> v.sparks();
             case "halo" -> v.halo();
+            case "disc" -> v.disc();
+            case "lens" -> v.lens();
+            case "granule" -> v.granule();
+            case "prominence" -> v.prominence();
+            case "shell" -> v.shell();
+            case "nebula" -> v.nebula();
+            case "cone" -> v.cone();
             case "beam" -> v.beam();
             case "ring" -> v.ring();
             case "skyRing" -> v.skyRing();
@@ -2289,6 +2298,56 @@ public final class LogicHarness {
      * that keeps the authored rows honest. It also insists that two warheads sharing a theme do not share
      * a shape, which is the failure mode that got the whole effect rejected in the first place.
      */
+    /**
+     * The brightness curve of a detonation, and how far away you can be and still get one.
+     *
+     * <p>This is the test for "there is no blast when the effect ends". The impact used to fade as
+     * exp(-3t) over its whole lifetime, which was right when an impact was a one-second flash and
+     * catastrophic once impacts became twenty-four-second cinematics: 22 % brightness at the halfway
+     * mark, 5 % at the end, so the warhead popped once and then spent the rest of its own effect
+     * invisible. Distance made it worse - the falloff was squared, so standing at the edge of a
+     * 469-block blast put the effect under the renderer's own skip threshold.
+     */
+    private static void impactEnvelopeTests() {
+        section("impact brightness envelope");
+
+        float previous = Float.MAX_VALUE;
+        for (int i = 0; i <= 100; i++) {
+            float t = i / 100.0F;
+            float v = com.shadowclangaming.warhead.BlastMotif.impactEnvelope(t);
+            check("envelope is a brightness at t=" + t, v >= 0.0F && v <= 1.0F);
+            check("envelope never rises at t=" + t, v <= previous + 1e-6F);
+            previous = v;
+        }
+        close("the detonation starts at full brightness", 1.0D,
+                com.shadowclangaming.warhead.BlastMotif.impactEnvelope(0.0F));
+        close("the effect is over at the end of its life", 0.0D,
+                com.shadowclangaming.warhead.BlastMotif.impactEnvelope(1.0F));
+        // The regression, named: at the halfway mark a blast is still at full strength.
+        check("a blast is still at full strength halfway through its own effect",
+                com.shadowclangaming.warhead.BlastMotif.impactEnvelope(0.5F) >= 0.99F);
+        check("a blast is still at full strength three quarters of the way through",
+                com.shadowclangaming.warhead.BlastMotif.impactEnvelope(0.75F) >= 0.99F);
+        check("the fade happens in the last quarter, not all the way along",
+                com.shadowclangaming.warhead.BlastMotif.impactEnvelope(0.9F) < 0.5F);
+
+        // Distance. A 469-block blast has a 589-block reach; these are the numbers that used to lose it.
+        double reach = 589.0D;
+        close("a blast is full brightness at its own centre", 1.0D,
+                com.shadowclangaming.warhead.BlastMotif.distanceFalloff(0.0D, reach));
+        check("standing at the edge of your own detonation still gets most of it",
+                com.shadowclangaming.warhead.BlastMotif.distanceFalloff(469.0D, reach) > 0.4F);
+        check("the falloff never drops under the renderer's skip threshold",
+                com.shadowclangaming.warhead.BlastMotif.distanceFalloff(reach, reach) > 0.03F);
+        check("the falloff never goes negative past the reach",
+                com.shadowclangaming.warhead.BlastMotif.distanceFalloff(reach * 4.0D, reach) >= 0.0F);
+        check("a zero reach draws nothing",
+                com.shadowclangaming.warhead.BlastMotif.distanceFalloff(10.0D, 0.0D) == 0.0F);
+        check("the falloff is monotonic",
+                com.shadowclangaming.warhead.BlastMotif.distanceFalloff(100.0D, reach)
+                        > com.shadowclangaming.warhead.BlastMotif.distanceFalloff(400.0D, reach));
+    }
+
     private static void warheadFeatureTests() {
         section("warhead signature features");
 

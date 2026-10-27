@@ -211,8 +211,9 @@ public final class CinematicFx {
             if (distance > reach) {
                 continue;
             }
-            float proximity = (float) (1.0D - Math.min(1.0D, distance / reach));
-            float strength = proximity * proximity * entry.intensity()
+            // Not squared - see BlastMotif.distanceFalloff. Squaring put a player standing at the edge
+            // of their own 469-block detonation under the skip threshold below.
+            float strength = BlastMotif.distanceFalloff(distance, reach) * entry.intensity()
                     * (float) SCGConfig.shaderStrength();
             if (strength <= 0.03F) {
                 continue;
