@@ -95,11 +95,18 @@ public final class CinematicFx {
     /**
      * Draw the effects as CPU triangles.
      *
-     * Called from {@code BlastClientEvents} only when the volumetric program is unavailable - it is the
-     * fallback, not a second pass. It used to carry its own {@code @SubscribeEvent}, which meant the
-     * geometry drew on every frame whether or not the raymarcher had already drawn the same effect.
+     * Called from {@code BlastClientEvents} every frame, alongside the volumetric pass. It used to carry
+     * its own {@code @SubscribeEvent}, drawing whether or not the raymarcher had already drawn; it was
+     * then demoted to a fallback that ran only when the volumetric program failed to load.
+     *
+     * <p>Both of those were wrong. The volume raymarches the fireball and nothing else, while shockwave
+     * rings, ground sigils, sky circles, ember columns, arcs, shards, ring stacks, tendrils, scan shells
+     * and glyph rings exist only here - so the fallback version meant that on every machine where the
+     * shader worked, which is every machine, none of them ever drew. Running both unconditionally and
+     * suppressing the one duplicated layer is the version that is right about all twelve. See
+     * {@link #draw}.
      */
-    public static void render(RenderLevelStageEvent event) {
+    public static void render(RenderLevelStageEvent event, boolean suppressCoreSphere) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) {
             return;
         }
@@ -151,7 +158,7 @@ public final class CinematicFx {
                     break;
                 }
                 int before = sink.vertices;
-                draw(sink, effect);
+                draw(sink, effect, suppressCoreSphere);
                 vertices += sink.vertices - before;
             }
             if (sink.vertices > 0) {
@@ -175,13 +182,22 @@ public final class CinematicFx {
         }
     }
 
-    /** One effect: every layer its motif asks for, at this point in its life. */
-    private static void draw(CountingSink sink, Effect effect) {
+    /**
+     * Every layer one effect's motif asks for, at this point in its life.
+     *
+     * @param suppressCoreSphere skip CORE_SPHERE, because the volumetric pass raymarched the fireball
+     *                           already. It is the only one of the twelve layer types the volume also
+     *                           draws; the other eleven exist solely here.
+     */
+    private static void draw(CountingSink sink, Effect effect, boolean suppressCoreSphere) {
         int seed = (int) (effect.seed ^ (effect.seed >>> 32)) ^ (int) (effect.progress * 40.0F);
         for (BlastMotif.Spec spec : effect.charging()
                 ? effect.motif.chargeSpecs() : effect.motif.specs()) {
             if (sink.vertices >= MAX_VERTICES) {
                 return;
+            }
+            if (suppressCoreSphere && spec.layer() == BlastMotif.Layer.CORE_SPHERE) {
+                continue;
             }
             BlastGeometry.layer(sink, spec, effect.progress, effect.x, effect.y, effect.z,
                     effect.radius, tint(spec.argb(), effect.strength), seed);

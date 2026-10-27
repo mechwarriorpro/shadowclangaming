@@ -39,17 +39,32 @@ public final class BlastClientEvents {
      * The world-space effect itself.
      *
      * AFTER_PARTICLES, after the terrain and the weather are in the framebuffer, so the volume is
-     * depth-tested against the world rather than painted over it. Volumetric first, triangles only if the
-     * raymarcher is not usable on this machine - and the particle pass above runs either way.
+     * depth-tested against the world rather than painted over it.
+     *
+     * <p>BOTH RENDERERS RUN. This used to read {@code if (!VolumetricFx.render(event))
+     * CinematicFx.render(event);} - the geometry as a fallback for machines where the raymarcher would
+     * not load. The raymarcher loads, so the geometry never ran at all: 135 authored layer instances
+     * across the roster - shockwave rings, ground sigils, sky circles, ember columns, arcs, shards,
+     * ring stacks, tendrils, scan shells, glyph rings - were built, uploaded and then skipped every
+     * single frame. That is the reported "the sphere blocks every other visual effect". Nothing was
+     * being blocked. Nothing was being drawn.
+     *
+     * <p>Stellar survived because the two things it leans on hardest, the orbital shaft and the sky,
+     * live inside the volume shader itself. Every other theme carries its identity in the geometry
+     * layers, which is why only the non-stellar weapons looked like a bare sphere.
+     *
+     * <p>The one genuine overlap is the fireball: the volume raymarches it, and CORE_SPHERE would draw
+     * a second one on top. So that single layer is suppressed when the volume drew, and the other
+     * eleven run. Geometry goes last so the opaque fireball cannot swallow the rings and sigils around
+     * it - the same reason the orbital shaft is drawn last inside the volume pass.
      */
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) {
             return;
         }
-        if (!VolumetricFx.render(event)) {
-            CinematicFx.render(event);
-        }
+        boolean fireball = VolumetricFx.render(event);
+        CinematicFx.render(event, fireball);
     }
 
     // The post chain is drawn from ApexClientEvents, immediately after the apex chain and only when an

@@ -699,6 +699,98 @@ def check_impact_fx_reachable():
     return 1
 
 
+def _occurs_inside_conditional(body, needle):
+    """True if `needle` occurs inside any brace-delimited `if` block of `body`.
+
+    Brace depth alone is not enough: the method opens with a stage guard, and `VolumetricFx.render` sits
+    between that guard and the call, so "is there an if before it" says nothing. What matters is whether
+    the call is lexically *inside* a conditional block, which means tracking which braces an `if` opened.
+    """
+    stack = []
+    pending_if = False
+    i = 0
+    length = len(body)
+    while i < length:
+        ch = body[i]
+        if body.startswith("if", i) and not (body[i - 1:i].isalnum() or body[i - 1:i] == "_"):
+            pending_if = True
+            i += 2
+            continue
+        if ch == "(":
+            depth = 0
+            while i < length:
+                if body[i] == "(":
+                    depth += 1
+                elif body[i] == ")":
+                    depth -= 1
+                    if depth == 0:
+                        break
+                i += 1
+        elif ch == "{":
+            stack.append(pending_if)
+            pending_if = False
+        elif ch == "}":
+            if stack:
+                stack.pop()
+        elif ch == ";":
+            pending_if = False
+        elif body.startswith(needle, i):
+            return any(stack)
+        i += 1
+    return False
+
+
+def check_geometry_pass_is_not_a_fallback():
+    """The world-space geometry must run whether or not the raymarcher drew.
+
+    BlastClientEvents.onRenderLevel used to read::
+
+        if (!VolumetricFx.render(event)) {
+            CinematicFx.render(event);
+        }
+
+    - the geometry as a fallback for machines where the volumetric program would not load. It loads, so
+    CinematicFx.render never ran on any working machine: 135 authored layer instances across the roster
+    (shockwave rings, ground sigils, sky circles, ember columns, arcs, shards, ring stacks, tendrils,
+    scan shells, glyph rings) were built and then skipped every frame. Nothing was occluded; nothing was
+    drawn. Stellar hid it because the orbital shaft and the sky live inside the volume shader, so only
+    the non-stellar weapons looked like a bare sphere.
+
+    The single genuine duplicate is the fireball, so CORE_SPHERE is suppressed when the volume drew and
+    the other eleven layers run. Both halves are asserted here, because losing either is invisible: lose
+    the call and the geometry vanishes, lose the suppression and two fireballs stack.
+    """
+    events = strip_strings_and_comments(
+        read(os.path.join(JAVA, "com/shadowclangaming/client/BlastClientEvents.java")))
+    marker = "onRenderLevel(RenderLevelStageEvent event) {"
+    if marker not in events:
+        fail("BlastClientEvents.onRenderLevel is gone; "
+             "check_geometry_pass_is_not_a_fallback cannot find the dispatch")
+        return 0
+    body = events[events.index(marker) + len(marker):]
+    body = body[:body.index("\n    }")]
+    if "CinematicFx.render(" not in body:
+        fail("BlastClientEvents.onRenderLevel never calls CinematicFx.render, so no world-space "
+             "geometry is drawn at all")
+        return 0
+    if _occurs_inside_conditional(body, "CinematicFx.render("):
+        fail("CinematicFx.render is inside a conditional block: on any machine where the condition is "
+             "false the eleven geometry-only layer types are skipped (this is how 135 authored layers "
+             "went undrawn)")
+        return 0
+    if "VolumetricFx.render(" not in body:
+        fail("BlastClientEvents.onRenderLevel no longer runs the volumetric pass")
+        return 0
+    cinematic = strip_strings_and_comments(
+        read(os.path.join(JAVA, "com/shadowclangaming/client/CinematicFx.java")))
+    if "Layer.CORE_SPHERE" not in cinematic:
+        fail("CinematicFx no longer suppresses CORE_SPHERE, so the fireball is drawn twice - once "
+             "raymarched and once as geometry")
+        return 0
+    print("geometry pass: unconditional alongside the raymarcher, CORE_SPHERE suppressed")
+    return 1
+
+
 def check_glsl_defined():
     """smoothstep(edge0, edge1, x) is undefined when edge0 > edge1, and drivers disagree about what it does.
 
@@ -1278,6 +1370,7 @@ def main():
     check_emp_drain()
     check_shape_authoring()
     check_impact_fx_reachable()
+    check_geometry_pass_is_not_a_fallback()
     blocks, items = check_assets()
     check_entities()
     check_particles()
