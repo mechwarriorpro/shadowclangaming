@@ -301,8 +301,8 @@ float sampleField(vec3 wp, out vec3 emission) {
             float amount = (i == 0 ? max(Waves, Ring) : Waves * (0.8 - fi * 0.25));
             if (amount > 0.01) {
                 float crest = 1.0 - smoothstep(0.0, w, abs(rr - waveR));
-                float flat = 1.0 - smoothstep(0.0, 0.16 + fi * 0.06, abs(q.y + 0.9));
-                body += amount * crest * flat * (0.55 + 0.45 * n) * (1.0 - fi * 0.22);
+                float flatness = 1.0 - smoothstep(0.0, 0.16 + fi * 0.06, abs(q.y + 0.9));
+                body += amount * crest * flatness * (0.55 + 0.45 * n) * (1.0 - fi * 0.22);
             }
         }
     }
@@ -439,7 +439,7 @@ float sampleField(vec3 wp, out vec3 emission) {
         bright *= mix(1.0, 2.6, amount * pillar);
     }
 
-    // --- coins: flat gold discs tumbling through the blast
+    // --- coins: flatness gold discs tumbling through the blast
     if (Coins > 0.01) {
         for (int i = 0; i < 7; i++) {
             float fi = float(i);
@@ -559,7 +559,7 @@ float sampleField(vec3 wp, out vec3 emission) {
 
     // --- accretion disc with relativistic Doppler beaming. The single most recognisable thing about a
     // real black hole image: the side of the disc swinging toward you is beamed brighter and bluer, the
-    // side swinging away is dim and red, so the ring is lopsided rather than a flat washer.
+    // side swinging away is dim and red, so the ring is lopsided rather than a flatness washer.
     if (Disc > 0.01) {
         float discY = abs(q.y) + ridge(vec3(q.xz * 3.0, Time * 0.3, Seed)) * 0.03;
         float plane = 1.0 - smoothstep(0.0, 0.05, discY);
@@ -662,9 +662,9 @@ float sampleField(vec3 wp, out vec3 emission) {
             // The signature: a pentagram on the ground ring, turning with it, and a hexagram counter-turning
             // over it. Drawn as real line segments rather than a polar trick, so the chords stay straight at
             // any radius instead of bowing - which is the difference between a sigil and a flower.
-            vec2 flat = vec2(q.x, q.z);
-            float pent = starPolygon(flat, 5.0, 2.0, ringR * 0.98, 0.030, spin);
-            float hexa = starPolygon(flat, 6.0, 2.0, ringR * 1.12, 0.024, -spin * 1.5);
+            vec2 flatness = vec2(q.x, q.z);
+            float pent = starPolygon(flatness, 5.0, 2.0, ringR * 0.98, 0.030, spin);
+            float hexa = starPolygon(flatness, 6.0, 2.0, ringR * 1.12, 0.024, -spin * 1.5);
             float sigilCore = 1.0 - smoothstep(0.0, ringR * 0.34, rr);
             body += Circle * ground * (rim * 1.6 + teeth * rim * 1.3 + spokes * inner * 0.9 + figure * 1.1
                     + pent * 1.9 + hexa * 1.4 + sigilCore * 0.35);
@@ -801,7 +801,7 @@ void main() {
         float gz = sampleField(peakPos + vec3(0.0, 0.0, eps), throwaway)
                  - sampleField(peakPos - vec3(0.0, 0.0, eps), throwaway);
         // Down the gradient: density falls away outwards, so -grad points out of the surface. The bias
-        // keeps normalize() off a zero vector where the field is locally flat.
+        // keeps normalize() off a zero vector where the field is locally flatness.
         vec3 n = -normalize(vec3(gx, gy, gz) + vec3(1e-5));
         // Lit from the camera. An explosion is its own light source, so what the eye actually reads is the
         // shape facing you plus a hot rim where the surface turns away - not a distant sun.

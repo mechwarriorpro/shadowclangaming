@@ -159,7 +159,7 @@ public final class VolumetricFx {
         List<CinematicFx.Effect> effects = CinematicFx.collect(mc);
         long frame = ++frames;
         if (effects.isEmpty()) {
-            lastDrawn = drawn;
+            lastDrawn = 0;
             com.shadowclangaming.debug.ShadowDebug.log("VOLUME_FRAME", "frame={} active=0", frame);
             return true;
         }
@@ -232,6 +232,7 @@ public final class VolumetricFx {
                 drawProxy(effect.x(), effect.y(), effect.z(), effect.radius() * PROXY_BOX);
                 drawn++;
             }
+            lastDrawn = drawn;
             com.shadowclangaming.debug.ShadowDebug.log("VOLUME_FRAME",
                     "frame={} active={} drawn={} program=world_blast_volume", frame, effects.size(), drawn);
         } catch (Throwable ex) {

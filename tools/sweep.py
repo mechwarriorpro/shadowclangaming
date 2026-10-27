@@ -794,6 +794,52 @@ YARN_NAMES = {
 }
 
 
+# GLSL reserved words. Using one as a variable name is a hard syntax error, not a warning, and it takes
+# the whole shader down with it - so the game silently falls back to CPU triangles and the build stays
+# green. `flat` cost us several rounds exactly this way: world_blast_volume.fsh declared `float flat` in
+# the waves primitive and `vec2 flat` in the circle sigils, the shader never once compiled, and every
+# effect the user saw was the triangle fallback. Nothing in this repo could catch it, because sweep.py
+# checks names and the JVM compile never sees GLSL.
+GLSL_RESERVED = set("""
+flat smooth noperspective sample patch subroutine input output filter common partition class union
+enum typedef template this packed resource goto inline noinline volatile public static extern
+external interface long short double half fixed unsigned superp sizeof cast namespace using precise
+coherent restrict readonly writeonly
+""".split())
+
+
+def check_glsl_reserved_words():
+    """No GLSL reserved word used as a declared identifier.
+
+    Only declarations are flagged (a type keyword followed by the name), because the same words appear
+    legitimately in prose and - in the case of `flat` - as an actual qualifier on a varying.
+    """
+    hits = 0
+    files = []
+    for dirpath, _dirs, names in os.walk(ASSETS):
+        for name in names:
+            if name.endswith((".fsh", ".vsh")):
+                files.append(os.path.join(dirpath, name))
+    files.sort()
+    if not files:
+        fail("check_glsl_reserved_words found no shaders under %s" % ASSETS)
+        return 1
+    for path in files:
+        code = re.sub(r"/\*.*?\*/", " ", read(path), flags=re.S)
+        code = re.sub(r"//[^\n]*", "", code)
+        for match in re.finditer(r"\b(?:float|int|uint|bool|vec2|vec3|vec4|ivec2|ivec3|ivec4|mat2|mat3|mat4)"
+                                 r"\s+(\w+)\b", code):
+            if match.group(1) in GLSL_RESERVED:
+                line = code[:match.start()].count("\n") + 1
+                fail("%s line %d declares %r, which is a reserved GLSL keyword; the shader will not "
+                     "compile and the game will fall back to CPU triangles"
+                     % (os.path.relpath(path, ASSETS), line, match.group(1)))
+                hits += 1
+    if hits == 0:
+        print("glsl reserved words: none used as identifiers in %d shaders" % len(files))
+    return hits
+
+
 def check_sky_box_reaches_the_big_ones():
     """The sky cube must be able to get outside the blast cube, or the sky is never drawn.
 
@@ -1041,6 +1087,7 @@ def main():
     check_mojmap_names()
     check_soul_furnace_spawn_guard()
     check_sky_box_reaches_the_big_ones()
+    check_glsl_reserved_words()
     subscribers = check_event_subscribers()
     check_proxy_box()
     check_glsl_defined()
