@@ -110,7 +110,7 @@ out vec4 fragColor;
 
 // Half-extent of the proxy cube, in blast radii. client/VolumetricFx draws a cube this size, so the two
 // must stay in step: the shader marches exactly the volume the geometry covers, no more and no less.
-const float PROXY_BOX = 3.4;
+const float PROXY_BOX = 2.0;
 
 // ---------------------------------------------------------------- value noise
 
@@ -268,8 +268,13 @@ float sampleField(vec3 wp, out vec3 emission) {
     vec3 seedOffset = vec3(Seed * 97.0, Seed * 41.0, Seed * 63.0);
     float wx = fbm(p * 1.7 + vec3(11.3, 5.1, 3.7) + seedOffset);
     float wz = fbm(p * 1.7 + vec3(31.7, 7.9, 13.1) + seedOffset);
-    vec3 warped = p + vec3(wx - 0.5, 0.0, wz - 0.5) * (0.9 + Turb);
-    float n = fbm((warped + seedOffset * 0.35) * (1.5 + Turb * 1.3)) * 2.0 - 1.0;
+    // Halved. The warp displaces the sample point by up to a whole noise cell, which smears fine detail
+    // into mush - that is a large part of what read as "scrambled". Turbulence should bend the surface,
+    // not relocate it.
+    vec3 warped = p + vec3(wx - 0.5, 0.0, wz - 0.5) * (0.45 + Turb * 0.5);
+    // Lower frequency: bigger, more coherent cells. High-frequency noise at this scale aliases against
+    // the march step length and comes out as grain rather than as surface.
+    float n = fbm((warped + seedOffset * 0.35) * (1.0 + Turb * 0.85)) * 2.0 - 1.0;
     float rr = length(q.xz);
     float body = 0.0;
     float heat = clamp(1.0 - r * 0.8 + n * 0.35, 0.0, 1.0);
@@ -693,6 +698,13 @@ float sampleField(vec3 wp, out vec3 emission) {
         body += amount * column * (0.35 + 0.85 * flick);
     }
 
+    // Fade to nothing before the proxy cube's faces. Anything still dense at a face gets clipped by it,
+    // and a hard clip is a visible cube edge - the shockwave alone expands to 0.5 + speed * 3.4, which at
+    // 3.15 normalised radii was landing within a whisker of a 3.4 box and drawing the cube's outline.
+    // With the box now at 2.0 the same features would clip harder, so this is not optional.
+    float edgeFade = 1.0 - smoothstep(0.62, 0.96, length(wp - Center) / max(radius * PROXY_BOX, 1e-4));
+    body *= edgeFade;
+
     body *= fade * Strength;
     if (body <= 0.002) {
         emission = vec3(0.0);
@@ -757,7 +769,7 @@ void main() {
 
     // The sky is smooth and its box is huge, so it needs a fraction of the steps the fireball does.
     int steps = int(clamp(ShaftPass > 0.5 ? Steps * 1.6
-                          : (SkyPass > 0.5 ? Steps * 0.4 : Steps), 8.0, 160.0));
+                          : (SkyPass > 0.5 ? Steps * 0.4 : Steps), 8.0, 224.0));
     float stepLen = (tExit - tEnter) / float(steps);
     vec3 pos = ro + rd * (tEnter + stepLen * 0.5);
 

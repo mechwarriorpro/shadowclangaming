@@ -58,7 +58,7 @@ public final class VolumetricFx {
             ResourceLocation.fromNamespaceAndPath(ShadowClanGaming.MOD_ID, "world_blast_volume");
 
     /** Half-extent of the proxy cube in blast radii. Must match PROXY_BOX in the fragment shader. */
-    public static final double PROXY_BOX = 3.4D;
+    public static final double PROXY_BOX = 2.0D;
 
     /**
      * Half-extent of the SKYBOX cube, in blast radii, and the cap on it in blocks.
@@ -88,8 +88,8 @@ public final class VolumetricFx {
 
     private static final int BASE_STEPS = 44;
     private static final int MIN_STEPS = 16;
-    /** The shader's own clamp is 160; going past it is wasted work the GPU throws away. */
-    private static final int MAX_STEPS = 160;
+    /** The shader's own clamp is 224; going past it is wasted work the GPU throws away. */
+    private static final int MAX_STEPS = 224;
 
     private static ShaderInstance shader;
     private static boolean loadFailed;
