@@ -734,6 +734,17 @@ void main() {
     }
     rd /= rayLen;
 
+    // One march per pixel. All six proxy faces are wound clockwise, i.e. consistently INWARD, so
+    // gl_FrontFacing is true for exactly the faces whose inward normal points at the camera - the far
+    // walls when the camera is outside, the surrounding walls when it is inside. Keeping those and only
+    // those is correct for both cases and needs no assumption about which side the camera is on.
+    // The gate that used to be here inverted the test, so from outside every fragment was discarded and
+    // the volume was invisible; marching both faces instead composited the same volume twice, which is
+    // where the blown-out whites came from.
+    if (!gl_FrontFacing) {
+        discard;
+    }
+
     float radius = max(Radius, 0.5);
     // SkyBox is derived from the cube client/VolumetricFx actually drew, so it is used as-is:
     // flooring it here would march a box the geometry does not cover.
@@ -777,6 +788,10 @@ void main() {
     // The same emission summed WITHOUT the transmittance weighting. acc converges on the surface colour;
     // this one keeps growing through the thin outer shell, which is where a halo actually comes from.
     vec3 glow = vec3(0.0);
+    // The weight glow is divided by. Summing emission * a across up to 224 steps made glow grow with the
+    // optical depth of the whole path - roughly 25x emission for a large blast - and that was added to
+    // acc wholesale, which is what blew the sky out to pure white.
+    float glowWeight = 0.0;
     float transmittance = 1.0;
     // Where the volume was thickest along this ray, for the surface pass below.
     float peak = 0.0;
@@ -796,6 +811,7 @@ void main() {
             float a = clamp(density * stepLen * densityScale, 0.0, 1.0);
             acc += emission * a * transmittance;
             glow += emission * a;
+            glowWeight += a;
             transmittance *= 1.0 - a;
             if (transmittance < 0.02) {
                 break;
@@ -855,11 +871,16 @@ void main() {
     // surface pass above just gave a facing keeps that facing, and only the skirt glows outward. Summing
     // `a` instead of averaging it is safe because stepLen is inversely proportional to the step count, so
     // the total is the integral of the field and does not drift as the march gets coarser with distance.
-    acc += glow * 0.30 * (1.0 - opacity);
+    // An average emission, not a running sum, so the halo is bounded by the brightest the volume gets
+    // rather than by how far the ray travelled through it.
+    vec3 bloom = glow / max(glowWeight, 1e-4);
+    acc += bloom * 0.30 * (1.0 - opacity);
 
     // Not multiplied by ColorModulator. ShaderInstance.apply() overwrites that uniform every frame
     // with RenderSystem.getShaderColor() - whatever the previous pass left there - so folding it in
     // hands the final image to a value this mod never sets. That is why bypassing the march showed a
     // magenta box while the march showed nothing: the bypass returns before this line.
-    fragColor = vec4(acc, opacity);
+    // Premultiplied output has to satisfy rgb <= a. The blend is ONE, ONE_MINUS_SRC_ALPHA, so anything
+    // above the alpha adds past 1.0 and clips to flat white with no detail - the exact symptom reported.
+    fragColor = vec4(min(acc, vec3(opacity)), opacity);
 }
