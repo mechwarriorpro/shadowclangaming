@@ -782,6 +782,48 @@ def check_event_subscribers():
             fail("BlastClientEvents never calls %s.render - the world effect would never be drawn" % renderer)
     return len(subscribers)
 
+# Yarn names for things this codebase refers to by their Mojmap names. The mod is Mojmap, so a Yarn
+# name is a compile error rather than a warning - and this workspace has no compiler, so it costs a
+# full CI round to find out. Every entry here has already been paid for once.
+# name -> (pattern that only the Yarn usage matches, the Mojmap replacement)
+YARN_NAMES = {
+    # A bare identifier: `age % 4`, `age;`, `age++`. Not `.age` - that is the mod's own Entry field.
+    "age": (r"(?<![\w.])age\b", "tickCount"),
+    # A call site, whatever it is called on: `getWorld()`, `this.getWorld()`, `entity.getWorld()`.
+    "getWorld": (r"\bgetWorld\s*\(", "level()"),
+}
+
+
+def check_mojmap_names():
+    """No Yarn-only *entity* identifiers: this is Mojmap and `age` is not `Entity.age` here.
+
+    `age` for an entity's tick count and `getWorld()` for its level both read perfectly plausibly if
+    you have spent time in Fabric, and both are `cannot find symbol` in this project.
+
+    Scoped, because `age` is a perfectly good name for the mod's OWN fields - ClientBlastQueue.Entry,
+    ApexStages and half a dozen others have one, and they are not entities. So a file is only checked
+    if it does not declare `age` itself, and comments and strings are stripped first: prose about "the
+    effect's age" is not an identifier.
+    """
+    hits = 0
+    for path in java_files():
+        source = read(path)
+        code = re.sub(r"/\*.*?\*/", " ", source, flags=re.S)
+        code = re.sub(r"//[^\n]*", "", code)
+        code = re.sub(r'"(?:[^"\\]|\\.)*"', '""', code)
+        for yarn, (pattern, mojmap) in YARN_NAMES.items():
+            if re.search(r"(?:int|long|float|double|var)\s+%s\b" % yarn, code):
+                continue  # this file has its own field, local or parameter of that name
+            for match in re.finditer(pattern, code):
+                line = code[:match.start()].count("\n") + 1
+                fail("%s line %d uses the Yarn name `%s`; this is Mojmap, use %s"
+                     % (os.path.relpath(path, JAVA), line, yarn, mojmap))
+                hits += 1
+    if hits == 0:
+        print("mojmap names: no Yarn-only identifiers")
+    return hits
+
+
 def check_fuse_ownership():
     """No delivery form may count its fuse on an entity that can be removed mid-count.
 
@@ -934,6 +976,7 @@ def main():
     check_world_shaders()
     check_charge_wiring()
     check_fuse_ownership()
+    check_mojmap_names()
     subscribers = check_event_subscribers()
     check_proxy_box()
     check_glsl_defined()

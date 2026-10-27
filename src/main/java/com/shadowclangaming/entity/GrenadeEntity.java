@@ -97,11 +97,14 @@ public class GrenadeEntity extends ThrowableItemProjectile {
      * Sparks while it cooks, if it is still in the world to be seen. The countdown itself is not here -
      * see {@link #onHit}. This is decoration only, so it is harmless if the entity has already been
      * removed by the time it would have run.
+     *
+     * <p>{@code tickCount}, not {@code age}: this is Mojmap, and {@code age} is the Yarn name for the
+     * same field.
      */
     @Override
     public void tick() {
         super.tick();
-        if (level().isClientSide || fuse <= 0 || age % 4 != 0) {
+        if (level().isClientSide || fuse <= 0 || tickCount % 4 != 0) {
             return;
         }
         if (level() instanceof net.minecraft.server.level.ServerLevel server) {
