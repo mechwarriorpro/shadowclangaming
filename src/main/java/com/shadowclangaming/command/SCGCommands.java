@@ -50,6 +50,16 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  */
 public final class SCGCommands {
 
+    /**
+     * Whether the volumetric raymarcher is actually drawing, published by the client at startup.
+     *
+     * <p>A supplier rather than a direct call because {@code VolumetricFx} pulls in
+     * {@code net.minecraft.client}, which does not exist on a dedicated server - and this class is loaded
+     * on both sides. Every other client reference in this mod lives under {@code client/} for the same
+     * reason; the client publishes, common code only reads.
+     */
+    public static volatile java.util.function.Supplier<String> volumetricStatus;
+
     public static void register(RegisterCommandsEvent event) {
         CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
 
@@ -324,6 +334,10 @@ public final class SCGCommands {
                         + ", shake " + com.shadowclangaming.config.SCGConfig.screenShake()
                         + ", overlay fallback " + com.shadowclangaming.config.SCGConfig.fallbackOverlay()),
                 false);
+        java.util.function.Supplier<String> raymarcher = volumetricStatus;
+        source.sendSuccess(() -> Component.literal("  volumetric raymarcher: " + (raymarcher == null
+                ? "not reported - this command is running on a dedicated server"
+                : raymarcher.get())), false);
         for (var style : styles) {
             source.sendSuccess(() -> Component.literal(String.format("  %-10s chain %s  colour #%06X  shake %.2f",
                     style.id(), style.shader(), style.colour() & 0xFFFFFF, style.shake())), false);

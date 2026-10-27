@@ -26,6 +26,9 @@ import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 public final class SCGClient {
     @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        // So /scg fx status can say whether the raymarcher is running instead of only printing config.
+        com.shadowclangaming.command.SCGCommands.volumetricStatus =
+                com.shadowclangaming.client.VolumetricFx::statusLine;
         event.registerEntityRenderer(SCGEntities.MISSILE.get(), MissileRenderer::new);
         // A spell bolt renders as the amethyst shard it carries - no custom model needed.
         event.registerEntityRenderer(SCGEntities.SPELL_PROJECTILE.get(),

@@ -88,7 +88,10 @@ public final class VolumetricFx {
 
     private static ShaderInstance shader;
     private static boolean loadFailed;
+    /** Why the shader is unusable, for /scg fx status. Null while everything is fine. */
+    private static String failureReason;
     private static long frames;
+    private static int lastDrawn;
 
     private VolumetricFx() {
     }
@@ -105,6 +108,7 @@ public final class VolumetricFx {
         } catch (IOException | RuntimeException ex) {
             loadFailed = true;
             shader = null;
+            failureReason = String.valueOf(ex.getMessage());
             ShadowClanGaming.LOGGER.error("Volumetric blast shader failed to register; using geometry", ex);
         }
     }
@@ -112,6 +116,28 @@ public final class VolumetricFx {
     /** True when the raymarcher is usable. */
     public static boolean available() {
         return shader != null && !loadFailed;
+    }
+
+    /**
+     * One line for {@code /scg fx status}: is the raymarcher actually drawing, and if not, why.
+     *
+     * <p>This existed because the failure is silent in every other place a player would look. A shader that
+     * does not compile does not fail the build - it fails at load, this class catches it, and the game draws
+     * CPU triangles instead. The visible result is "the effects are transparent and all look the same",
+     * which is indistinguishable from the shader merely looking bad, and the config lines that
+     * {@code fx status} already printed said nothing either way.
+     */
+    public static String statusLine() {
+        if (loadFailed) {
+            return "NOT RUNNING - shader failed to load, drawing CPU triangles instead: " + failureReason;
+        }
+        if (shader == null) {
+            return "NOT RUNNING - shader never registered";
+        }
+        if (!SCGConfig.cinematicShadersEnabled()) {
+            return "NOT RUNNING - cinematicShaders is off in config, drawing CPU triangles instead";
+        }
+        return "running, " + frames + " frame(s) drawn, " + lastDrawn + " volume(s) last frame";
     }
 
     /**
@@ -133,6 +159,7 @@ public final class VolumetricFx {
         List<CinematicFx.Effect> effects = CinematicFx.collect(mc);
         long frame = ++frames;
         if (effects.isEmpty()) {
+            lastDrawn = drawn;
             com.shadowclangaming.debug.ShadowDebug.log("VOLUME_FRAME", "frame={} active=0", frame);
             return true;
         }

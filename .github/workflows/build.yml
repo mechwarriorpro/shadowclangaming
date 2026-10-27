@@ -26,6 +26,16 @@ jobs:
           distribution: temurin
           java-version: '21'
 
+      # The JVM compile never sees GLSL, and sweep.py can only check that uniform names join. So a shader
+      # that does not compile used to reach the release: VolumetricFx catches the failure at runtime, sets
+      # loadFailed, and the game quietly draws CPU triangles instead - which presents as "the effects are
+      # transparent and all look the same" with a completely green build.
+      - name: Install a GLSL compiler
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq glslang-tools
+          glslangValidator --version | head -1
+
       # Every check runs even if an earlier one fails, so one report covers the whole suite instead of
       # needing a push per failure.
       - name: Run the fast checks
@@ -51,6 +61,7 @@ jobs:
           run "api harness" bash tools/run_api_harness.sh
           run "lua harness" bash tools/run_lua_harness.sh
           run "syntax check" bash tools/check_syntax.sh
+          run "glsl compiles" bash tools/check_glsl.sh
           echo "$status" > /tmp/checks.status
           EOS
           bash /tmp/checks.sh 2>&1 | tee /tmp/checks.log
