@@ -108,9 +108,38 @@ public final class VolumetricFx {
         } catch (IOException | RuntimeException ex) {
             loadFailed = true;
             shader = null;
-            failureReason = String.valueOf(ex.getMessage());
+            failureReason = describe(ex);
             ShadowClanGaming.LOGGER.error("Volumetric blast shader failed to register; using geometry", ex);
         }
+    }
+
+    /**
+     * Everything worth knowing about a shader load failure, in something that fits in chat.
+     *
+     * <p>The first version of this stored {@code ex.getMessage()}, and the failure that mattered had no
+     * message at all - so {@code fx status} said "shader failed to load: null", which is the one answer
+     * guaranteed to be useless. Class names survive a null message, the cause chain survives a wrapped
+     * one, and the top stack frames say which side threw. The full trace still goes to the log via
+     * LOGGER.error; this is the part you can read without opening a file.
+     */
+    private static String describe(Throwable ex) {
+        StringBuilder out = new StringBuilder();
+        Throwable cursor = ex;
+        for (int depth = 0; cursor != null && depth < 5; depth++) {
+            if (out.length() > 0) {
+                out.append("  <-  ");
+            }
+            out.append(cursor.getClass().getName());
+            if (cursor.getMessage() != null) {
+                out.append(": ").append(cursor.getMessage().replace('\n', ' '));
+            }
+            cursor = cursor.getCause() == cursor ? null : cursor.getCause();
+        }
+        StackTraceElement[] frames = ex.getStackTrace();
+        for (int i = 0; i < Math.min(4, frames.length); i++) {
+            out.append("\n      at ").append(frames[i]);
+        }
+        return out.toString();
     }
 
     /** True when the raymarcher is usable. */
@@ -129,7 +158,8 @@ public final class VolumetricFx {
      */
     public static String statusLine() {
         if (loadFailed) {
-            return "NOT RUNNING - shader failed to load, drawing CPU triangles instead: " + failureReason;
+            return "NOT RUNNING - shader failed to load, drawing CPU triangles instead: " + failureReason
+                    + "\n      (full trace in logs/latest.log under 'Volumetric blast shader failed to register')";
         }
         if (shader == null) {
             return "NOT RUNNING - shader never registered";
