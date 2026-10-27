@@ -722,8 +722,6 @@ void main() {
     }
     rd /= rayLen;
 
-    // One shade per pixel, whether the camera is outside the proxy volume or standing inside it: from
-    // outside the near faces are front-facing, from inside the visible faces are back-facing.
     float radius = max(Radius, 0.5);
     // SkyBox is derived from the cube client/VolumetricFx actually drew, so it is used as-is:
     // flooring it here would march a box the geometry does not cover.
@@ -731,12 +729,14 @@ void main() {
     // same width whether the warhead it feeds is a grenade or a cataclysm.
     float boxRadius = ShaftPass > 0.5 ? max(ShaftHalf, 1.0)
                                       : radius * (SkyPass > 0.5 ? SkyBox : PROXY_BOX);
-    bool inside = all(lessThan(abs(CamPos - Center), vec3(boxRadius)));
-    bool shade = inside ? !gl_FrontFacing : gl_FrontFacing;
-    if (!shade) {
-        discard;
-    }
-
+    // No face gate. This used to keep one shade per pixel with a test on gl_FrontFacing, assuming the
+    // proxy cube's winding made the visible faces front-facing from outside and back-facing from inside.
+    // If that is wrong for either case, EVERY fragment is discarded and the volume is completely
+    // invisible no matter what the field computes - while the fx solid bypass returns above this point
+    // and still draws a box, which is exactly the symptom that was reported. Both faces are marched
+    // instead. With depth writes off and premultiplied output, compositing an opaque volume twice gives
+    // acc + (1 - opacity) * acc, which at opacity near 1 is the same image, so the cost is a redundant
+    // march rather than a brighter one.
     vec3 bmin = Center - vec3(boxRadius);
     vec3 bmax = Center + vec3(boxRadius);
     // Reciprocal, and never zero: sign() of an exactly axis-aligned ray returns 0, which would put an
