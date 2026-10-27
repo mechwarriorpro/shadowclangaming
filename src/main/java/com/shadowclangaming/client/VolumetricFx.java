@@ -221,7 +221,7 @@ public final class VolumetricFx {
         int drawn = 0;
         try {
             Vec3 cam = event.getCamera().getPosition();
-            Matrix4f view = WorldMatrices.view(event);
+            Matrix4f view = WorldMatrices.view(event, event.getCamera());
             Matrix4f projection = WorldMatrices.projection(event);
             float time = (float) ((mc.level.getGameTime() % 72000L)
                     + event.getPartialTick().getGameTimeDeltaPartialTick(false)) / 20.0F;
@@ -420,15 +420,17 @@ public final class VolumetricFx {
         Matrix4f proj = event.getProjectionMatrix();
         Matrix4f view = event.getModelViewMatrix();
         Matrix4f stale = RenderSystem.getProjectionMatrix();
-        // A view matrix keeps its translation in COLUMN 3 (m03/m13/m23); the previous version of this
-        // diagnostic printed row 3, which is zeros by construction and told us nothing.
+        // The view matrix the shader actually gets, translation included. The event's own matrix is
+        // rotation only, so its m03/m13/m23 read 0.00 - which is the bug this now checks for: if these
+        // are still zero the camera offset did not get applied and nothing can be in the frustum.
+        Matrix4f used = view == null ? null : WorldMatrices.view(event, event.getCamera());
         return String.format(java.util.Locale.ROOT,
-                "event proj m00=%.4f m11=%.4f m32=%.4f (perspective needs -1.0000) | RenderSystem proj m32=%.4f"
-                        + " | event view m03=%.2f m13=%.2f m23=%.2f",
+                "proj m00=%.4f m11=%.4f m32=%.4f (=2*near*far/(near-far) at 0.05/1000, as expected)"
+                        + " | view used m03=%.2f m13=%.2f m23=%.2f (must be non-zero)",
                 proj == null ? 0.0F : proj.m00(), proj == null ? 0.0F : proj.m11(),
-                proj == null ? 0.0F : proj.m32(), stale == null ? 0.0F : stale.m32(),
-                view == null ? 0.0F : view.m03(), view == null ? 0.0F : view.m13(),
-                view == null ? 0.0F : view.m23());
+                proj == null ? 0.0F : proj.m32(),
+                used == null ? 0.0F : used.m03(), used == null ? 0.0F : used.m13(),
+                used == null ? 0.0F : used.m23());
     }
 
     /** Read by fx status: did the probe reach a draw call, or not? */
@@ -447,9 +449,13 @@ public final class VolumetricFx {
         }
         probeFrames--;
         double half = 10.0D;
-        double x = Math.floor(cam.x) + 0.5D;
-        double y = Math.floor(cam.y) + 2.0D;
-        double z = Math.floor(cam.z) + 0.5D;
+        // Camera-relative, unlike drawProxy. RenderSystem's model-view at this stage is rotation only -
+        // the camera offset lives on the pose stack, not in the matrix - and there is no setter for it,
+        // so these vertices carry the translation themselves. Still centred two blocks above the player's
+        // feet; it just gets there by subtraction instead of by matrix.
+        double x = Math.floor(cam.x) + 0.5D - cam.x;
+        double y = Math.floor(cam.y) + 2.0D - cam.y;
+        double z = Math.floor(cam.z) + 0.5D - cam.z;
         double x0 = x - half, x1 = x + half, y0 = y - half, y1 = y + half, z0 = z - half, z1 = z + half;
         int argb = 0xFFFF00FF;
         // Deliberately permissive: depth off, cull off, blend off. The first version drew with whatever

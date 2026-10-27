@@ -1,5 +1,7 @@
 package com.shadowclangaming.client;
 
+import net.minecraft.client.Camera;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import org.joml.Matrix4f;
 
@@ -38,13 +40,32 @@ public final class WorldMatrices {
      * matrix at that stage, so anything drawn with it lands off-screen. The event carries the exact
      * model-view and projection LevelRenderer is using, which is why both come from it now.
      */
-    public static Matrix4f view(RenderLevelStageEvent event) {
+    /**
+     * The level's rotation for this frame, with the camera translation applied.
+     *
+     * <p>The event's model-view is rotation only: measured in-game its translation column is
+     * m03=m13=m23=0.00, because LevelRenderer keeps the camera offset on the pose stack rather than in
+     * this matrix. Vertices submitted in absolute world coordinates therefore stay hundreds of blocks
+     * from the origin and fall outside the frustum - which is invisible in exactly the way every other
+     * wrong-matrix bug is. Multiplying the translation on the right gives R * T(-cam), which is the
+     * world-to-camera transform those vertices need.
+     */
+    public static Matrix4f view(RenderLevelStageEvent event, Camera camera) {
         Matrix4f modelView = event.getModelViewMatrix();
-        return modelView != null ? new Matrix4f(modelView) : new Matrix4f();
+        Matrix4f view = modelView != null ? new Matrix4f(modelView) : new Matrix4f();
+        Vec3 cam = camera.getPosition();
+        return view.translate((float) -cam.x, (float) -cam.y, (float) -cam.z);
     }
 
     /** The projection matrix Minecraft is drawing the level with this frame. */
-    /** @see #view(RenderLevelStageEvent) for why this is not RenderSystem's. */
+    /**
+     * The level's own projection, unmodified.
+     *
+     * <p>Measured m32 = -0.1000, which is 2*near*far/(near-far) at Minecraft's 0.05/1000 planes - this
+     * version's layout simply is not the one an earlier diagnostic assumed when it insisted on -1.0000.
+     * The level renders correctly with this matrix, so it is correct by definition and is passed through
+     * untouched.
+     */
     public static Matrix4f projection(RenderLevelStageEvent event) {
         Matrix4f projection = event.getProjectionMatrix();
         return projection != null ? new Matrix4f(projection) : new Matrix4f();

@@ -138,7 +138,7 @@ public final class CinematicFx {
             // same pair of matrices the level is drawn with. Taken from the event: RenderSystem's
             // projection at this stage measured m32 = -0.1 in-game, where a perspective projection has
             // -1.0, so it is not the level's matrix and anything projected with it lands off-screen.
-            active.safeGetUniform("ScgView").set(WorldMatrices.view(event));
+            active.safeGetUniform("ScgView").set(WorldMatrices.view(event, event.getCamera()));
             active.safeGetUniform("ScgProj").set(WorldMatrices.projection(event));
             BufferBuilder buffer = Tesselator.getInstance()
                     .begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
