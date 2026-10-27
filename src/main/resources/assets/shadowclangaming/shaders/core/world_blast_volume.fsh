@@ -141,6 +141,34 @@ float ridge(vec3 p) {
 
 // ---------------------------------------------------------------- the field
 
+// Shortest distance from p to the segment a..b. The whole occult-signature business is five or six of
+// these, so it is worth having one correct copy: h is clamped, and the denominator is floored, because a
+// zero-length segment would otherwise put a NaN into every pixel it touched.
+float segDist(vec2 p, vec2 a, vec2 b) {
+    vec2 pa = p - a;
+    vec2 ba = b - a;
+    float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-6), 0.0, 1.0);
+    return length(pa - ba * h);
+}
+
+// The {n/k} star polygon inscribed in a circle of radius rad: n points, each joined to the one k steps
+// along. {5/2} is a pentagram and {6/2} is a hexagram, which is why this is written generally rather than
+// as two separate shapes. Returns a thickness mask, 1 on the line and 0 clear of it.
+float starPolygon(vec2 p, float n, float k, float rad, float thick, float spin) {
+    float d = 1e9;
+    for (int i = 0; i < 6; i++) {
+        if (float(i) >= n) {
+            break;
+        }
+        float a0 = 6.28318530718 * float(i) / n + spin;
+        float a1 = 6.28318530718 * float(i) + k * 6.28318530718 / n + spin;
+        vec2 va = vec2(cos(a0), sin(a0)) * rad;
+        vec2 vb = vec2(cos(a1), sin(a1)) * rad;
+        d = min(d, segDist(p, va, vb));
+    }
+    return 1.0 - smoothstep(thick * 0.4, thick, d);
+}
+
 float sampleField(vec3 wp, out vec3 emission) {
     float radius = max(Radius, 0.5);
     float t = clamp(Progress, 0.0, 1.0);
@@ -596,8 +624,16 @@ float sampleField(vec3 wp, out vec3 emission) {
             float inner = 1.0 - smoothstep(ringR * 0.55, ringR, rr);
             float lobes = abs(sin(ang * 3.0)) * ringR;
             float figure = 1.0 - smoothstep(0.0, 0.03, abs(rr - lobes));
-            body += Circle * ground * (rim * 1.6 + teeth * rim * 1.3 + spokes * inner * 0.9 + figure * 1.1);
-            bright *= mix(1.0, 2.4, Circle * ground * rim);
+            // The signature: a pentagram on the ground ring, turning with it, and a hexagram counter-turning
+            // over it. Drawn as real line segments rather than a polar trick, so the chords stay straight at
+            // any radius instead of bowing - which is the difference between a sigil and a flower.
+            vec2 flat = vec2(q.x, q.z);
+            float pent = starPolygon(flat, 5.0, 2.0, ringR * 0.98, 0.030, spin);
+            float hexa = starPolygon(flat, 6.0, 2.0, ringR * 1.12, 0.024, -spin * 1.5);
+            float sigilCore = 1.0 - smoothstep(0.0, ringR * 0.34, rr);
+            body += Circle * ground * (rim * 1.6 + teeth * rim * 1.3 + spokes * inner * 0.9 + figure * 1.1
+                    + pent * 1.9 + hexa * 1.4 + sigilCore * 0.35);
+            bright *= mix(1.0, 3.0, Circle * ground * max(rim, pent));
 
             // Overhead: bigger, thinner, and rotating the opposite way, so the two do not lock together.
             float plane = 1.0 - smoothstep(0.0, 0.07, abs(q.y - (1.7 + fi * 0.22)));
@@ -680,6 +716,9 @@ void main() {
 
     vec3 acc = vec3(0.0);
     float transmittance = 1.0;
+    // Where the volume was thickest along this ray, for the surface pass below.
+    float peak = 0.0;
+    vec3 peakPos = pos;
     // Optical depth in units of the blast radius, so a grenade and a kilometre-wide cataclysm are equally
     // solid instead of one being fog and the other a brick.
     float densityScale = 2.2 / max(radius, 1.0);
@@ -687,6 +726,10 @@ void main() {
     for (int i = 0; i < steps; i++) {
         vec3 emission;
         float density = sampleField(pos, emission);
+        if (density > peak) {
+            peak = density;
+            peakPos = pos;
+        }
         if (density > 0.002) {
             float a = clamp(density * stepLen * densityScale, 0.0, 1.0);
             acc += emission * a * transmittance;
@@ -699,6 +742,35 @@ void main() {
     }
 
     float opacity = 1.0 - transmittance;
+
+    // --- surface shading. The march above only integrates emission, and with no normal anywhere in it a
+    // solid core and a thin skirt are lit identically - so both read as coloured fog. That is the whole
+    // "it is transparent" complaint: not the blend mode, but that nothing in the image says "surface".
+    // Taking the gradient of the field at the thickest sample gives the volume a facing, which is what an
+    // explosion needs to read as an object rather than a tint.
+    if (SkyPass < 0.5 && peak > 0.02 && opacity > 0.04) {
+        float eps = max(stepLen * 0.55, 0.02);
+        vec3 throwaway;
+        float gx = sampleField(peakPos + vec3(eps, 0.0, 0.0), throwaway)
+                 - sampleField(peakPos - vec3(eps, 0.0, 0.0), throwaway);
+        float gy = sampleField(peakPos + vec3(0.0, eps, 0.0), throwaway)
+                 - sampleField(peakPos - vec3(0.0, eps, 0.0), throwaway);
+        float gz = sampleField(peakPos + vec3(0.0, 0.0, eps), throwaway)
+                 - sampleField(peakPos - vec3(0.0, 0.0, eps), throwaway);
+        // Down the gradient: density falls away outwards, so -grad points out of the surface. The bias
+        // keeps normalize() off a zero vector where the field is locally flat.
+        vec3 n = -normalize(vec3(gx, gy, gz) + vec3(1e-5));
+        // Lit from the camera. An explosion is its own light source, so what the eye actually reads is the
+        // shape facing you plus a hot rim where the surface turns away - not a distant sun.
+        float facing = clamp(dot(n, -rd), 0.0, 1.0);
+        float rim = pow(max(0.0, 1.0 - facing), 3.0);
+        acc *= 0.55 + 0.6 * facing + 0.85 * rim;
+        // And the body is solid. Past this much accumulated opacity the ray has gone through the thing, so
+        // the world behind it should not survive - the thin outer skirt still composites over it.
+        opacity = mix(opacity, 1.0, smoothstep(0.30, 0.80, opacity)
+                                    * smoothstep(0.02, 0.22, peak));
+    }
+
     // Both tests, not just brightness: a dark warhead (a World Eater's core is deliberately black) can
     // have almost no emission and still be completely opaque, and discarding it would punch a hole in
     // the middle of the one effect that is supposed to hide the world behind it.

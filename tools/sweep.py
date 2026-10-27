@@ -794,6 +794,36 @@ YARN_NAMES = {
 }
 
 
+def check_sky_box_reaches_the_big_ones():
+    """The sky cube must be able to get outside the blast cube, or the sky is never drawn.
+
+    skyBoxRadii() returns 0 - "draw nothing" - when the block cap leaves the sky inside the blast's own
+    cube, and that cube is radius * PROXY_BOX. So a cap below radius * PROXY_BOX silently deletes the
+    skybox, with no error and no log. At 3000 blocks that started happening above 882 blocks of blast
+    radius, which is the entire stellar tier, and the report was "still no skybox effects".
+
+    Asserted against the largest radius BlastFx.radius can produce rather than a typical one: if it holds
+    at 4096 it holds everywhere.
+    """
+    path = os.path.join(JAVA, "com", "shadowclangaming", "client", "VolumetricFx.java")
+    source = read(path)
+    cap = re.search(r"SKY_BOX_MAX_BLOCKS\s*=\s*([\d.]+)D", source)
+    proxy = re.search(r"PROXY_BOX\s*=\s*([\d.]+)D", source)
+    if not cap or not proxy:
+        fail("cannot read SKY_BOX_MAX_BLOCKS / PROXY_BOX from VolumetricFx")
+        return 1
+    cap_v, proxy_v = float(cap.group(1)), float(proxy.group(1))
+    widest = 4096.0  # BlastFx.radius clamps to this
+    need = widest * proxy_v
+    if cap_v <= need:
+        fail("SKY_BOX_MAX_BLOCKS=%.0f cannot get outside a %.0f-block blast cube (needs > %.0f); "
+             "the stellar tier would get no skybox" % (cap_v, need, need))
+        return 1
+    print("sky box: %.0f blocks clears a %.0f-block blast cube (max radius %.0f)"
+          % (cap_v, need, widest))
+    return 0
+
+
 def check_soul_furnace_spawn_guard():
     """The Soul Furnace spawn veto is wired end to end.
 
@@ -1010,6 +1040,7 @@ def main():
     check_fuse_ownership()
     check_mojmap_names()
     check_soul_furnace_spawn_guard()
+    check_sky_box_reaches_the_big_ones()
     subscribers = check_event_subscribers()
     check_proxy_box()
     check_glsl_defined()

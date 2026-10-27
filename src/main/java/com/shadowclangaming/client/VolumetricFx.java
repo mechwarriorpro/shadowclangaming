@@ -66,7 +66,13 @@ public final class VolumetricFx {
      * still precise. Past the cap the sky is the same sky, so it is simply not drawn any bigger.
      */
     public static final double SKY_BOX_RADII = 48.0D;
-    public static final double SKY_BOX_MAX_BLOCKS = 3000.0D;
+    // Was 3000, which quietly deleted the skybox from exactly the warheads that were supposed to have it.
+    // skyBoxRadii() refuses to draw when the cap leaves the sky inside the blast's own cube, and that cube
+    // is radius * PROXY_BOX - so with a 3000-block cap any blast wider than 3000 / 3.4 = 882 blocks got no
+    // sky at all. Absolute Annihilation is 1237 blocks across. The bigger the weapon, the less sky it got,
+    // which is backwards for the stellar tier. The field is evaluated from direction only, so a larger cube
+    // costs nothing per pixel: the march still takes the same handful of steps.
+    public static final double SKY_BOX_MAX_BLOCKS = 16000.0D;
 
     /** How many volumes may be marched in one frame. Each is a full-screen-ish raymarch; this is the cap. */
     public static final int MAX_VOLUMES = 4;
