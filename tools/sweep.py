@@ -808,6 +808,44 @@ coherent restrict readonly writeonly
 """.split())
 
 
+def check_no_color_modulator():
+    """No mod shader multiplies by ColorModulator.
+
+    ShaderInstance.apply() does, every frame:
+
+        if (this.COLOR_MODULATOR != null) this.COLOR_MODULATOR.set(RenderSystem.getShaderColor());
+
+    So whatever a shader JSON declares as its default is overwritten before the first draw with the
+    colour the previous render pass happened to leave in RenderSystem. Folding it into the output
+    hands the final image to a value this mod never sets. That is exactly what the volumetric blast
+    did, and it is why bypassing the march drew a magenta box while the march drew nothing - the
+    bypass returns before the multiply. Comments explaining all this are fine, so // is stripped.
+    """
+    hits = 0
+    for dirpath, _dirs, names in os.walk(os.path.join(ASSETS, "shaders")):
+        for name in sorted(names):
+            path = os.path.join(dirpath, name)
+            where = os.path.relpath(path, ASSETS)
+            if name.endswith(".json"):
+                try:
+                    data = json.loads(read(path))
+                except ValueError:
+                    continue
+                for index, uniform in enumerate(data.get("uniforms") or []):
+                    if isinstance(uniform, dict) and uniform.get("name") == "ColorModulator":
+                        fail("%s uniforms[%d] declares ColorModulator, which ShaderInstance.apply() "
+                             "overwrites with RenderSystem.getShaderColor() every frame" % (where, index))
+                        hits += 1
+            elif name.endswith((".fsh", ".vsh")):
+                for number, line in enumerate(read(path).split("\n"), 1):
+                    if "ColorModulator" in line.split("//")[0]:
+                        fail("%s:%d uses ColorModulator, a uniform this mod does not control"
+                             % (where, number))
+                        hits += 1
+    if hits == 0:
+        print("color modulator: no mod shader depends on it")
+
+
 def check_shader_uniform_types():
     """Every uniform type in a core shader JSON is one Minecraft can actually parse.
 
@@ -1231,6 +1269,7 @@ def main():
     check_sky_box_reaches_the_big_ones()
     check_glsl_reserved_words()
     check_glsl_duplicate_declarations()
+    check_no_color_modulator()
     check_shader_uniform_types()
     check_shader_uniform_counts()
     subscribers = check_event_subscribers()

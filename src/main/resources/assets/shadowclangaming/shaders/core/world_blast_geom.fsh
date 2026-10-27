@@ -4,12 +4,13 @@
 // and the previous build's shader-heavy approach is exactly what this replaces.
 in vec4 vertexColor;
 
-uniform vec4 ColorModulator;
 
 out vec4 fragColor;
 
 void main() {
-    vec4 color = vertexColor * ColorModulator;
+    // See world_blast_volume.fsh: apply() overwrites ColorModulator with RenderSystem's shader colour,
+    // so a mod shader must not fold it into its own output.
+    vec4 color = vertexColor;
     if (color.a < 0.004) {
         discard;
     }

@@ -24,7 +24,6 @@
 
 in vec3 vWorld;
 
-uniform vec4 ColorModulator;
 uniform vec3 Center;
 uniform vec3 CamPos;
 uniform vec4 ColorA;
@@ -846,5 +845,9 @@ void main() {
     // the total is the integral of the field and does not drift as the march gets coarser with distance.
     acc += glow * 0.30 * (1.0 - opacity);
 
-    fragColor = vec4(acc, opacity) * ColorModulator;
+    // Not multiplied by ColorModulator. ShaderInstance.apply() overwrites that uniform every frame
+    // with RenderSystem.getShaderColor() - whatever the previous pass left there - so folding it in
+    // hands the final image to a value this mod never sets. That is why bypassing the march showed a
+    // magenta box while the march showed nothing: the bypass returns before this line.
+    fragColor = vec4(acc, opacity);
 }
