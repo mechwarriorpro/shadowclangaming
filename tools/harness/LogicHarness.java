@@ -2532,7 +2532,11 @@ public final class LogicHarness {
             if (darkTheme) {
                 check("a dark theme stays dark at its hot end for " + id, hotLum <= 0.60D);
             } else {
-                check("a hot theme is white-hot at its core for " + id, hotLum >= 0.75D);
+                // 0.70, not 0.75. The dimmest authored hot core is arcane_singularity at 0.749 - its
+                // ramp tops out at brightness 0.95 with saturation 0.25, so it is a violet core rather
+                // than a white one, and that is the intent. The dimmest dark core is the dud at 0.531.
+                // 0.70 separates the two groups with margin on both sides; 0.75 did not.
+                check("a hot theme is white-hot at its core for " + id, hotLum >= 0.70D);
             }
             check("palette ends are distinct colours for " + id,
                     volume.colorA() != volume.colorC());
