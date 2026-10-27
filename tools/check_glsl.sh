@@ -23,7 +23,11 @@ while IFS= read -r -d '' f; do
         *) continue ;;
     esac
     checked=$((checked + 1))
-    if ! out="$(glslangValidator --target-env opengl -S "$stage" "$f" 2>&1)"; then
+    # No --target-env: it makes glslang emit SPIR-V, which demands GLSL 330+ and Vulkan-style
+    # layout(location=) on every uniform. Minecraft core shaders are #version 150 desktop GL and declare
+    # their uniforms plainly, so that flag reports the toolchain's rules as errors in every shader we
+    # have. Left to itself glslang validates against the #version each file declares, which is the point.
+    if ! out="$(glslangValidator -S "$stage" "$f" 2>&1)"; then
         status=1
         echo "FAIL ${f#"$root"/}"
         echo "$out" | sed 's/^/     /'
