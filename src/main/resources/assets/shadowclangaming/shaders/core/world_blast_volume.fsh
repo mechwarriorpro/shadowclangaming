@@ -715,6 +715,9 @@ void main() {
     vec3 pos = ro + rd * (tEnter + stepLen * 0.5);
 
     vec3 acc = vec3(0.0);
+    // The same emission summed WITHOUT the transmittance weighting. acc converges on the surface colour;
+    // this one keeps growing through the thin outer shell, which is where a halo actually comes from.
+    vec3 glow = vec3(0.0);
     float transmittance = 1.0;
     // Where the volume was thickest along this ray, for the surface pass below.
     float peak = 0.0;
@@ -733,6 +736,7 @@ void main() {
         if (density > 0.002) {
             float a = clamp(density * stepLen * densityScale, 0.0, 1.0);
             acc += emission * a * transmittance;
+            glow += emission * a;
             transmittance *= 1.0 - a;
             if (transmittance < 0.02) {
                 break;
@@ -783,5 +787,16 @@ void main() {
     // attenuates it, so the terrain showed through at full brightness no matter how dense the volume got.
     // With ONE/ONE_MINUS_SRC_ALPHA the core - where transmittance has fallen to nothing - genuinely
     // occludes the world behind it, while the thin outer skirt still glows additively over it.
+    // --- bloom. The reference mod gets its flare from a real bloom pass: emissive geometry writes
+    // Bloom = texture * bloomTime * 15 into a separate buffer, which is then blurred full-screen. A
+    // world-space volume has no such pass and cannot look at neighbouring pixels, so the halo has to be
+    // made by the volume's own thin outer shell instead.
+    //
+    // Weighting it by (1 - opacity) is what makes it a halo rather than a wash: the solid core the
+    // surface pass above just gave a facing keeps that facing, and only the skirt glows outward. Summing
+    // `a` instead of averaging it is safe because stepLen is inversely proportional to the step count, so
+    // the total is the integral of the field and does not drift as the march gets coarser with distance.
+    acc += glow * 0.30 * (1.0 - opacity);
+
     fragColor = vec4(acc, opacity) * ColorModulator;
 }
