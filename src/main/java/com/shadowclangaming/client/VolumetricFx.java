@@ -175,7 +175,8 @@ public final class VolumetricFx {
         if (!SCGConfig.cinematicShadersEnabled()) {
             return "NOT RUNNING - cinematicShaders is off in config, drawing CPU triangles instead";
         }
-        return "running, " + frames + " frame(s) drawn, " + lastDrawn + " volume(s) last frame";
+        return "running, " + frames + " frame(s) drawn, " + lastDrawn + " volume(s) last frame"
+                + "; " + probeLine();
     }
 
     /**
@@ -385,6 +386,11 @@ public final class VolumetricFx {
     /** The proxy cube: six faces, two triangles each, in world coordinates. */
     /** Frames left on the probe cube; see {@link #startProbe}. */
     private static int probeFrames;
+    /** Probe cubes that actually reached a draw call, so "I saw nothing" can be told apart from "the
+     *  command never ran". Reported by fx status. */
+    private static int probeDrawn;
+    /** RenderSystem's matrices as measured on the probe's first frame; see {@link #matrices}. */
+    private static String probeMatrices = "not measured";
 
     /**
      * Draw a solid magenta cube through Minecraft's own position-colour shader for a few seconds.
@@ -398,6 +404,37 @@ public final class VolumetricFx {
      */
     public static void startProbe(int frames) {
         probeFrames = frames;
+        probeDrawn = 0;
+    }
+
+    /**
+     * What RenderSystem is holding for the transform at this stage.
+     *
+     * <p>Every draw in this class - the raymarcher's proxy cube and the vanilla probe cube alike - is
+     * positioned by these matrices, so if they are not the level's at AFTER_PARTICLES then both fail the
+     * same way and nothing appears however correct the geometry is. A perspective projection has m32 == -1
+     * and a non-zero m11; identity or a stale ortho matrix has neither, and that is the tell.
+     */
+    private static String matrices() {
+        Matrix4f proj = RenderSystem.getProjectionMatrix();
+        Matrix4f view = RenderSystem.getModelViewMatrix();
+        if (proj == null || view == null) {
+            return "projection=" + (proj == null ? "NULL" : "set")
+                    + " modelView=" + (view == null ? "NULL" : "set");
+        }
+        return String.format(java.util.Locale.ROOT,
+                "proj m00=%.4f m11=%.4f m32=%.4f (perspective needs m32=-1.0000) | view m30=%.2f m31=%.2f m32=%.2f",
+                proj.m00(), proj.m11(), proj.m32(), view.m30(), view.m31(), view.m32());
+    }
+
+    /** Read by fx status: did the probe reach a draw call, or not? */
+    public static String probeLine() {
+        if (probeDrawn > 0) {
+            return probeDrawn + " probe cube(s) drew; " + probeMatrices;
+        }
+        return probeFrames > 0
+                ? "probe requested, " + probeFrames + " frame(s) left, none drew"
+                : "no probe run";
     }
 
     private static void drawProbe(Vec3 cam) {
@@ -411,6 +448,15 @@ public final class VolumetricFx {
         double z = Math.floor(cam.z) + 0.5D;
         double x0 = x - half, x1 = x + half, y0 = y - half, y1 = y + half, z0 = z - half, z1 = z + half;
         int argb = 0xFFFF00FF;
+        // Deliberately permissive: depth off, cull off, blend off. The first version drew with whatever
+        // state the level renderer happened to leave behind and drew nothing, which is ambiguous - depth
+        // rejection, backface culling (the camera is INSIDE this cube) and a draw that never reaches the
+        // framebuffer all look identical from out here. With all three disabled the only way this stays
+        // invisible is if the draw is not landing on screen at all.
+        RenderSystem.disableDepthTest();
+        RenderSystem.depthMask(false);
+        RenderSystem.disableBlend();
+        RenderSystem.disableCull();
         BufferBuilder buffer = Tesselator.getInstance()
                 .begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
         colourQuad(buffer, x0, y0, z0, x1, y0, z0, x1, y1, z0, x0, y1, z0, argb);
@@ -419,8 +465,16 @@ public final class VolumetricFx {
         colourQuad(buffer, x1, y0, z0, x1, y0, z1, x1, y1, z1, x1, y1, z0, argb);
         colourQuad(buffer, x0, y0, z1, x1, y0, z1, x1, y0, z0, x0, y0, z0, argb);
         colourQuad(buffer, x0, y1, z0, x1, y1, z0, x1, y1, z1, x0, y1, z1, argb);
+        if (probeDrawn == 0) {
+            probeMatrices = matrices();
+            ShadowClanGaming.LOGGER.info("SCG probe matrices: {}", probeMatrices);
+        }
         RenderSystem.setShader(GameRenderer::getPositionColorShader);
         BufferUploader.drawWithShader(buffer.buildOrThrow());
+        probeDrawn++;
+        RenderSystem.enableDepthTest();
+        RenderSystem.depthMask(true);
+        RenderSystem.enableCull();
     }
 
     private static void colourQuad(BufferBuilder buffer,
