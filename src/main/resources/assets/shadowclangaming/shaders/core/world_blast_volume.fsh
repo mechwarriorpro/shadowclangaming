@@ -724,6 +724,16 @@ float sampleField(vec3 wp, out vec3 emission) {
         col *= 0.7 + 0.3 * sin(Time * 6.0 + r * 4.0);
     }
     emission = col * Glow * bright;
+    // Hue-preserving cap, not a per-channel clamp. Glow is authored up to 1.9 and the palettes are
+    // already pale, so this product routinely exceeds 1.0 in several channels at once. Clamping each one
+    // pins them all at 1.0 and the result is pure white - #F6E7C1 at glow 1.9 becomes exactly
+    // (1.00, 1.00, 1.00), which is the blowout. Dividing by the loudest channel keeps the ratios, so the
+    // colour survives at full brightness instead of washing out. This is what makes standing inside the
+    // blast render as the inside of a coloured fireball rather than as a white screen.
+    float loudest = max(emission.r, max(emission.g, emission.b));
+    if (loudest > 1.0) {
+        emission /= loudest;
+    }
     return clamp(body, 0.0, 3.0);
 }
 
@@ -867,7 +877,11 @@ void main() {
         // shape facing you plus a hot rim where the surface turns away - not a distant sun.
         float facing = clamp(dot(n, -rd), 0.0, 1.0);
         float rim = pow(max(0.0, 1.0 - facing), 3.0);
-        acc *= 0.55 + 0.6 * facing + 0.85 * rim;
+        // Clamped to 1.0. This reaches 2.0 at a fully lit rim, which doubled acc and then hit the
+        // min(acc, opacity) clamp - so the shading itself was being flattened away at exactly the
+        // brightest points, the opposite of what it is for. As a modulator it should darken and shape,
+        // never amplify past what the blend can hold.
+        acc *= clamp(0.55 + 0.6 * facing + 0.85 * rim, 0.0, 1.0);
         // And the body is solid. Past this much accumulated opacity the ray has gone through the thing, so
         // the world behind it should not survive - the thin outer skirt still composites over it.
         opacity = mix(opacity, 1.0, smoothstep(0.30, 0.80, opacity)
