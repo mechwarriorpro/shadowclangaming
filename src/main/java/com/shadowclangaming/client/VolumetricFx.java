@@ -26,7 +26,7 @@ import java.util.List;
  *
  * <p>WHAT IT IS. For every live effect this draws one cube the size of the blast around the detonation
  * point and hands the frame to {@code world_blast_volume.fsh}, which marches a domain-warped value-noise
- * field through that cube and composes fifteen structural features - fireball, shockwave shells, black
+ * field through that cube and composes twenty-two structural features - fireball, shockwave shells, black
  * hole, stellar corona, spacetime tear, meteors, lightning, ground runes, sky circles, portals, jet,
  * coins, smoke, sub-charges, flash, dome, embers - all computed per pixel from the warhead's own
  * authored parameters, so a World Eater is a hole with an accretion disc and a Numismatic blast is made
@@ -118,7 +118,12 @@ public final class VolumetricFx {
         RenderSystem.enableDepthTest();
         RenderSystem.depthMask(false);
         RenderSystem.enableBlend();
-        RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE);
+        // Premultiplied alpha: src.rgb is already emission-weighted by the march, so ONE/ONE_MINUS_SRC_ALPHA
+        // is the correct composite. The old SRC_ALPHA/ONE was purely additive - it added the effect on top
+        // of the framebuffer and never attenuated it, so the terrain showed through at full brightness no
+        // matter how dense the volume was, which is exactly "the sphere is transparent".
+        RenderSystem.blendFunc(GlStateManager.SourceFactor.ONE,
+                GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
         RenderSystem.disableCull();
         int drawn = 0;
         try {
@@ -199,7 +204,7 @@ public final class VolumetricFx {
         set(program, "Glow", v.glow() * effect.strength());
         set(program, "Swirl", v.swirl());
         set(program, "Seed", v.seed());
-        // The fifteen structural features. Every one is authored per warhead in BlastMotif.Volume.author;
+        // The twenty-two structural features. Every one is authored per warhead in BlastMotif.Volume.author;
         // the shader sums whatever is non-zero, so this list is what turns one fireball into thirty-eight
         // different weapons.
         set(program, "Hole", v.hole());
@@ -217,6 +222,16 @@ public final class VolumetricFx {
         set(program, "Flash", v.flash());
         set(program, "Dome", v.dome());
         set(program, "Embers", v.embers());
+        set(program, "Cap", v.cap());
+        set(program, "Debris", v.debris());
+        set(program, "Dust", v.dust());
+        set(program, "Vortex", v.vortex());
+        set(program, "Cracks", v.cracks());
+        set(program, "Sparks", v.sparks());
+        set(program, "Halo", v.halo());
+        // Scales density as well as glow, so the volume thins out as the effect ends instead of turning
+        // into an opaque black ball that sits there after the fire is gone.
+        set(program, "Strength", Math.max(0.0F, Math.min(1.0F, effect.strength())));
     }
 
     /** The proxy cube: six faces, two triangles each, in world coordinates. */

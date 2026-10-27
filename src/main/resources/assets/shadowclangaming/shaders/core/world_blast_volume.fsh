@@ -4,9 +4,10 @@
 // A cube the size of the blast is drawn around the detonation and this marches a procedural density field
 // through it - no textures, no samplers, no billboards. The fireball is a function, evaluated per pixel.
 //
-// THE FIELD IS A COMPOSITION, NOT A PRESET. Fifteen structural features - hole, star, rift, shockwave
-// shells, meteors, lightning, runes, portals, jet, coins, smoke, sub-charges, flash, dome, embers - are
-// each weighted 0..1 and summed. Every warhead in BlastMotif.Volume authors its own weights from its own
+// THE FIELD IS A COMPOSITION, NOT A PRESET. Twenty-two structural features - hole, star, rift,
+// shockwave shells, meteors, lightning, runes, sky rings, portals, jet, coins, smoke, sub-charges,
+// flash, dome, embers, mushroom cap, debris, dust, vortex, ground cracks, sparks and halo - are each
+// weighted 0..1 and summed. Every warhead in BlastMotif.Volume authors its own weights from its own
 // description, so a World Eater is a black hole with an accretion ring, a Quasar Lance is a kilometre of
 // jet, a Ragnarok is meteors and lightning under a blood-red sky, and a Numismatic blast is made of
 // tumbling gold. One code path, thirty-eight compositions, nothing in here branches per warhead.
@@ -55,6 +56,19 @@ uniform float SubCharges;
 uniform float Flash;
 uniform float Dome;
 uniform float Embers;
+// Round 49: seven more, so the ground and the air around the blast are part of the effect too.
+uniform float Cap;
+uniform float Debris;
+uniform float Dust;
+uniform float Vortex;
+uniform float Cracks;
+uniform float Sparks;
+uniform float Halo;
+// The effect's own fade, 1.0 for most of its life and then down to nothing. It has to scale the
+// DENSITY and not just the emission: with premultiplied alpha the opacity comes from how much was
+// accumulated, so dimming the colour alone would leave a solid black blob hanging in the world
+// after the blast had finished burning.
+uniform float Strength;
 
 out vec4 fragColor;
 
@@ -138,10 +152,15 @@ float sampleField(vec3 wp, out vec3 emission) {
     float heat = clamp(1.0 - r * 0.8 + n * 0.35, 0.0, 1.0);
     float bright = 1.0;
 
-    // --- fireball: the turbulent body, hollowing out as it ages
-    float shell = 1.0 - smoothstep(0.3, 1.0, r + n * 0.45 * Turb);
-    float hollow = charging ? 0.25 : smoothstep(0.1, 0.8, t);
-    body += (1.0 - Smoke) * clamp(shell - smoothstep(0.1, 0.85, r) * hollow * 0.9, 0.0, 1.0);
+    // --- fireball: the turbulent body. Dense all the way through, with only the SURFACE noisy, so the
+    // blast occludes what is behind it. It used to carve the interior out as the effect aged, which left
+    // a hollow bubble - and a hollow bubble under an additive blend is exactly "transparent".
+    float surface = r + n * 0.42 * Turb;
+    float inside = 1.0 - smoothstep(0.58, 1.0, surface);
+    float skirt = (1.0 - smoothstep(0.72, 1.55, surface)) * 0.6;
+    // Late in the detonation the ball breaks apart rather than hollowing out.
+    float breakup = charging ? 0.0 : smoothstep(0.55, 1.0, t) * 0.55;
+    body += (1.0 - Smoke) * (inside * 2.2 + skirt) * (1.0 - breakup);
 
     // --- smoke: heavy, dark, low. What a dud or a plague leaves instead of a fireball.
     if (Smoke > 0.01) {
@@ -339,6 +358,86 @@ float sampleField(vec3 wp, out vec3 emission) {
         bright *= mix(1.0, 1.6, Dome * skin);
     }
 
+    // --- mushroom cloud: a stem with a churning cap that flattens as it climbs
+    if (Cap > 0.01) {
+        float climb = charging ? 0.1 : smoothstep(0.0, 0.5, t) * 1.5;
+        float stem = (1.0 - smoothstep(0.0, 0.22, rr)) * (1.0 - smoothstep(0.0, climb, max(0.0, q.y)));
+        float capR = 0.35 + 0.5 * smoothstep(0.1, 0.6, t);
+        float cap = (1.0 - smoothstep(0.0, 0.24, abs(q.y - (climb + 0.15))))
+                  * (1.0 - smoothstep(capR * 0.6, capR * 1.4, rr));
+        float churn = 0.55 + 0.45 * fbm(p * 2.0 + vec3(0.0, Time * 0.4, 0.0) + seedOffset);
+        body += Cap * (stem * 1.5 + cap * 1.8) * churn;
+        bright *= mix(1.0, 1.4, Cap * cap);
+    }
+
+    // --- debris: shrapnel thrown outward, each piece with its own speed and a streak behind it
+    if (Debris > 0.01 && !charging) {
+        for (int i = 0; i < 8; i++) {
+            float fi = float(i);
+            vec3 dir = normalize(vec3(hash31(vec3(fi, 1.0, Seed)) - 0.5,
+                                      hash31(vec3(fi, 2.0, Seed)) * 0.7,
+                                      hash31(vec3(fi, 3.0, Seed)) - 0.5) + vec3(0.001));
+            float speed = 0.8 + 0.9 * hash31(vec3(fi, 4.0, Seed));
+            vec3 at = dir * (t * 1.9 * speed);
+            float streak = (1.0 - smoothstep(0.0, 0.07, length(cross(q - at, dir))))
+                         * (1.0 - smoothstep(0.0, 0.24, dot(at - q, dir)));
+            float piece = 1.0 - smoothstep(0.0, 0.08, length(q - at));
+            body += Debris * (streak * 1.3 + piece * 1.5);
+            bright *= mix(1.0, 1.9, Debris * piece);
+        }
+    }
+
+    // --- dust: a ground-hugging ring rolling outward, and dim - it is dirt, not fire
+    if (Dust > 0.01) {
+        float front = charging ? 0.2 : mix(0.2, 2.6, smoothstep(0.0, 0.75, t));
+        float band = 1.0 - smoothstep(0.0, 0.35, abs(rr - front));
+        float ground = 1.0 - smoothstep(0.0, 0.32, max(0.0, q.y + 0.95));
+        float roll = 0.5 + 0.5 * fbm(p * 1.6 + vec3(Time * 0.5, 0.0, 0.0) + seedOffset);
+        body += Dust * band * ground * roll * 1.5;
+        bright *= mix(1.0, 0.45, Dust * band * ground);
+    }
+
+    // --- vortex: a twisting funnel, three arms winding as they rise
+    if (Vortex > 0.01) {
+        float wide = 0.12 + 0.5 * max(0.0, q.y + 0.9);
+        float arms = pow(max(0.0, sin(atan(q.z, q.x) + q.y * 2.4 - Time * 2.2) * 3.0), 6.0);
+        float funnel = (1.0 - smoothstep(0.0, wide, rr))
+                     * (1.0 - smoothstep(0.0, 2.3, max(0.0, q.y + 0.9)));
+        body += Vortex * funnel * (0.45 + arms) * 1.4;
+        bright *= mix(1.0, 1.8, Vortex * arms * funnel);
+    }
+
+    // --- cracks: glowing veins shot through the ground, pulsing outward
+    if (Cracks > 0.01) {
+        float veins = pow(max(0.0, sin(atan(q.z, q.x) * 18.0 + Seed * 40.0)), 26.0);
+        float reach = (1.0 - smoothstep(0.1, 1.9, rr)) * smoothstep(0.0, 0.18, rr);
+        float ground = 1.0 - smoothstep(0.0, 0.09, abs(q.y + 0.95));
+        float pulse = 0.6 + 0.4 * sin(rr * 6.0 - Time * 3.0);
+        body += Cracks * veins * reach * ground * pulse * 2.2;
+        bright *= mix(1.0, 2.8, Cracks * veins * reach * ground);
+    }
+
+    // --- sparks: scattered points of light filling the volume, twinkling out of step
+    if (Sparks > 0.01) {
+        vec3 cell = floor(q * 5.0);
+        float h = hash31(cell + seedOffset);
+        if (h > 0.80) {
+            vec3 jitter = vec3(hash31(cell + 11.0), hash31(cell + 23.0), hash31(cell + 37.0)) - 0.5;
+            float d = length(fract(q * 5.0) - 0.5 - jitter * 0.6);
+            float twinkle = 0.5 + 0.5 * sin(Time * 9.0 + h * 60.0);
+            body += Sparks * (1.0 - smoothstep(0.0, 0.09, d)) * twinkle * 2.0;
+            bright *= mix(1.0, 2.4, Sparks * twinkle);
+        }
+    }
+
+    // --- halo: a wide soft bloom outside the fireball. Cheap, and it is what makes a blast read as
+    // enormous from a distance rather than as a ball of a known size.
+    if (Halo > 0.01) {
+        float bloom = 1.0 - smoothstep(0.5, 2.6, r);
+        body += Halo * bloom * 0.4;
+        bright *= mix(1.0, 1.5, Halo * bloom);
+    }
+
     // --- embers: a rising column of fire
     if (Embers > 0.01 || Rise > 0.4) {
         float amount = max(Embers, (Rise - 0.4) * 1.2);
@@ -347,7 +446,7 @@ float sampleField(vec3 wp, out vec3 emission) {
         body += amount * column * (0.35 + 0.85 * flick);
     }
 
-    body *= fade;
+    body *= fade * Strength;
     if (body <= 0.002) {
         emission = vec3(0.0);
         return 0.0;
@@ -408,7 +507,7 @@ void main() {
     float transmittance = 1.0;
     // Optical depth in units of the blast radius, so a grenade and a kilometre-wide cataclysm are equally
     // solid instead of one being fog and the other a brick.
-    float densityScale = 9.0 / max(radius, 1.0);
+    float densityScale = 2.2 / max(radius, 1.0);
 
     for (int i = 0; i < steps; i++) {
         vec3 emission;
@@ -424,8 +523,18 @@ void main() {
         pos += rd * stepLen;
     }
 
-    if (dot(acc, acc) < 0.00002) {
+    float opacity = 1.0 - transmittance;
+    // Both tests, not just brightness: a dark warhead (a World Eater's core is deliberately black) can
+    // have almost no emission and still be completely opaque, and discarding it would punch a hole in
+    // the middle of the one effect that is supposed to hide the world behind it.
+    if (opacity < 0.004 && dot(acc, acc) < 0.00002) {
         discard;
     }
-    fragColor = vec4(acc, 1.0) * ColorModulator;
+    // Premultiplied alpha, and the opacity is the march's own transmittance rather than a constant 1.
+    // It used to be vec4(acc, 1.0) under an additive blend, which is why the blast read as coloured
+    // glass: SRC_ALPHA/ONE adds the effect ON TOP of whatever was already in the framebuffer and never
+    // attenuates it, so the terrain showed through at full brightness no matter how dense the volume got.
+    // With ONE/ONE_MINUS_SRC_ALPHA the core - where transmittance has fallen to nothing - genuinely
+    // occludes the world behind it, while the thin outer skirt still glows additively over it.
+    fragColor = vec4(acc, opacity) * ColorModulator;
 }

@@ -1575,3 +1575,82 @@ logic harness, the API and Lua harnesses, and a full `gradlew build` against Neo
 here, and how they *look* is not something a sweep can tell you. The feature weights are arithmetic that
 says a Ragnarok has meteors at 1.0; whether those meteors read as meteors is a judgement only the game
 can make.
+
+---
+
+## Round 49 — solid, not transparent; the endgame weapons were detonating silently
+
+Three reports from play-testing Round 48: the sphere is transparent, there still are not enough effects,
+and there is no blast when the effect ends. All three were real, and the third was a genuine bug in
+something I had reported as met.
+
+### 1. No blast when the effect ends — the seventeen apex warheads never announced their detonation
+
+`WarheadType.detonate` handed the seventeen endgame weapons to `ApexWarheads.fire` and `return`ed.
+`BlastFx.emit` — the call that sends the impact effect to clients — sat *below* that branch. So the World
+Eater, Ragnarok, the Quasar Lance, the Soul Furnace and the other thirteen played their charge effect for
+the whole fuse and then did their damage with no impact effect at all. The comment above the line even
+said "announces itself to the nearby clients **first**" while the code did it second.
+
+It compiles, it runs, the warhead destroys the landscape, and nothing appears in any log. The weapons
+most worth watching were the only ones with nothing to watch — which is also why Round 48's new
+primitives looked like they had done nothing.
+
+The emit now sits above the hand-off, sized to the radius the weapon will actually carve (`sliderRadius`
+when the pad's slider is set, so a 512-block black hole no longer draws as a 96-block one).
+`check_impact_fx_reachable()` fails the build if `BlastFx.emit` ever ends up below the first `return` in
+that method again; it was verified to fire on the old ordering.
+
+### 2. Transparent, because the composite was additive-only
+
+```glsl
+fragColor = vec4(acc, 1.0) * ColorModulator;                      // alpha pinned to 1
+RenderSystem.blendFunc(SRC_ALPHA, ONE);                           // result = acc*1 + dst*1
+```
+
+`SRC_ALPHA, ONE` **adds** the effect on top of the framebuffer and never attenuates what was already
+there. No density, no march length, no opacity could ever hide the terrain — the volume was
+mathematically incapable of occluding anything. And `transmittance`, the accumulated opacity the march
+had just computed, was thrown away on the next line.
+
+Now premultiplied: `fragColor = vec4(acc, 1.0 - transmittance)` under `ONE, ONE_MINUS_SRC_ALPHA`. Where
+the march has been attenuated to nothing the core genuinely hides the world behind it; the thin outer
+skirt still glows over it. Three supporting changes:
+
+* The fireball no longer carves its own interior out. It used to subtract up to 0.9 from the centre as
+  the effect aged, leaving a hollow bubble — and a hollow bubble under an additive blend is exactly
+  "transparent". The interior is dense for the whole life of the effect; only the *surface* is noisy,
+  and it breaks apart at the end rather than hollowing.
+* `densityScale` 9.0 → 2.2. At 9.0 the core saturated on the first march step, so the fireball rendered
+  as a flat silhouette with no depth inside it. At 2.2 the core reaches opacity over two or three steps
+  and the skirt over five or six, which is what gives it internal structure.
+* The discard test is `opacity < 0.004 && dot(acc, acc) < 0.00002`, not brightness alone. A World Eater's
+  core is deliberately black: almost no emission, completely opaque. Discarding on brightness would have
+  punched a hole in the middle of the one effect that is supposed to hide the world.
+* A new `Strength` uniform scales **density**, not just glow. With premultiplied alpha the opacity comes
+  from accumulation, so dimming the colour alone would have left a solid black ball hanging in the world
+  after the fire had burnt out.
+
+### 3. Seven more primitives, so the ground and the air are part of it
+
+Fifteen became twenty-two: `Cap` (mushroom stem and churning cap), `Debris` (shrapnel with streaks,
+impact phase only), `Dust` (a dim ground-hugging ring rolling outward — dirt, not fire), `Vortex` (a
+three-armed funnel), `Cracks` (glowing veins shot through the ground, pulsing outward), `Sparks`
+(twinkling points filling the volume) and `Halo` (a wide soft bloom, which is what makes a blast read as
+enormous from a distance rather than as a ball of a known size).
+
+Every theme now has a baseline of ground and air business, so no warhead is a bare sphere, and 35
+warheads author over it — `fission` gets a 0.95 mushroom cap, `world_rune` gets cracks at 1.0,
+`soul_furnace` a 1.0 vortex, `absolute_annihilation` dust, debris, cracks, halo and cap together.
+`world_blast_volume.fsh` is 532 lines and the program declares 47 uniforms.
+
+### 4. What was verified, and what was not
+
+Machine-checked: `tools/sweep.py` including the new `check_impact_fx_reachable` (negative-tested against
+the old ordering), all 47 uniforms joined JSON ↔ GLSL ↔ Java in both directions, 62 `smoothstep` edges
+scanned, `tools/check_names.py`, the logic harness, the API and Lua harnesses, and `gradlew build`
+against NeoForge 21.1.264 in CI. Locally, the authored feature table was re-simulated: no floor
+violations, and the closest same-theme pair *widened* from 0.50 to 0.70.
+
+**Not** verified: a frame of it. Whether the core now reads as solid rather than glassy, and whether
+seven more primitives reads as "much more", are both judgements only the game can make.

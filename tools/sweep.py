@@ -618,6 +618,37 @@ def check_emp_drain():
     return 1
 
 
+def check_impact_fx_reachable():
+    """Every warhead must announce its detonation, including the ones that hand off and return early.
+
+    The seventeen apex warheads return from inside WarheadType.detonate to run their own staged timeline.
+    The impact effect used to be announced *below* that branch, so it never ran for any of them: the World
+    Eater, Ragnarok and the Quasar Lance each played a charge effect for the whole fuse and then detonated
+    invisibly. It compiles, it runs, the warhead does its damage - and the one thing you are watching for
+    does not happen, with nothing in any log to say so.
+
+    So: BlastFx.emit must appear before the first return in the method that owns the switch.
+    """
+    source = read(os.path.join(JAVA, "com/shadowclangaming/warhead/WarheadType.java"))
+    marker = "int sliderRadius, long buildSeed) {"
+    if marker not in source:
+        fail("WarheadType.detonate no longer has the (sliderRadius, buildSeed) overload; "
+             "check_impact_fx_reachable cannot find the switch owner")
+        return 0
+    body = source[source.index(marker):]
+    emit = body.find("BlastFx.emit(")
+    early = body.find("\n            return;")
+    if emit < 0:
+        fail("WarheadType.detonate never calls BlastFx.emit, so no warhead announces its detonation")
+        return 0
+    if 0 <= early < emit:
+        fail("WarheadType.detonate returns before BlastFx.emit: any warhead taking that branch detonates "
+             "with no impact effect (this is how the seventeen apex warheads went silent)")
+        return 0
+    print("impact effect: announced before the first return in WarheadType.detonate")
+    return 1
+
+
 def check_glsl_defined():
     """smoothstep(edge0, edge1, x) is undefined when edge0 > edge1, and drivers disagree about what it does.
 
@@ -820,6 +851,7 @@ def main():
     check_proxy_box()
     check_glsl_defined()
     check_emp_drain()
+    check_impact_fx_reachable()
     blocks, items = check_assets()
     check_entities()
     check_particles()

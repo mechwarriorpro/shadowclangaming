@@ -2195,6 +2195,7 @@ public final class LogicHarness {
     private static final String[] FEATURES = {
             "hole", "star", "rift", "waves", "meteors", "lightning", "glyphs", "portals",
             "jet", "coins", "smoke", "subCharges", "flash", "dome", "embers",
+            "cap", "debris", "dust", "vortex", "cracks", "sparks", "halo",
     };
 
     /**
@@ -2211,30 +2212,30 @@ public final class LogicHarness {
                     java.util.Map.entry("dud", "smoke=0.8"),
                     java.util.Map.entry("decoy", "smoke=0.6,flash=0.3"),
                     java.util.Map.entry("emp", "lightning=0.8"),
-                    java.util.Map.entry("he", "waves=0.7,flash=0.4"),
+                    java.util.Map.entry("he", "waves=0.7,flash=0.4,dust=0.7"),
                     java.util.Map.entry("incendiary", "embers=0.9"),
                     java.util.Map.entry("cluster", "subCharges=0.9"),
-                    java.util.Map.entry("fission", "waves=0.8,flash=0.5"),
-                    java.util.Map.entry("fusion", "star=0.7,flash=0.9"),
-                    java.util.Map.entry("antimatter", "hole=0.8,flash=0.9"),
+                    java.util.Map.entry("fission", "waves=0.8,flash=0.5,cap=0.9"),
+                    java.util.Map.entry("fusion", "star=0.7,flash=0.9,cap=0.7"),
+                    java.util.Map.entry("antimatter", "hole=0.8,flash=0.9,halo=0.7"),
                     java.util.Map.entry("numismatic", "coins=0.9"),
-                    java.util.Map.entry("world_eater", "hole=0.9,dark=0.9"),
+                    java.util.Map.entry("world_eater", "hole=0.9,dark=0.9,vortex=0.9"),
                     java.util.Map.entry("stellar_requiem", "star=0.9"),
                     java.util.Map.entry("reality_breaker", "rift=0.9"),
                     java.util.Map.entry("spacetime_hammer", "waves=0.9"),
                     java.util.Map.entry("universal_imploder", "implode=0.9,hole=0.6"),
-                    java.util.Map.entry("ragnarok", "meteors=0.9,lightning=0.8,skyRing=0.8"),
-                    java.util.Map.entry("world_rune", "glyphs=0.9"),
+                    java.util.Map.entry("ragnarok", "meteors=0.9,lightning=0.8,skyRing=0.8,dust=0.9,cracks=0.8"),
+                    java.util.Map.entry("world_rune", "glyphs=0.9,cracks=1.0"),
                     java.util.Map.entry("abyssal_covenant", "portals=0.9"),
-                    java.util.Map.entry("soul_furnace", "lightning=0.9,skyRing=0.9,dark=0.8"),
+                    java.util.Map.entry("soul_furnace", "lightning=0.9,skyRing=0.9,dark=0.8,vortex=1.0"),
                     java.util.Map.entry("arcane_singularity", "glyphs=0.9,skyRing=0.9"),
                     java.util.Map.entry("quasar_lance", "jet=0.9"),
                     java.util.Map.entry("starforge", "star=0.9,embers=0.8"),
-                    java.util.Map.entry("big_bang_seed", "star=0.9,flash=0.9"),
+                    java.util.Map.entry("big_bang_seed", "star=0.9,flash=0.9,halo=1.0"),
                     java.util.Map.entry("reality_corruptor", "rift=0.8"),
-                    java.util.Map.entry("absolute_zero", "hole=0.8,implode=0.9"),
-                    java.util.Map.entry("omega", "waves=0.9,implode=0.8"),
-                    java.util.Map.entry("absolute_annihilation", "hole=0.8,star=0.8,flash=0.9,waves=0.9"),
+                    java.util.Map.entry("absolute_zero", "hole=0.8,implode=0.9,cracks=0.7"),
+                    java.util.Map.entry("omega", "waves=0.9,implode=0.8,dust=0.9"),
+                    java.util.Map.entry("absolute_annihilation", "hole=0.8,star=0.8,flash=0.9,waves=0.9,dust=1.0,halo=1.0"),
                     java.util.Map.entry("bulwark", "dome=0.9"),
                     java.util.Map.entry("contagion", "smoke=0.9"),
                     java.util.Map.entry("spell", "glyphs=0.8,skyRing=0.8"),
@@ -2265,6 +2266,13 @@ public final class LogicHarness {
             case "flash" -> v.flash();
             case "dome" -> v.dome();
             case "embers" -> v.embers();
+            case "cap" -> v.cap();
+            case "debris" -> v.debris();
+            case "dust" -> v.dust();
+            case "vortex" -> v.vortex();
+            case "cracks" -> v.cracks();
+            case "sparks" -> v.sparks();
+            case "halo" -> v.halo();
             case "beam" -> v.beam();
             case "ring" -> v.ring();
             case "skyRing" -> v.skyRing();

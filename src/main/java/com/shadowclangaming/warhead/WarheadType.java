@@ -279,16 +279,23 @@ public enum WarheadType {
                          java.util.List<ItemStack> cargo, int sliderRadius, long buildSeed) {
         // The seventeen apex warheads are staged weapons: they own a timeline, so they hand off to
         // ApexWarheads instead of doing their work in this switch. One line covers all of them.
+        // EVERY warhead announces its detonation here, before anything can return. This line used to sit
+        // below the apex hand-off, and the seventeen endgame weapons all return from inside it - so the
+        // World Eater, Ragnarok, the Quasar Lance and the rest played their charge effect for the whole
+        // fuse and then went off with no impact effect at all. The weapons most worth watching were the
+        // only ones with nothing to watch.
         com.shadowclangaming.warhead.apex.Apex apex =
                 com.shadowclangaming.warhead.apex.Apex.byId(id);
         if (apex != null) {
+            // Sized to the radius this weapon will actually carve, which is the pad's slider when it is
+            // set - not the warhead's base power, or a 512-block black hole would draw as a 96-block one.
+            int apexRadius = Math.max(4, sliderRadius > 0 ? sliderRadius : apex.radius());
+            com.shadowclangaming.warhead.BlastFx.emit(level, this, pos, (apexRadius - 8) / 6.0F);
             com.shadowclangaming.warhead.apex.ApexWarheads.fire(level, pos, apex, sliderRadius,
                     buildSeed);
             return;
         }
 
-        // Every warhead that reaches this switch announces itself to the nearby clients first, so the
-        // screen effect is owned by one call site instead of being bolted on per delivery form.
         com.shadowclangaming.warhead.BlastFx.emit(level, this, pos, power);
 
         switch (this) {
