@@ -798,7 +798,19 @@ void main() {
     vec3 peakPos = pos;
     // Optical depth in units of the blast radius, so a grenade and a kilometre-wide cataclysm are equally
     // solid instead of one being fog and the other a brick.
-    float densityScale = ShaftPass > 0.5 ? 1.7 / max(ShaftWidth, 1.0) : 2.2 / max(radius, 1.0);
+    // Density per unit distance has to be stated against the box actually being marched, or a pass with
+    // a much larger box gets proportionally too much of it. The sky box is radius * SkyBox - roughly
+    // fifteen times the blast cube - so at 2.2 / radius a single one of its 329-block strides reaches
+    // alpha 3.75, clamps to 1.0, and the sky becomes an opaque slab of nebula colour after the FIRST
+    // step. That is the pure white filling the upper screen.
+    //
+    // Expressed as optical depth instead: total depth is densityScale * path, and the path through a box
+    // is about 2 * boxRadius. The blast targets 4.4 (opacity 0.99, solid, which is what was asked for);
+    // the sky targets 1.4, which is opacity 0.75 at its densest and a real veil everywhere else, so the
+    // stars and the sky still come through it.
+    float densityScale = ShaftPass > 0.5 ? 1.7 / max(ShaftWidth, 1.0)
+                       : SkyPass > 0.5 ? 0.7 / max(radius * SkyBox, 1.0)
+                       : 2.2 / max(radius, 1.0);
 
     for (int i = 0; i < steps; i++) {
         vec3 emission;
