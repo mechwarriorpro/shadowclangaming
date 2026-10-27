@@ -808,6 +808,54 @@ coherent restrict readonly writeonly
 """.split())
 
 
+def check_glsl_duplicate_declarations():
+    """No identifier declared twice in the same brace scope.
+
+    A redefinition is a hard compile error, and it is very easy to write when adding a block to a shader
+    that already has thirty primitives sharing one function scope. `plane` was already the overhead magic
+    circle's mask when the sigil code declared a vec2 of the same name four lines earlier. Like the
+    reserved-word check this is only here because the JVM compile never sees GLSL.
+    """
+    types = r"(?:float|int|uint|bool|vec2|vec3|vec4|ivec2|ivec3|ivec4|mat2|mat3|mat4)"
+    hits = 0
+    for dirpath, _dirs, names in os.walk(ASSETS):
+        for name in sorted(names):
+            if not name.endswith((".fsh", ".vsh")):
+                continue
+            path = os.path.join(dirpath, name)
+            code = re.sub(r"/\*.*?\*/", " ", read(path), flags=re.S)
+            code = re.sub(r"//[^\n]*", "", code)
+            # Walk the file tracking brace depth; a scope is identified by the stack of depths at which
+            # blocks opened, so two declarations only collide if they are genuinely siblings.
+            depth = 0
+            seen = {}          # (scope key) -> {name: line}
+            scope_stack = []
+            for lineno, line in enumerate(code.split("\n"), 1):
+                for match in re.finditer(r"\b%s\s+(\w+)\s*[;=]" % types, line):
+                    key = tuple(scope_stack)
+                    bucket = seen.setdefault(key, {})
+                    ident = match.group(1)
+                    if ident in bucket:
+                        fail("%s line %d redeclares %r, first declared at line %d; the shader will not "
+                             "compile" % (os.path.relpath(path, ASSETS), lineno, ident, bucket[ident]))
+                        hits += 1
+                    else:
+                        bucket[ident] = lineno
+                for ch in line:
+                    if ch == "{":
+                        scope_stack.append(depth)
+                        depth += 1
+                        seen.setdefault(tuple(scope_stack), {})
+                    elif ch == "}":
+                        depth -= 1
+                        if scope_stack:
+                            seen.pop(tuple(scope_stack), None)
+                            scope_stack.pop()
+    if hits == 0:
+        print("glsl scopes: no redeclarations")
+    return hits
+
+
 def check_glsl_reserved_words():
     """No GLSL reserved word used as a declared identifier.
 
@@ -1088,6 +1136,7 @@ def main():
     check_soul_furnace_spawn_guard()
     check_sky_box_reaches_the_big_ones()
     check_glsl_reserved_words()
+    check_glsl_duplicate_declarations()
     subscribers = check_event_subscribers()
     check_proxy_box()
     check_glsl_defined()
