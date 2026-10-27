@@ -275,9 +275,13 @@ public final class VolumetricFx {
         } catch (Throwable ex) {
             // Not loadFailed: the program compiled and is still usable. Recording a draw error as a load
             // failure is what made fx status report a JSON problem that had already been fixed.
+            // Logged once: this runs on the render thread, so an unguarded log here fills the file
+            // several times a second for as long as an effect is alive.
+            if (!drawFailed) {
+                drawFailure = describe(ex);
+                ShadowClanGaming.LOGGER.error("Volumetric blast draw failed; falling back to geometry", ex);
+            }
             drawFailed = true;
-            drawFailure = describe(ex);
-            ShadowClanGaming.LOGGER.error("Volumetric blast draw failed; falling back to geometry", ex);
             com.shadowclangaming.debug.ShadowDebug.logThrowable("VOLUME_FAIL", "frame=" + frame, ex);
             return false;
         } finally {
@@ -405,11 +409,24 @@ public final class VolumetricFx {
 
     // ------------------------------------------------------------------ uniform plumbing
     //
-    // By name. This used to go through safeGetUniform precisely to avoid importing the uniform class -
-    // "it has moved packages between versions and a wrong import is a build failure". That reasoning was
-    // the bug: safeGetUniform's whole behaviour is to hide a missing uniform behind a DUMMY, so the one
-    // thing worth knowing (that the program does not have this uniform) was unreachable, and setting it
-    // threw instead. Naming com.mojang.blaze3d.shaders.Uniform costs one import and buys the distinction.
+    // By name.
+    //
+    // uniformTypesAreMinecraftsOwn: Minecraft's Uniform.getTypeFromString (1.21.1) parses exactly three
+    // spellings - "int", "float", and "matrix" ending in 2x2/3x3/4x4 - and returns -1 for anything else.
+    // There is no "vec2", "vec3" or "vec4". The constructor then does
+    //
+    //     if (type <= 3) { intValues = memAllocInt(count); floatValues = null; }
+    //     else           { intValues = null; floatValues = memAllocFloat(count); }
+    //
+    // and -1 <= 3, so a uniform declared as "vec3" gets an int buffer and floatValues is left explicitly
+    // null. The first float set on it throws
+    //     NullPointerException: ... because "this.floatValues" is null
+    // from inside Uniform.set - not at load, at draw, every frame, with the shader otherwise perfectly
+    // healthy. upload() compounds it by switching on type, so -1 uploads through uploadAsInteger.
+    //
+    // Vectors are spelled "float" with count N: vanilla's own ChunkOffset is float/3 and ColorModulator is
+    // float/4, and uploadAsFloat switches on type 4 -> glUniform1(FloatBuffer), which writes the count
+    // floats straight into the vec3's consecutive slots. tools/sweep.py now rejects any other spelling.
 
     /** Uniforms already reported missing, so a per-frame failure logs once instead of 300 times a second. */
     private static final java.util.Set<String> reportedMissing = new java.util.HashSet<>();
@@ -417,14 +434,9 @@ public final class VolumetricFx {
     /**
      * The named uniform, or null if the program does not have one.
      *
-     * <p>{@code safeGetUniform} never returns null - when the name is absent it returns a shared DUMMY
-     * built as {@code new Uniform("dummy", -1, 1, null)}, and type -1 allocates neither buffer. Calling
-     * {@code set} on it throws {@code NullPointerException: ... because "this.floatValues" is null}, which
-     * is what was killing every frame: the shader loaded fine, then the first {@code set(program, "Center",
-     * ...)} threw, and the catch-all below recorded it as a load failure and pointed at the JSON.
-     *
-     * <p>So resolve through the nullable getter and say which uniform is missing. A shader with one absent
-     * uniform should lose that uniform, not the entire effect.
+     * <p>Resolving through the nullable getter is defence in depth, not the fix: an earlier theory blamed
+     * {@code safeGetUniform}'s DUMMY fallback, and a live stack trace disproved it by reaching this line at
+     * all. The real cause was in the JSON, not here - see {@link #uniformTypesAreMinecraftsOwn}.
      */
     private static Uniform uniform(ShaderInstance program, String name) {
         Uniform found = program.getUniform(name);

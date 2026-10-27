@@ -65,7 +65,7 @@
     },
     {
       "name": "Center",
-      "type": "vec3",
+      "type": "float",
       "count": 3,
       "values": [
         0,
@@ -75,7 +75,7 @@
     },
     {
       "name": "CamPos",
-      "type": "vec3",
+      "type": "float",
       "count": 3,
       "values": [
         0,
@@ -85,7 +85,7 @@
     },
     {
       "name": "ColorA",
-      "type": "vec4",
+      "type": "float",
       "count": 4,
       "values": [
         1,
@@ -96,7 +96,7 @@
     },
     {
       "name": "ColorB",
-      "type": "vec4",
+      "type": "float",
       "count": 4,
       "values": [
         1,
@@ -107,7 +107,7 @@
     },
     {
       "name": "ColorC",
-      "type": "vec4",
+      "type": "float",
       "count": 4,
       "values": [
         0.2,

@@ -808,6 +808,53 @@ coherent restrict readonly writeonly
 """.split())
 
 
+def check_shader_uniform_types():
+    """Every uniform type in a core shader JSON is one Minecraft can actually parse.
+
+    Uniform.getTypeFromString (1.21.1) understands exactly "int", "float" and "matrix" ending in
+    2x2/3x3/4x4, and returns -1 for everything else - there is no "vec2", "vec3" or "vec4". The
+    constructor then branches on `type <= 3` to pick a buffer, and -1 lands in the int branch, which
+    leaves floatValues explicitly null. Any float setter on that uniform throws
+    "NullPointerException: ... because \"this.floatValues\" is null" - at draw time, every frame,
+    from a shader that loaded without complaint. Five rounds of "the effect is transparent" were
+    this one line in a JSON file.
+
+    Vectors are spelled "float" with count N; vanilla's own ChunkOffset is float/3 and
+    ColorModulator is float/4.
+    """
+    allowed = {"int", "float", "matrix2x2", "matrix3x3", "matrix4x4"}
+    hits = 0
+    checked = 0
+    for dirpath, _dirs, names in os.walk(os.path.join(ASSETS, "shaders")):
+        for name in sorted(names):
+            if not name.endswith(".json"):
+                continue
+            path = os.path.join(dirpath, name)
+            try:
+                data = json.loads(read(path))
+            except ValueError:
+                continue  # check_shader_uniform_counts already reports this
+            uniforms = data.get("uniforms")
+            if not isinstance(uniforms, list):
+                continue
+            for index, uniform in enumerate(uniforms):
+                if not isinstance(uniform, dict):
+                    continue
+                checked += 1
+                kind = uniform.get("type")
+                if kind in allowed:
+                    continue
+                where = "%s uniforms[%d] (%s)" % (os.path.relpath(path, ASSETS), index,
+                                                  uniform.get("name", "?"))
+                fail("%s declares type %r, which Uniform.getTypeFromString cannot parse: it "
+                     "returns -1, the int buffer is allocated, floatValues stays null and every "
+                     "float set on it throws at draw time. Use %r with count %s."
+                     % (where, kind, "float", uniform.get("count", "N")))
+                hits += 1
+    if hits == 0:
+        print("shader uniform types: %d uniforms all use a type Minecraft can parse" % checked)
+
+
 def check_shader_uniform_counts():
     """Every uniform in a core shader JSON has a count, and it matches the values array.
 
@@ -1184,6 +1231,7 @@ def main():
     check_sky_box_reaches_the_big_ones()
     check_glsl_reserved_words()
     check_glsl_duplicate_declarations()
+    check_shader_uniform_types()
     check_shader_uniform_counts()
     subscribers = check_event_subscribers()
     check_proxy_box()
