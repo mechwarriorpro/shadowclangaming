@@ -2520,7 +2520,20 @@ public final class LogicHarness {
             double coolLum = luminance(volume.colorC());
             check("palette has a thermal gradient for " + id, hotLum - coolLum >= 0.10D);
             check("palette core is the hot end for " + id, hotLum > coolLum);
-            check("palette core is not black for " + id, hotLum >= 0.30D);
+            // A degenerate black core, not a dim one - and not a blanket brightness floor either. The
+            // first version of this asserted 0.30 and CI failed it on soul_furnace, correctly: the Soul
+            // Furnace's hot end is 0.162 by authoring, and three lines further down another assertion
+            // demands it stays dark. Brightness overall is `glow`'s job and is asserted separately.
+            // What the theme decides is whether the core is white-hot or deliberately dark.
+            boolean darkTheme = switch (motif.theme()) {
+                case VOID, SOUL, BEAST, SILENT -> true;
+                default -> false;
+            };
+            if (darkTheme) {
+                check("a dark theme stays dark at its hot end for " + id, hotLum <= 0.60D);
+            } else {
+                check("a hot theme is white-hot at its core for " + id, hotLum >= 0.75D);
+            }
             check("palette ends are distinct colours for " + id,
                     volume.colorA() != volume.colorC());
             check("shape parameters are in range for " + id,
