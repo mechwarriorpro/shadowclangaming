@@ -448,7 +448,7 @@ public final class BlastMotif {
                 case "violator" -> shape.smoke(0.85F).dark(0.85F).glyphs(0.4F).lightning(0.35F)
                         .glow(1.1F).cracks(0.7F).vortex(0.5F).sparks(0.4F);
                 case "beef" -> shape.smoke(0.7F).embers(0.7F).coins(0.3F).rise(0.6F).glow(0.75F).dust(0.6F).sparks(0.5F);
-                default -> {  s.dust = 0.50F; s.debris = 0.45F; s.cracks = 0.20F; s.halo = 0.35F; }
+                default -> { }
             }
         }
 
@@ -527,7 +527,7 @@ public final class BlastMotif {
                     case BEAST -> { s.beam = 0.05F; s.ring = 0.40F; s.implode = -0.50F; s.turb = 1.05F; s.rise = 0.35F; s.streaks = 0.30F; s.dark = 0.05F;  s.dust = 0.40F; s.debris = 0.40F; s.sparks = 0.30F; }
                     case SOUL -> { s.beam = 0.30F; s.ring = 0.30F; s.skyRing = 1.00F; s.implode = 0.60F; s.turb = 0.50F; s.rise = 0.30F; s.streaks = 0.40F; s.dark = 0.70F; s.lightning = 0.5F;  s.vortex = 0.80F; s.sparks = 0.50F; s.halo = 0.45F; s.cracks = 0.40F; }
                     case SILENT -> { s.ring = 0.10F; s.turb = 0.25F; s.streaks = 0.05F; s.smoke = 0.6F;  s.dust = 0.30F; }
-                    default -> { s.ring = 0.75F; s.implode = -0.60F; s.turb = 1.00F; s.rise = 0.30F; s.streaks = 0.35F; s.flash = 0.3F; }
+                    default -> { s.dust = 0.50F; s.debris = 0.45F; s.cracks = 0.20F; s.halo = 0.35F; s.ring = 0.75F; s.implode = -0.60F; s.turb = 1.00F; s.rise = 0.30F; s.streaks = 0.35F; s.flash = 0.3F; }
                 }
                 // Warheads that end in a bigger bang burn brighter; the ones that are not bombs stay dim.
                 s.glow = 0.35F + finaleScale * 0.55F;

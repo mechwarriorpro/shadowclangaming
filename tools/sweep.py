@@ -618,6 +618,56 @@ def check_emp_drain():
     return 1
 
 
+def check_shape_authoring():
+    """BlastMotif.Volume has two switches over warheads that must not be mixed up.
+
+    Shape.baseline assigns fields on a local Shape ('s.dust = 0.5F'). Volume.author chains fluent setters
+    ('shape.dust(0.5F)'). They sit a few lines apart and read alike, so it is easy to put one form in the
+    other's switch - which is a compile error, and this workspace has no compiler, so the mistake only
+    surfaces in CI a minute and a half later. Worth checking here:
+
+      * every 's.X =' in the file is inside Shape.baseline, and X is a real Shape field;
+      * every '.X(' in Volume.author is a real setter on Shape;
+      * every Shape field is reachable from some setter, or it can never be authored.
+    """
+    source = read(os.path.join(JAVA, "com/shadowclangaming/warhead/BlastMotif.java"))
+    for marker in ("static Shape baseline(", "private static void author(", "Shape beam(float v)"):
+        if marker not in source:
+            fail("check_shape_authoring cannot find %r in BlastMotif" % marker)
+            return 0
+    baseline = source[source.index("static Shape baseline("):source.index("Shape beam(float v)")]
+    author = source[source.index("private static void author("):source.index("One string per warhead")]
+    # From the Shape declaration through the end of its last setter line. The fields come before the
+    # setters, so slicing from the first setter would find nothing to check; and the cut has to land
+    # after the setter BODY, not just its signature, or the last setter looks like it assigns nothing.
+    shape_cls = source[source.index("private static final class Shape {"):]
+    setter_starts = [m.end() for m in re.finditer(r"Shape \w+\(float v\)", shape_cls)]
+    if not setter_starts:
+        fail("check_shape_authoring found no Shape setters; the layout it expects has changed")
+        return 0
+    shape_cls = shape_cls[:shape_cls.index("\n", max(setter_starts))]
+
+    fields = set(re.findall(r"^\s{12}float (\w+);", shape_cls, re.M))
+    setters = set(re.findall(r"^\s{12}Shape (\w+)\(float v\)", shape_cls, re.M))
+    set_fields = set(re.findall(r"Shape \w+\(float v\) \{ (\w+) = v;", shape_cls))
+    if not fields or not setters:
+        fail("check_shape_authoring found no Shape fields or setters; the layout it expects has changed")
+        return 0
+
+    for field in sorted(set(re.findall(r"\bs\.(\w+)\s*=", baseline)) - fields):
+        fail("Shape.baseline assigns s.%s, which is not a field of Shape" % field)
+    for field in sorted(set(re.findall(r"\bs\.(\w+)\s*=", author))):
+        fail("Volume.author assigns s.%s directly - that switch chains setters (shape.%s(...)), and 's' "
+             "does not exist there" % (field, field))
+    for name in sorted(set(re.findall(r"\.([a-zA-Z]+)\(", author)) - setters - {"of", "id", "get"}):
+        fail("Volume.author calls .%s(...), which is not a setter on Shape" % name)
+    for field in sorted(fields - set_fields):
+        fail("Shape.%s has no setter that assigns it, so no warhead can author it" % field)
+    print("shape authoring: %d fields, %d setters, both switches in their own form"
+          % (len(fields), len(setters)))
+    return 1
+
+
 def check_impact_fx_reachable():
     """Every warhead must announce its detonation, including the ones that hand off and return early.
 
@@ -851,6 +901,7 @@ def main():
     check_proxy_box()
     check_glsl_defined()
     check_emp_drain()
+    check_shape_authoring()
     check_impact_fx_reachable()
     blocks, items = check_assets()
     check_entities()
