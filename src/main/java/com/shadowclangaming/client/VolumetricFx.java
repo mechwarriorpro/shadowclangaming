@@ -229,58 +229,71 @@ public final class VolumetricFx {
             float time = (float) ((mc.level.getGameTime() % 72000L)
                     + event.getPartialTick().getGameTimeDeltaPartialTick(false)) / 20.0F;
 
-            RenderSystem.setShader(() -> shader);
+            // Phase-ordered, not per effect. Drawing the shaft, sky and blast for one effect before
+            // moving to the next let the SECOND effect's skybox - a cube up to 3000 blocks across, parked
+            // on the far plane - composite on top of the first effect's already-drawn fireball. With up to
+            // MAX_VOLUMES active at once that is the reported overlap. Every sky now goes down first as a
+            // shared backdrop, then every shaft, then every blast, so no sky can cover a fireball and no
+            // shaft can cover a blast.
+            List<CinematicFx.Effect> active = new java.util.ArrayList<>();
             for (CinematicFx.Effect effect : effects) {
-                if (drawn >= MAX_VOLUMES) {
+                if (active.size() >= MAX_VOLUMES) {
                     break;
                 }
                 if (effect.strength() <= 0.04F) {
                     continue;
                 }
-                double distance = Math.sqrt((effect.x() - cam.x) * (effect.x() - cam.x)
-                        + (effect.y() - cam.y) * (effect.y() - cam.y)
-                        + (effect.z() - cam.z) * (effect.z() - cam.z));
-                setUniforms(shader, effect, cam, view, projection, time, distance);
-                // Skybox FIRST, then the blast over it. Both are premultiplied and neither writes
-                // depth, so drawing in this order puts the fireball in front of the sky it is
-                // silhouetted against - the other way round the nebula would cover the explosion.
-                BlastMotif.Volume vol = effect.motif().volume();
-                // The shaft from orbit, first: it is the tallest thing drawn here and the blast sits at its
-                // foot, so painting it before the others puts the fireball in front of the shaft feeding it
-                // rather than the other way round. Center has to move up to the middle of the shaft's own
-                // cube and be put back afterwards - the sky and blast passes both want the impact point.
-                if (vol.shaft() > 0.01F) {
-                    set(shader, "ShaftPass", 1.0F);
-                    set(shader, "Shaft", vol.shaft());
-                    set(shader, "Center", (float) effect.x(), (float) (effect.y() + SHAFT_HALF),
-                            (float) effect.z());
-                    drawProxy(effect.x(), effect.y() + SHAFT_HALF, effect.z(), SHAFT_HALF);
-                    set(shader, "ShaftPass", 0.0F);
-                    set(shader, "Shaft", 0.0F);
-                    set(shader, "Center", (float) effect.x(), (float) effect.y(), (float) effect.z());
+                active.add(effect);
+            }
+
+            RenderSystem.setShader(() -> shader);
+            for (int pass = 0; pass < 3; pass++) {
+                for (CinematicFx.Effect effect : active) {
+                    double distance = Math.sqrt((effect.x() - cam.x) * (effect.x() - cam.x)
+                            + (effect.y() - cam.y) * (effect.y() - cam.y)
+                            + (effect.z() - cam.z) * (effect.z() - cam.z));
+                    setUniforms(shader, effect, cam, view, projection, time, distance);
+                    BlastMotif.Volume vol = effect.motif().volume();
+                    // The shader marches radius * SkyBox and the geometry covers skyHalf, so those two
+                    // have to be the same number or the march samples space the cube does not cover.
+                    double skyRadii = BlastMotif.skyBoxRadii(effect.radius(), SKY_BOX_RADII,
+                            SKY_BOX_MAX_BLOCKS, PROXY_BOX);
+
+                    if (pass == 0) {
+                        if (vol.sky() > 0.01F && skyRadii > 0.0D) {
+                            double skyHalf = skyRadii * Math.max(1.0D, effect.radius());
+                            set(shader, "SkyPass", 1.0F);
+                            set(shader, "SkyBox", (float) skyRadii);
+                            // The sky is smooth and its box is huge, so it wants a fraction of the steps.
+                            set(shader, "Steps", (float) Math.max(MIN_STEPS, stepsFor(effect, distance) * 2 / 5));
+                            drawProxy(effect.x(), effect.y(), effect.z(), skyHalf);
+                        }
+                    } else if (pass == 1) {
+                        // The shaft from orbit. Center moves up to the middle of the shaft's own cube and
+                        // is put back afterwards - the blast pass wants the impact point.
+                        if (vol.shaft() > 0.01F) {
+                            set(shader, "ShaftPass", 1.0F);
+                            set(shader, "Shaft", vol.shaft());
+                            set(shader, "Center", (float) effect.x(), (float) (effect.y() + SHAFT_HALF),
+                                    (float) effect.z());
+                            drawProxy(effect.x(), effect.y() + SHAFT_HALF, effect.z(), SHAFT_HALF);
+                        }
+                    } else {
+                        set(shader, "ShaftPass", 0.0F);
+                        set(shader, "Shaft", 0.0F);
+                        set(shader, "SkyPass", 0.0F);
+                        // Was left at the sky's step count by the branch above, so the scaling stepsFor
+                        // does was never reaching the blast whenever a sky pass had run.
+                        set(shader, "Steps", (float) stepsFor(effect, distance));
+                        set(shader, "Center", (float) effect.x(), (float) effect.y(), (float) effect.z());
+                        double half = effect.radius() * PROXY_BOX;
+                        lastRadius = effect.radius();
+                        lastBoxHalf = half;
+                        lastSteps = stepsFor(effect, distance);
+                        drawProxy(effect.x(), effect.y(), effect.z(), half);
+                        drawn++;
+                    }
                 }
-                // The shader marches radius * SkyBox and the geometry covers skyHalf, so those two have
-                // to be the same number or the march samples space the cube does not cover. SkyBox is
-                // therefore derived from skyHalf and never floored or clamped afterwards - and if the
-                // block cap leaves no room outside the blast's own cube, there is no sky to draw.
-                double skyRadii = BlastMotif.skyBoxRadii(effect.radius(), SKY_BOX_RADII,
-                        SKY_BOX_MAX_BLOCKS, PROXY_BOX);
-                if (vol.sky() > 0.01F && skyRadii > 0.0D) {
-                    double skyHalf = skyRadii * Math.max(1.0D, effect.radius());
-                    set(shader, "SkyPass", 1.0F);
-                    set(shader, "SkyBox", (float) skyRadii);
-                    set(shader, "Steps", (float) Math.max(MIN_STEPS, BASE_STEPS - (int) (distance / 96.0D)));
-                    drawProxy(effect.x(), effect.y(), effect.z(), skyHalf);
-                    set(shader, "SkyPass", 0.0F);
-                    set(shader, "Steps",
-                            (float) Math.max(MIN_STEPS, BASE_STEPS - (int) (distance / 48.0D)));
-                }
-                double half = effect.radius() * PROXY_BOX;
-                lastRadius = effect.radius();
-                lastBoxHalf = half;
-                lastSteps = stepsFor(effect, distance);
-                drawProxy(effect.x(), effect.y(), effect.z(), half);
-                drawn++;
             }
             lastDrawn = drawn;
             com.shadowclangaming.debug.ShadowDebug.log("VOLUME_FRAME",
