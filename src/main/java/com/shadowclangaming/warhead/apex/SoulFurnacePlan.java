@@ -49,6 +49,19 @@ public final class SoulFurnacePlan {
     /** The sphere never grows past three times the radius it was fired with. */
     public static final float MAX_GROWTH = 3.0F;
 
+    /**
+     * How far out the furnace stops new mobs from spawning, as a multiple of its own current radius.
+     *
+     * <p>Without this the furnace cannot finish. It only releases when an availability check comes back
+     * empty, and in any chunk with a normal spawn rate something walks back into range before the next
+     * check lands - so every check finds food, it grows to the ceiling, and it sits there for the full
+     * safety maximum. The furnace was reported doing exactly this. The margin is a fifth of the radius
+     * rather than none because the check consumes within {@code radius} and a mob spawning exactly on
+     * that boundary is consumed on the next check anyway; the extra ring is the one that matters, since
+     * it is where a spawn would land and then walk in.
+     */
+    public static final float SUPPRESS_MULTIPLIER = 1.2F;
+
     /** Effect lifetime before any souls are counted. */
     public static final int BASE_EFFECT_TICKS = 240;
 
@@ -107,6 +120,16 @@ public final class SoulFurnacePlan {
     /** Radius in blocks after {@code checks} consumptions, from the radius the weapon was fired with. */
     public static int radius(int baseRadius, int checks) {
         return Math.max(4, Math.round(Math.max(1, baseRadius) * growth(checks)));
+    }
+
+    /**
+     * The radius inside which the furnace vetoes new spawns, in blocks.
+     *
+     * <p>Grows with the furnace, so a furnace that has eaten three times as much holds back three times
+     * the area - which is the point, since that is also three times the area something could walk in from.
+     */
+    public static double suppressionRadius(int baseRadius, int checks) {
+        return radius(baseRadius, checks) * (double) SUPPRESS_MULTIPLIER;
     }
 
     /** Effect lifetime in ticks for a furnace that has eaten {@code souls}. */

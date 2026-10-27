@@ -150,6 +150,30 @@ public final class SoulFurnaceStages {
         }
     }
 
+    /**
+     * Whether a furnace is currently holding back spawns at this point.
+     *
+     * <p>True only while a furnace is actually burning, and only inside {@link SoulFurnacePlan#SUPPRESS_MULTIPLIER}
+     * of its <em>current</em> radius - so the suppression starts the moment the furnace lights, widens as it
+     * grows, and ends the instant it releases. Nothing about it persists and nothing needs cancelling: the
+     * list emptying is the whole cleanup.
+     */
+    public static boolean suppressesSpawning(ServerLevel level, double x, double y, double z) {
+        for (Burning burning : BURNING) {
+            if (burning.level != level) {
+                continue;
+            }
+            double reach = SoulFurnacePlan.suppressionRadius(burning.baseRadius, burning.checks);
+            double dx = x - burning.pos.x;
+            double dy = y - burning.pos.y;
+            double dz = z - burning.pos.z;
+            if (dx * dx + dy * dy + dz * dz <= reach * reach) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** Discard every running furnace. Called on server stop. */
     public static void clear() {
         BURNING.clear();

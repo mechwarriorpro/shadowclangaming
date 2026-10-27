@@ -1997,6 +1997,25 @@ public final class LogicHarness {
         check("growth is capped", g99 <= com.shadowclangaming.warhead.apex.SoulFurnacePlan.MAX_GROWTH);
         eq("the radius follows the growth", Math.round(80 * g5),
                 com.shadowclangaming.warhead.apex.SoulFurnacePlan.radius(80, 5));
+
+        // Spawn suppression: the ring outside the consume radius that stops the world walking back in.
+        eq("suppression reaches a fifth further than the furnace consumes", 96.0D,
+                com.shadowclangaming.warhead.apex.SoulFurnacePlan.suppressionRadius(80, 0));
+        close("suppression is exactly the multiplier", 1.2D,
+                com.shadowclangaming.warhead.apex.SoulFurnacePlan.SUPPRESS_MULTIPLIER);
+        for (int c = 0; c <= 40; c += 7) {
+            int r = com.shadowclangaming.warhead.apex.SoulFurnacePlan.radius(80, c);
+            double sup = com.shadowclangaming.warhead.apex.SoulFurnacePlan.suppressionRadius(80, c);
+            close("suppression tracks the radius at check " + c, r * 1.2D, sup);
+            check("suppression is strictly outside the consume radius at check " + c, sup > (double) r);
+            check("suppression never collapses at check " + c, sup > 0.0D);
+        }
+        check("a grown furnace holds back more ground",
+                com.shadowclangaming.warhead.apex.SoulFurnacePlan.suppressionRadius(80, 30)
+                        > com.shadowclangaming.warhead.apex.SoulFurnacePlan.suppressionRadius(80, 0));
+        check("suppression is bounded by the growth ceiling",
+                com.shadowclangaming.warhead.apex.SoulFurnacePlan.suppressionRadius(80, 999)
+                        <= com.shadowclangaming.warhead.apex.SoulFurnacePlan.suppressionRadius(80, 40));
         check("the radius never collapses",
                 com.shadowclangaming.warhead.apex.SoulFurnacePlan.radius(4, 0) >= 4);
 

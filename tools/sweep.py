@@ -794,6 +794,38 @@ YARN_NAMES = {
 }
 
 
+def check_soul_furnace_spawn_guard():
+    """The Soul Furnace spawn veto is wired end to end.
+
+    The furnace releases on the first availability check that finds nothing, so anything that lets mobs
+    walk back in between checks makes it grow forever. Two halves have to hold for that not to happen -
+    something has to veto the spawn, and the veto has to consult the furnace list. Either half on its own
+    compiles and does nothing.
+    """
+    path = os.path.join(JAVA, "com", "shadowclangaming", "warhead", "apex",
+                        "SoulFurnaceSpawnGuard.java")
+    if not os.path.exists(path):
+        fail("SoulFurnaceSpawnGuard.java is missing; the furnace can be repopulated between checks")
+        return 1
+    source = read(path)
+    need = {
+        "setResult(MobSpawnEvent.PositionCheck.Result.FAIL)": "vetoes the spawn",
+        "SoulFurnaceStages.suppressesSpawning": "consults the burning-furnace list",
+        "getSpawnType": "logs which spawn was refused",
+    }
+    missing = [what for needle, what in need.items() if needle not in source]
+    if missing:
+        for what in missing:
+            fail("SoulFurnaceSpawnGuard no longer %s" % what)
+        return len(missing)
+    if not re.search(r"@SubscribeEvent\s+public static void onSpawnPositionCheck\s*\(\s*"
+                     r"MobSpawnEvent\.PositionCheck", source):
+        fail("SoulFurnaceSpawnGuard's handler is not bound to MobSpawnEvent.PositionCheck")
+        return 1
+    print("soul furnace spawn guard: vetoes spawns inside a burning furnace")
+    return 0
+
+
 def check_mojmap_names():
     """No Yarn-only *entity* identifiers: this is Mojmap and `age` is not `Entity.age` here.
 
@@ -977,6 +1009,7 @@ def main():
     check_charge_wiring()
     check_fuse_ownership()
     check_mojmap_names()
+    check_soul_furnace_spawn_guard()
     subscribers = check_event_subscribers()
     check_proxy_box()
     check_glsl_defined()
