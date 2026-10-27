@@ -149,7 +149,11 @@ float fbm(vec3 p) {
 
 // Ridged noise: the sharp crease that reads as a crack, a bolt or a tear.
 float ridge(vec3 p) {
-    return 1.0 - abs(fbm(p) * 2.0 - 1.0);
+    // The crest is rounded. A bare 1 - abs(...) has a hard V at the crease, and at the frequencies this
+    // gets sampled at those creases tile into exactly the "cracked ice / shattered glass" look; cracks
+    // and bolts want a sharp line, not a field of angular shards.
+    float r = 1.0 - abs(fbm(p) * 2.0 - 1.0);
+    return r * r * (3.0 - 2.0 * r);
 }
 
 // ---------------------------------------------------------------- the field
@@ -208,7 +212,9 @@ float sampleField(vec3 wp, out vec3 emission) {
         float wall = 1.0 - smoothstep(edge * 0.30, edge, radial);
         float core = 1.0 - smoothstep(0.0, edge * 0.34, radial);
         // Current running down the shaft, so it reads as a discharge and not a rod.
-        float bands = 0.70 + 0.30 * sin(wp.y * 0.45 + Time * 9.0);
+        // A long slow ripple, not a 14-block strobe. The old period was 2*pi/0.45 ~ 14 blocks at 30%
+        // amplitude, which reads as corrugated plastic rather than as current running down a discharge.
+        float bands = 0.82 + 0.18 * sin(wp.y * 0.12 + Time * 2.5);
         // Pinch it at the impact and let the top dissolve: a shaft that stops dead in the air looks like a
         // bug, and one that flares where it meets the crater looks like it is feeding the blast.
         float along = clamp((wp.y - (Center.y - ShaftHalf)) / max(ShaftHalf * 2.0, 1.0), 0.0, 1.0);
@@ -350,7 +356,7 @@ float sampleField(vec3 wp, out vec3 emission) {
 
     // --- rift: a jagged tear in the world, bright at the edges
     if (Rift > 0.01) {
-        float tear = abs(q.x) + ridge(vec3(q.y * 2.2, q.z * 2.2, Time * 0.6 + Seed * 30.0)) * 0.42 - 0.34;
+        float tear = abs(q.x) + ridge(vec3(q.y * 1.3, q.z * 1.3, Time * 0.6 + Seed * 30.0)) * 0.42 - 0.34;
         float open = 1.0 - smoothstep(0.0, 0.16, abs(tear));
         float edge = (1.0 - smoothstep(0.0, 0.09, abs(tear))) * (1.0 - smoothstep(0.05, 0.16, abs(tear)));
         float tall = 1.0 - smoothstep(0.9, 2.1, abs(q.y));
@@ -377,7 +383,7 @@ float sampleField(vec3 wp, out vec3 emission) {
 
     // --- lightning: crackling bolts radiating from the centre
     if (Lightning > 0.01) {
-        float crack = ridge(p * (2.4 + Turb) + vec3(0.0, Time * 2.2, 0.0) + seedOffset);
+        float crack = ridge(p * (1.4 + Turb * 0.6) + vec3(0.0, Time * 1.1, 0.0) + seedOffset);
         float bolt = pow(max(0.0, crack), 14.0);
         float reach = 1.0 - smoothstep(0.25, 1.7, r);
         float flicker = 0.55 + 0.45 * sin(Time * 23.0 + Seed * 40.0);
@@ -570,7 +576,7 @@ float sampleField(vec3 wp, out vec3 emission) {
     // real black hole image: the side of the disc swinging toward you is beamed brighter and bluer, the
     // side swinging away is dim and red, so the ring is lopsided rather than a flat washer.
     if (Disc > 0.01) {
-        float discY = abs(q.y) + ridge(vec3(q.xz * 3.0 + Seed * 11.0, Time * 0.3)) * 0.03;
+        float discY = abs(q.y) + ridge(vec3(q.xz * 1.8 + Seed * 11.0, Time * 0.3)) * 0.03;
         float plane = 1.0 - smoothstep(0.0, 0.05, discY);
         float inner = smoothstep(0.34, 0.52, rr);
         float outer = 1.0 - smoothstep(0.9, 1.9, rr);
@@ -782,7 +788,13 @@ void main() {
     int steps = int(clamp(ShaftPass > 0.5 ? Steps * 1.6
                           : (SkyPass > 0.5 ? Steps * 0.4 : Steps), 8.0, 224.0));
     float stepLen = (tExit - tEnter) / float(steps);
-    vec3 pos = ro + rd * (tEnter + stepLen * 0.5);
+    // Jittered, not centred. Starting every pixel's march at the middle of its first step puts the slab
+    // boundaries at the same depth across the whole screen, so they line up into visible corrugation -
+    // the striped, layered look. Offsetting each pixel by a stable hash of its own position decorrelates
+    // the neighbours, which turns those bands into grain fine enough to read as texture. Stable rather
+    // than animated, so it dithers without shimmering.
+    float jitter = hash31(vec3(gl_FragCoord.xy, Seed * 91.0 + 7.3));
+    vec3 pos = ro + rd * (tEnter + stepLen * jitter);
 
     vec3 acc = vec3(0.0);
     // The same emission summed WITHOUT the transmittance weighting. acc converges on the surface colour;
