@@ -154,7 +154,17 @@ float fbm(vec3 p) {
 // doing. Dividing by the loudest channel holds the ratios, so the colour survives at full brightness.
 vec3 capHue(vec3 c) {
     float loudest = max(c.r, max(c.g, c.b));
-    return loudest > 1.0 ? c / loudest : c;
+    if (loudest <= 1.0) {
+        return c;
+    }
+    // Soft shoulder, not a hard divide. Dividing by the loudest channel pinned EVERYTHING above 1.0 to
+    // exactly 1.0, which fixed the white blowout by throwing away the bright end wholesale: Star's 3.2x
+    // core multiplier, Granule's 2.2x, Hole's 2.4x and a plain smoke warhead's 1.0x all landed on the
+    // same number. Those multipliers are per warhead, authored one at a time, and above 1.0 they did
+    // nothing at all - which is part of why thirty-eight weapons read as one.
+    // This maps [1, inf) monotonically onto [1, 1.5), so the ordering survives and the palette's hue is
+    // still untouched, while nothing can drive the framebuffer past its ceiling.
+    return c * (1.5 / (loudest + 0.5));
 }
 
 float ridge(vec3 p) {

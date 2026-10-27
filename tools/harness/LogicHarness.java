@@ -2485,6 +2485,18 @@ public final class LogicHarness {
         check("some warheads share a theme", sharedTheme > 0);
     }
 
+    /** Rec.709 relative luminance of 0xAARRGGBB, 0..1. */
+    private static double luminance(int argb) {
+        return 0.2126D * channel(argb, 0) / 255.0D
+                + 0.7152D * channel(argb, 1) / 255.0D
+                + 0.0722D * channel(argb, 2) / 255.0D;
+    }
+
+    /** One 8-bit channel of 0xAARRGGBB: 0 is red, 1 green, 2 blue. */
+    private static int channel(int argb, int index) {
+        return (argb >>> (16 - 8 * index)) & 0xFF;
+    }
+
     private static void volumeShaderTests() {
         section("volumetric shader parameters");
 
@@ -2500,6 +2512,17 @@ public final class LogicHarness {
                     ((volume.colorA() >>> 24) & 0xFF) == 0xFF
                             && ((volume.colorB() >>> 24) & 0xFF) == 0xFF
                             && ((volume.colorC() >>> 24) & 0xFF) == 0xFF);
+            // The shader builds its whole internal structure by lerping ColorC -> ColorB -> ColorA on
+            // `heat`, so a palette with no luminance spread renders as a uniformly coloured opaque ball
+            // and every warhead with one reads as the same effect in a different tint. That was true of
+            // seventeen of thirty-eight when the palette came from two arbitrary layer colours.
+            double hotLum = luminance(volume.colorA());
+            double coolLum = luminance(volume.colorC());
+            check("palette has a thermal gradient for " + id, hotLum - coolLum >= 0.10D);
+            check("palette core is the hot end for " + id, hotLum > coolLum);
+            check("palette core is not black for " + id, hotLum >= 0.30D);
+            check("palette ends are distinct colours for " + id,
+                    volume.colorA() != volume.colorC());
             check("shape parameters are in range for " + id,
                     volume.beam() >= 0.0F && volume.beam() <= 1.0F
                             && volume.ring() >= 0.0F && volume.ring() <= 1.0F
@@ -2534,6 +2557,33 @@ public final class LogicHarness {
             }
         }
         eq("every warhead has its own look", WARHEADS.length, signatures.size());
+
+        // Regression guards on the hue, which is the part that broke silently. A blue star whose core
+        // hue is read off its gold embers cools through yellow-green and comes out khaki - wrong, and
+        // not something any numeric range check would catch.
+        com.shadowclangaming.warhead.BlastMotif.Volume blueStar =
+                com.shadowclangaming.warhead.BlastMotif.forWarhead("fusion").volume();
+        check("a blue star cools toward blue, not khaki",
+                channel(blueStar.colorC(), 2) > channel(blueStar.colorC(), 0));
+        check("a blue star's edge is not green-dominant",
+                channel(blueStar.colorC(), 1) <= channel(blueStar.colorC(), 2));
+        com.shadowclangaming.warhead.BlastMotif.Volume forge =
+                com.shadowclangaming.warhead.BlastMotif.forWarhead("starforge").volume();
+        check("a forge cools toward red, not toward green",
+                channel(forge.colorC(), 0) > channel(forge.colorC(), 2));
+        check("a white-hot core with no hue of its own takes the theme's",
+                channel(com.shadowclangaming.warhead.BlastMotif.forWarhead("stellar_requiem")
+                        .volume().colorC(), 2) > 0x90);
+        com.shadowclangaming.warhead.BlastMotif.Volume furnace =
+                com.shadowclangaming.warhead.BlastMotif.forWarhead("soul_furnace").volume();
+        check("the Soul Furnace stays dark at its hot end",
+                luminance(furnace.colorA()) <= 0.45D);
+        check("a black hole stays dark at its hot end",
+                luminance(com.shadowclangaming.warhead.BlastMotif.forWarhead("world_eater")
+                        .volume().colorA()) <= 0.60D);
+        check("an incendiary is still white-hot",
+                luminance(com.shadowclangaming.warhead.BlastMotif.forWarhead("incendiary")
+                        .volume().colorA()) >= 0.90D);
 
         // The two the round was named after: they must not read as each other.
         com.shadowclangaming.warhead.BlastMotif.Volume soul =

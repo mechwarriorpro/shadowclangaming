@@ -363,10 +363,39 @@ public final class BlastMotif {
             Shape shape = Shape.baseline(theme == null ? Theme.ORDNANCE : theme, finaleScale);
             author(shape, warheadId);
 
-            // The palette is the motif's own: the first layer's colour is the hot core, the last is the
-            // cool edge, and the middle is halfway between them.
-            int a = specs.isEmpty() ? 0xFFFFCC66 : specs.get(0).argb();
-            int c = specs.isEmpty() ? 0xFF552200 : specs.get(specs.size() - 1).argb();
+            // The palette is the motif's thermal ramp: white-hot core, saturated dark edge.
+            //
+            // It used to be "the first layer's colour is the hot core, the last is the cool edge". Those
+            // are GEOMETRY colours - whatever ring, ember column or sky circle happened to be authored
+            // first and last in the list - and their position in the list has nothing to do with
+            // temperature. Measured across the roster, seventeen of thirty-eight warheads came out with a
+            // core and an edge within 0.12 of each other in BOTH luminance and hue. world_rune ran
+            // #FFE090 to #FFE0A0: sixteen parts in 255 of blue. incendiary #FFB050 to #FFB060.
+            // absolute_zero #C0F0FF to #D0F0FF.
+            //
+            // The shader drives its whole internal structure off `heat`, lerping ColorC -> ColorB ->
+            // ColorA. Hand it a flat pair and there is nothing to lerp: the volume renders as a uniformly
+            // coloured opaque ball, and every one of those seventeen reads as the same effect with a
+            // different tint. Stellar survived only because its motifs happen to start white-hot and end
+            // blue.
+            //
+            // So the ramp is authored per theme instead - how bright the hot end tops out, how dark and
+            // how saturated the cool end goes, and how far the edge's hue rotates from the core's. The
+            // warhead's OWN hue is still read off its layers, so identity is preserved and the thirty-eight
+            // parameter sets stay distinct. Deliberately dark themes (VOID, SOUL, BEAST, SILENT) get a low
+            // ceiling rather than a white one, so "dark" stays an authored property rather than being
+            // washed out by the ramp.
+            Theme rampTheme = theme == null ? Theme.ORDNANCE : theme;
+            float[] ramp = ramp(rampTheme);
+            float hue = paletteHue(specs, ramp[5]);
+            // Which way the cool end rotates depends on which half of the colour wheel this warhead
+            // sits in, so it cannot be a signed per-theme offset: STELLAR holds both starforge, whose
+            // hue is 0.11 and cools toward deep red, and fusion, whose hue is 0.56 and cools toward
+            // deeper blue. One signed offset got one of them right and pushed the other through
+            // yellow-green, which is how a blue star ended up with khaki edges.
+            float coolHue = hue < 0.42F ? hue - ramp[4] : hue + ramp[4];
+            int a = fromHsb(hue, ramp[1], ramp[0]);
+            int c = fromHsb(coolHue, ramp[3], ramp[2]);
             int b = mix(a, c, 0.5F);
             // How fast this motif's layers turn, folded into one number the shader uses to shear the
             // field. Two warheads in the same theme still move differently because of it.
@@ -603,6 +632,124 @@ public final class BlastMotif {
             Shape circle(float v) { circle = v; return this; }
             Shape sky(float v) { sky = v; return this; }
             Shape shaft(float v) { shaft = v; return this; }
+        }
+
+        /**
+         * A theme's thermal ramp, as {hot brightness, hot saturation, cool brightness, cool saturation,
+         * cool hue rotation in turns, fallback hue}.
+         *
+         * <p>The rotation is a magnitude, not a signed offset; the caller picks the direction from the
+         * warhead's own hue. See paletteHue.
+         *
+         * <p>The hot end is deliberately near-white for the themes that are supposed to be hot: a real
+         * fireball's core is over-exposed and only its edges carry the colour. The dark themes are the
+         * exception and are authored that way - a black hole whose core is white is not a black hole.
+         */
+        private static float[] ramp(Theme theme) {
+            return switch (theme) {
+                case ORDNANCE -> new float[] {0.98F, 0.18F, 0.22F, 0.95F, 0.030F, 0.08F};
+                case INFERNO -> new float[] {1.00F, 0.12F, 0.20F, 1.00F, 0.050F, 0.03F};
+                case NUCLEAR -> new float[] {1.00F, 0.16F, 0.22F, 0.95F, 0.020F, 0.22F};
+                case ARCANE -> new float[] {0.95F, 0.25F, 0.28F, 0.90F, 0.050F, 0.78F};
+                case STELLAR -> new float[] {1.00F, 0.06F, 0.82F, 0.30F, 0.060F, 0.58F};
+                case CATACLYSM -> new float[] {1.00F, 0.14F, 0.24F, 1.00F, 0.040F, 0.98F};
+                case VOID -> new float[] {0.72F, 0.45F, 0.14F, 1.00F, 0.030F, 0.78F};
+                case PLAGUE -> new float[] {0.90F, 0.30F, 0.18F, 1.00F, 0.050F, 0.25F};
+                case CRYO -> new float[] {1.00F, 0.10F, 0.55F, 0.45F, 0.030F, 0.55F};
+                case MACHINE -> new float[] {1.00F, 0.12F, 0.45F, 0.80F, 0.040F, 0.55F};
+                case COIN -> new float[] {1.00F, 0.20F, 0.35F, 0.95F, 0.030F, 0.13F};
+                case BARRIER -> new float[] {0.98F, 0.14F, 0.50F, 0.70F, 0.030F, 0.55F};
+                case LOGISTICS -> new float[] {0.85F, 0.18F, 0.32F, 0.55F, 0.020F, 0.10F};
+                case SWARM -> new float[] {0.95F, 0.22F, 0.35F, 0.85F, 0.030F, 0.12F};
+                case BEAST -> new float[] {0.70F, 0.35F, 0.18F, 0.75F, 0.020F, 0.85F};
+                case SOUL -> new float[] {0.45F, 0.80F, 0.10F, 1.00F, 0.050F, 0.80F};
+                case SILENT -> new float[] {0.55F, 0.10F, 0.28F, 0.15F, 0.000F, 0.10F};
+            };
+        }
+
+        /**
+         * The hue this motif's palette runs on.
+         *
+         * <p>The core sphere decides it, because that layer IS the fireball. Reading it off the most
+         * saturated layer instead - the obvious move, and the first one tried here - hands the palette
+         * to whatever accent a warhead happens to carry: fusion's embers are #FFE090 at saturation 0.44
+         * while its actual body is a saturation-0.06 blue, so most-saturated turned a blue star gold
+         * and then, cooled, khaki.
+         *
+         * <p>A core that is pure white or grey carries no usable hue; its number is rounding noise
+         * rather than a colour. Those fall back to the theme's hue, not to the accents - a white-hot
+         * detonation should cool the way its theme says, not the way its ember colour says.
+         */
+        private static float paletteHue(List<Spec> specs, float fallback) {
+            for (Spec spec : specs) {
+                if (spec.layer() == Layer.CORE_SPHERE) {
+                    float[] hsb = toHsb(spec.argb());
+                    return hsb[1] > 0.04F ? hsb[0] : fallback;
+                }
+            }
+            float bestHue = fallback;
+            float bestSat = 0.02F;
+            for (Spec spec : specs) {
+                float[] hsb = toHsb(spec.argb());
+                if (hsb[1] > bestSat) {
+                    bestSat = hsb[1];
+                    bestHue = hsb[0];
+                }
+            }
+            return bestHue;
+        }
+
+        /** Hue in turns, saturation and brightness both 0..1, to 0xAARRGGBB with an opaque alpha. */
+        private static int fromHsb(float h, float s, float b) {
+            h -= (float) Math.floor(h);
+            s = Math.max(0.0F, Math.min(1.0F, s));
+            b = Math.max(0.0F, Math.min(1.0F, b));
+            float sextant = h * 6.0F;
+            int i = (int) Math.floor(sextant) % 6;
+            float f = sextant - (float) Math.floor(sextant);
+            float p = b * (1.0F - s);
+            float q = b * (1.0F - f * s);
+            float t = b * (1.0F - (1.0F - f) * s);
+            float r;
+            float g;
+            float bl;
+            switch (i) {
+                case 0 -> { r = b; g = t; bl = p; }
+                case 1 -> { r = q; g = b; bl = p; }
+                case 2 -> { r = p; g = b; bl = t; }
+                case 3 -> { r = p; g = q; bl = b; }
+                case 4 -> { r = t; g = p; bl = b; }
+                default -> { r = b; g = p; bl = q; }
+            }
+            return 0xFF000000
+                    | (Math.round(r * 255.0F) << 16)
+                    | (Math.round(g * 255.0F) << 8)
+                    | Math.round(bl * 255.0F);
+        }
+
+        /** 0xAARRGGBB to {hue in turns, saturation, brightness}. Hue of a grey is 0 and must not be used. */
+        private static float[] toHsb(int argb) {
+            float r = ((argb >>> 16) & 0xFF) / 255.0F;
+            float g = ((argb >>> 8) & 0xFF) / 255.0F;
+            float b = (argb & 0xFF) / 255.0F;
+            float max = Math.max(r, Math.max(g, b));
+            float min = Math.min(r, Math.min(g, b));
+            float d = max - min;
+            float h = 0.0F;
+            if (d > 1e-6F) {
+                if (max == r) {
+                    h = (g - b) / d;
+                    if (h < 0.0F) {
+                        h += 6.0F;
+                    }
+                } else if (max == g) {
+                    h = (b - r) / d + 2.0F;
+                } else {
+                    h = (r - g) / d + 4.0F;
+                }
+                h /= 6.0F;
+            }
+            return new float[] {h, max > 1e-6F ? d / max : 0.0F, max};
         }
 
         private static int mix(int argb0, int argb1, float t) {
