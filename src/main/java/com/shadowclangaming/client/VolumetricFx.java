@@ -88,6 +88,8 @@ public final class VolumetricFx {
 
     private static final int BASE_STEPS = 44;
     private static final int MIN_STEPS = 16;
+    /** The shader's own clamp is 160; going past it is wasted work the GPU throws away. */
+    private static final int MAX_STEPS = 160;
 
     private static ShaderInstance shader;
     private static boolean loadFailed;
@@ -177,7 +179,7 @@ public final class VolumetricFx {
             return "NOT RUNNING - cinematicShaders is off in config, drawing CPU triangles instead";
         }
         return "running, " + frames + " frame(s) drawn, " + lastDrawn + " volume(s) last frame"
-                + "; " + probeLine() + "; " + solidLine();
+                + "; " + probeLine() + "; " + solidLine() + "\n      " + scaleLine();
     }
 
     /**
@@ -273,7 +275,11 @@ public final class VolumetricFx {
                     set(shader, "Steps",
                             (float) Math.max(MIN_STEPS, BASE_STEPS - (int) (distance / 48.0D)));
                 }
-                drawProxy(effect.x(), effect.y(), effect.z(), effect.radius() * PROXY_BOX);
+                double half = effect.radius() * PROXY_BOX;
+                lastRadius = effect.radius();
+                lastBoxHalf = half;
+                lastSteps = stepsFor(effect, distance);
+                drawProxy(effect.x(), effect.y(), effect.z(), half);
                 drawn++;
             }
             lastDrawn = drawn;
@@ -327,7 +333,7 @@ public final class VolumetricFx {
         set(program, "Phase", effect.charging() ? 0.0F : 1.0F);
         set(program, "Time", time);
         // Fewer steps for distant volumes: the same march over a blast on the horizon is wasted work.
-        set(program, "Steps", (float) Math.max(MIN_STEPS, BASE_STEPS - (int) (distance / 48.0D)));
+        set(program, "Steps", (float) stepsFor(effect, distance));
         set(program, "Beam", v.beam());
         set(program, "Ring", v.ring());
         set(program, "SkyRing", v.skyRing());
@@ -386,6 +392,30 @@ public final class VolumetricFx {
         set(program, "Solid", solidFrames > 0 ? 1.0F : 0.0F);
     }
 
+    /**
+     * How many march steps a volume gets.
+     *
+     * <p>Scaled by the box it has to cross. It used to be a flat 44 less the camera distance, which is
+     * fine for a ten-block grenade and useless for a blast whose proxy cube is thousands of blocks
+     * across: 44 strides of several hundred blocks each land between the features and sample almost
+     * nothing. The shader clamps to 160 either way.
+     */
+    private static int stepsFor(CinematicFx.Effect effect, double distance) {
+        double boxHalf = Math.max(1.0D, effect.radius()) * PROXY_BOX;
+        return (int) Math.max(MIN_STEPS,
+                Math.min(MAX_STEPS, BASE_STEPS * boxHalf / 40.0D - distance / 48.0D));
+    }
+
+    /** Radius, proxy half-extent and step count of the last volume drawn; read by fx status. */
+    public static String scaleLine() {
+        if (lastRadius <= 0.0D) {
+            return "no volume drawn yet";
+        }
+        return String.format(java.util.Locale.ROOT,
+                "last volume radius %.0f, proxy half %.0f blocks (%.0f across), %d steps",
+                lastRadius, lastBoxHalf, lastBoxHalf * 2.0D, lastSteps);
+    }
+
     /** The proxy cube: six faces, two triangles each, in world coordinates. */
     /** Frames left on the probe cube; see {@link #startProbe}. */
     private static int probeFrames;
@@ -396,6 +426,9 @@ public final class VolumetricFx {
     private static int probeDrawn;
     /** RenderSystem's matrices as measured on the probe's first frame; see {@link #matrices}. */
     private static String probeMatrices = "not measured";
+    private static double lastRadius;
+    private static double lastBoxHalf;
+    private static int lastSteps;
 
     /**
      * Draw a solid magenta cube through Minecraft's own position-colour shader for a few seconds.
@@ -448,17 +481,18 @@ public final class VolumetricFx {
         Matrix4f proj = event.getProjectionMatrix();
         Matrix4f view = event.getModelViewMatrix();
         Matrix4f stale = RenderSystem.getProjectionMatrix();
-        // The view matrix the shader actually gets, translation included. The event's own matrix is
-        // rotation only, so its m03/m13/m23 read 0.00 - which is the bug this now checks for: if these
-        // are still zero the camera offset did not get applied and nothing can be in the frustum.
+        // joml's Matrix4f is column-major: m00..m03 is the first COLUMN, so a field named mCR is column C,
+        // row R. The translation therefore lives in m30/m31/m32, and m03/m13/m23 are row 3 of the first
+        // three columns - zero for any affine matrix, so an earlier version of this diagnostic that
+        // printed them and demanded they be non-zero was checking a constant. The projection settles it:
+        // m32 measured -0.1000, which is column 3 row 2, i.e. 2*near*far/(near-far) at 0.05/1000.
         Matrix4f used = view == null ? null : WorldMatrices.view(event, event.getCamera());
         return String.format(java.util.Locale.ROOT,
-                "proj m00=%.4f m11=%.4f m32=%.4f (=2*near*far/(near-far) at 0.05/1000, as expected)"
-                        + " | view used m03=%.2f m13=%.2f m23=%.2f (must be non-zero)",
-                proj == null ? 0.0F : proj.m00(), proj == null ? 0.0F : proj.m11(),
+                "proj m32=%.4f (=2*near*far/(near-far) at 0.05/1000, correct)"
+                        + " | view translation m30=%.2f m31=%.2f m32=%.2f (must be -camera)",
                 proj == null ? 0.0F : proj.m32(),
-                used == null ? 0.0F : used.m03(), used == null ? 0.0F : used.m13(),
-                used == null ? 0.0F : used.m23());
+                used == null ? 0.0F : used.m30(), used == null ? 0.0F : used.m31(),
+                used == null ? 0.0F : used.m32());
     }
 
     /** Read by fx status: did the probe reach a draw call, or not? */
