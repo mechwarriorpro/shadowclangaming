@@ -148,6 +148,15 @@ float fbm(vec3 p) {
 }
 
 // Ridged noise: the sharp crease that reads as a crack, a bolt or a tear.
+// Brightness cap that keeps the hue. Every emission path multiplies a palette colour by Glow (authored
+// up to 1.9) and then by a local multiplier of 2.4 to 3.4, so the product routinely lands between 4 and
+// 6. Clamping each channel pins them all at 1.0 and the result is pure white - which is what the sky was
+// doing. Dividing by the loudest channel holds the ratios, so the colour survives at full brightness.
+vec3 capHue(vec3 c) {
+    float loudest = max(c.r, max(c.g, c.b));
+    return loudest > 1.0 ? c / loudest : c;
+}
+
 float ridge(vec3 p) {
     // The crest is rounded. A bare 1 - abs(...) has a hard V at the crease, and at the frequencies this
     // gets sampled at those creases tile into exactly the "cracked ice / shattered glass" look; cracks
@@ -222,7 +231,7 @@ float sampleField(vec3 wp, out vec3 emission) {
         float flare = 1.0 + 1.6 * (1.0 - smoothstep(0.0, 0.10, along));
         float fade = charging ? mix(0.30, 1.0, t) : 1.0 - smoothstep(0.60, 1.0, t) * 0.9;
         float body = Shaft * ends * bands * flare * (wall * 0.9 + core * 2.4);
-        emission = mix(ColorA.rgb, ColorC.rgb, core) * Glow * (1.0 + 2.4 * core) * Strength;
+        emission = capHue(mix(ColorA.rgb, ColorC.rgb, core) * Glow * (1.0 + 2.4 * core) * Strength);
         return clamp(body * fade, 0.0, 4.0);
     }
 
@@ -246,9 +255,13 @@ float sampleField(vec3 wp, out vec3 emission) {
             star = (1.0 - smoothstep(0.0, 0.0035, angular)) * twinkle;
         }
         float sky = Sky * (cloud * 0.8 + cloud * band * 0.9 + star * 3.0);
-        float fade = charging ? mix(0.4, 1.0, t) : 1.0 - smoothstep(0.7, 1.0, t) * 0.85;
-        emission = mix(ColorC.rgb, ColorA.rgb, clamp(cloud + star, 0.0, 1.0))
-                 * Glow * (0.8 + 1.6 * star) * Strength;
+        // The same curve the blast uses. It was 1 - smoothstep(0.7, 1.0, t) * 0.85, which only started
+        // letting go at t = 0.7 and bottomed out at 0.15, while the blast starts fading at 0.45 and
+        // reaches zero. So the fireball faded away and the nebula stayed hanging there over it - the
+        // "works fine until the sky overrides it" report.
+        float fade = charging ? mix(0.4, 1.0, t) : 1.0 - smoothstep(0.45, 1.0, t);
+        emission = capHue(mix(ColorC.rgb, ColorA.rgb, clamp(cloud + star, 0.0, 1.0))
+                          * Glow * (0.8 + 1.6 * star) * Strength);
         return clamp(sky * fade, 0.0, 3.0);
     }
 
@@ -730,10 +743,7 @@ float sampleField(vec3 wp, out vec3 emission) {
     // (1.00, 1.00, 1.00), which is the blowout. Dividing by the loudest channel keeps the ratios, so the
     // colour survives at full brightness instead of washing out. This is what makes standing inside the
     // blast render as the inside of a coloured fireball rather than as a white screen.
-    float loudest = max(emission.r, max(emission.g, emission.b));
-    if (loudest > 1.0) {
-        emission /= loudest;
-    }
+    emission = capHue(emission);
     return clamp(body, 0.0, 3.0);
 }
 
