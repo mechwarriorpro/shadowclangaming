@@ -268,9 +268,9 @@ public final class VolumetricFx {
                             set(shader, "Steps", (float) Math.max(MIN_STEPS, stepsFor(effect, distance) * 2 / 5));
                             drawProxy(effect.x(), effect.y(), effect.z(), skyHalf);
                         }
-                    } else if (pass == 1) {
-                        // The shaft from orbit. Center moves up to the middle of the shaft's own cube and
-                        // is put back afterwards - the blast pass wants the impact point.
+                    } else if (pass == 2) {
+                        // The shaft from orbit, last so the growing fireball cannot occlude it. Center
+                        // moves up to the middle of the shaft's own cube.
                         if (vol.shaft() > 0.01F) {
                             set(shader, "ShaftPass", 1.0F);
                             set(shader, "Shaft", vol.shaft());
@@ -278,7 +278,7 @@ public final class VolumetricFx {
                                     (float) effect.z());
                             drawProxy(effect.x(), effect.y() + SHAFT_HALF, effect.z(), SHAFT_HALF);
                         }
-                    } else {
+                    } else if (pass == 1) {
                         set(shader, "ShaftPass", 0.0F);
                         set(shader, "Shaft", 0.0F);
                         set(shader, "SkyPass", 0.0F);

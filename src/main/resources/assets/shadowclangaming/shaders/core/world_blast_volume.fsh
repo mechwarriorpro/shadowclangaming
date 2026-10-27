@@ -837,12 +837,18 @@ void main() {
     // step. That is the pure white filling the upper screen.
     //
     // Expressed as optical depth instead: total depth is densityScale * path, and the path through a box
-    // is about 2 * boxRadius. The blast targets 4.4 (opacity 0.99, solid, which is what was asked for);
-    // the sky targets 1.4, which is opacity 0.75 at its densest and a real veil everywhere else, so the
-    // stars and the sky still come through it.
+    // is about 2 * boxRadius. The sky targets 1.4, which is opacity 0.75 at its densest and a real veil
+    // everywhere else, so the stars still come through it.
+    //
+    // The blast targets 3.0 rather than the 4.4 it had. At 4.4 the transmittance is under 1% by a third
+    // of the way in, so acc converged on the emission at the NEAR SURFACE and everything behind it - the
+    // core, the shell, the beam where it enters - contributed nothing. The result was a flat opaque ball,
+    // which is "solid" in the most useless sense. At 3.0 the silhouette is still 95% opaque, so nothing
+    // behind the blast shows through, but the interior emission reaches the eye and the authored
+    // structure is actually visible.
     float densityScale = ShaftPass > 0.5 ? 1.7 / max(ShaftWidth, 1.0)
                        : SkyPass > 0.5 ? 0.7 / max(radius * SkyBox, 1.0)
-                       : 2.2 / max(radius, 1.0);
+                       : 1.5 / max(radius, 1.0);
 
     for (int i = 0; i < steps; i++) {
         vec3 emission;
