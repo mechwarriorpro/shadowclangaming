@@ -652,6 +652,38 @@
       "values": [
         0.0
       ]
+    },
+    {
+      "name": "ScgSparkSoft",
+      "type": "float",
+      "count": 1,
+      "values": [
+        0.0
+      ]
+    },
+    {
+      "name": "ScgInteriorDetail",
+      "type": "float",
+      "count": 1,
+      "values": [
+        0.0
+      ]
+    },
+    {
+      "name": "ScgWispExponent",
+      "type": "float",
+      "count": 1,
+      "values": [
+        1.6
+      ]
+    },
+    {
+      "name": "ScgDither",
+      "type": "float",
+      "count": 1,
+      "values": [
+        0.0
+      ]
     }
   ]
 }

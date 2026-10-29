@@ -407,6 +407,23 @@ public final class VolumetricFx {
         set(program, "ScgKnee", SCGConfig.volumetricKnee());
         set(program, "ScgHaloFalloff", SCGConfig.volumetricHaloFalloff() ? 1.0F : 0.0F);
 
+        // -------------------------------------------------- refinement (phase 3 experiment)
+        //
+        // Four corrections, again each traced to a line rather than to the screenshot:
+        //   ScgSparkSoft      - `1 - smoothstep(0, 0.09, d)` is a flat-topped disc with a hard rim and one
+        //                       scalar brightness for the whole cell, so the sparks read as sprites.
+        //   ScgInteriorDetail - the fireball body is authored flat ("only the SURFACE noisy"), which is why
+        //                       the dense interior reads as a single slab. Zero-mean, from the two fbm
+        //                       samples the domain warp already computed, so it costs nothing.
+        //   ScgWispExponent   - pow(x, 1.6) is a soft threshold, a 40x swing across the middle of the noise
+        //                       range, which is why the outer wisps cut off instead of dissipating.
+        //   ScgDither         - the nebula is a smooth gradient on an 8-bit target, so it bands.
+        // JSON defaults are the phase 2 values, so an unset uniform cannot half-apply this.
+        set(program, "ScgSparkSoft", SCGConfig.volumetricSparkSoft() ? 1.0F : 0.0F);
+        set(program, "ScgInteriorDetail", SCGConfig.volumetricInteriorDetail());
+        set(program, "ScgWispExponent", SCGConfig.volumetricWispExponent());
+        set(program, "ScgDither", SCGConfig.volumetricDither() ? 1.0F : 0.0F);
+
         set(program, "Beam", v.beam());
         set(program, "Ring", v.ring());
         set(program, "SkyRing", v.skyRing());

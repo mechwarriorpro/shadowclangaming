@@ -74,6 +74,17 @@ public final class SCGConfig {
     public static final ModConfigSpec.DoubleValue VOLUMETRIC_KNEE;
     /** Make the halo fall off with distance from the blast instead of being a per-ray constant. */
     public static final ModConfigSpec.BooleanValue VOLUMETRIC_HALO_FALLOFF;
+
+    // ------------------------------------------------- volumetric refinement (phase 3 experiment)
+
+    /** Soften the sparks from a flat-topped disc to a Gaussian. */
+    public static final ModConfigSpec.BooleanValue VOLUMETRIC_SPARK_SOFT;
+    /** Internal density structure. Zero-mean, so the blast still occludes what is behind it. */
+    public static final ModConfigSpec.DoubleValue VOLUMETRIC_INTERIOR_DETAIL;
+    /** Exponent on the nebula's contrast curve. Lower = wisps dissipate instead of cutting off. */
+    public static final ModConfigSpec.DoubleValue VOLUMETRIC_WISP_EXPONENT;
+    /** Half-LSB output dither, to break up banding in smooth gradients like the nebula sky. */
+    public static final ModConfigSpec.BooleanValue VOLUMETRIC_DITHER;
     // ------------------------------------------------------------------ common
 
     public static final ModConfigSpec COMMON_SPEC;
@@ -189,6 +200,32 @@ public final class SCGConfig {
                         "The halo term is fed by one average over the whole march, so without this it is",
                         "the same strength everywhere and the outer transition reads as a shelf.")
                 .define("volumetric_halo_falloff", true);
+
+        VOLUMETRIC_SPARK_SOFT = client
+                .comment("Draw the scattered sparks as soft glowing points instead of flat discs.",
+                        "The old profile was exactly 1.0 across the whole interior and exactly 0.0 outside",
+                        "a fixed radius, so each spark was a hard-edged disc with no internal gradient -",
+                        "which is what made them read as superimposed sprites.")
+                .define("volumetric_spark_soft", true);
+
+        VOLUMETRIC_INTERIOR_DETAIL = client
+                .comment("Internal density structure inside the fireball (0.0 - 1.0). The body was",
+                        "authored flat so it would occlude what is behind it, which is also why the dense",
+                        "interior read as one slab. This is ZERO-MEAN: mean density, and therefore the",
+                        "occlusion, is unchanged. 0.0 restores the flat phase 2 interior.")
+                .defineInRange("volumetric_interior_detail", 0.5D, 0.0D, 1.0D);
+
+        VOLUMETRIC_WISP_EXPONENT = client
+                .comment("Contrast exponent on the outer wisps (0.4 - 2.5). The old 1.6 was a soft",
+                        "threshold - a 40x swing over the middle of the noise range - which is why the",
+                        "wisps cut off sharply instead of dissipating. Lower is softer.")
+                .defineInRange("volumetric_wisp_exponent", 1.15D, 0.4D, 2.5D);
+
+        VOLUMETRIC_DITHER = client
+                .comment("Dither the output by half an LSB. Smooth low-contrast gradients such as the",
+                        "nebula sky otherwise band on an 8-bit framebuffer. The pattern is stable across",
+                        "frames, so it does not flicker.")
+                .define("volumetric_dither", true);
 
         SCREEN_SHAKE = client
                 .comment("Shake the camera when a warhead goes off nearby.")
@@ -366,6 +403,28 @@ public final class SCGConfig {
 
     public static boolean volumetricHaloFalloff() {
         return or(VOLUMETRIC_HALO_FALLOFF, Boolean.TRUE);
+    }
+
+    public static boolean volumetricSparkSoft() {
+        return or(VOLUMETRIC_SPARK_SOFT, Boolean.TRUE);
+    }
+
+    public static float volumetricInteriorDetail() {
+        return (float) clamp(or(VOLUMETRIC_INTERIOR_DETAIL, 0.5D), 0.0D, 1.0D);
+    }
+
+    /**
+     * Exponent on the nebula's contrast curve.
+     *
+     * <p>Held strictly above zero: the shader evaluates {@code pow(x, exponent)} and an exponent of 0
+     * returns 1.0 everywhere - solid fog instead of wisps - while a negative one divides by zero at x = 0.
+     */
+    public static float volumetricWispExponent() {
+        return (float) clamp(or(VOLUMETRIC_WISP_EXPONENT, 1.15D), 0.4D, 2.5D);
+    }
+
+    public static boolean volumetricDither() {
+        return or(VOLUMETRIC_DITHER, Boolean.TRUE);
     }
 
     private static double clamp(double value, double min, double max) {

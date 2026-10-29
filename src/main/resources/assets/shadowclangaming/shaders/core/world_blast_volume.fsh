@@ -157,16 +157,34 @@ uniform float ScgKnee;
 // constant. `bloom` is one average over the whole march, so the term it feeds cannot express shape.
 uniform float ScgHaloFalloff;
 
+// ---------------------------------------------------------------- refinement (phase 3)
+
+// 1.0 replaces the sparks' flat-topped disc with a Gaussian. `1 - smoothstep(0, 0.09, d)` is exactly 1.0
+// across the whole interior and exactly 0.0 outside 0.09, which is a disc with a hard rim and no internal
+// gradient - the "superimposed sprite" look. A Gaussian has neither.
+uniform float ScgSparkSoft;
+// Interior density detail. The fireball body was authored flat on purpose ("only the SURFACE noisy") so
+// the blast would occlude what is behind it; that is also why the dense interior reads as one slab of
+// translucent material. Zero-mean, so the mean density - and therefore the occlusion - is unchanged.
+uniform float ScgInteriorDetail;
+// Exponent on the nebula's contrast curve. 1.6 was a soft threshold (a 40x swing between x = 0.1 and
+// x = 1.0), which is what made the outer wisps cut off instead of dissipating.
+uniform float ScgWispExponent;
+// 1.0 dithers the output by half an LSB. The nebula is a smooth low-contrast gradient and an 8-bit
+// framebuffer quantises it into the faint horizontal banding in the upper sky.
+uniform float ScgDither;
+
 out vec4 fragColor;
 
 // Half-extent of the proxy cube, in blast radii. client/VolumetricFx draws a cube this size, so the two
 // must stay in step: the shader marches exactly the volume the geometry covers, no more and no less.
 const float PROXY_BOX = 2.0;
 
-// Mean of the `n` term used for emission detail. fbm sums weights 0.5 + 0.25 + 0.125 + 0.0625 = 0.9375
-// over value noise in [0,1), so fbm averages about 0.469 and n = fbm*2 - 1 averages about -0.0625 - NOT
-// zero. Deriving it from the weights rather than measuring it on screen keeps the two in step if the
-// octave count ever changes.
+// Mean of one fbm() evaluation. The weights sum to 0.5 + 0.25 + 0.125 + 0.0625 = 0.9375 over value noise
+// in [0,1), so fbm averages about 0.469 - NOT 0.5 and not 0. Any zero-mean modulation built from fbm has
+// to subtract this, or the "detail" is partly a uniform dimming.
+const float FBM_MEAN = (0.5 + 0.25 + 0.125 + 0.0625) * 0.5;
+// Mean of the `n` term used for emission detail. n = fbm*2 - 1, so its mean is 2*FBM_MEAN - 1 = -0.0625.
 const float N_MEAN = 2.0 * (0.5 + 0.25 + 0.125 + 0.0625) * 0.5 - 1.0;
 
 // ---------------------------------------------------------------- value noise
@@ -435,7 +453,21 @@ float sampleField(vec3 wp, out vec3 emission) {
     float skirt = (1.0 - smoothstep(0.72, 1.55, surface)) * 0.6;
     // Late in the detonation the ball breaks apart rather than hollowing out.
     float breakup = charging ? 0.0 : smoothstep(0.55, 1.0, t) * 0.55;
-    body += (1.0 - Smoke) * (inside * 2.2 + skirt) * (1.0 - breakup);
+    // --- interior detail (phase 3). The comment above this block is honest about the trade it made: "only
+    // the SURFACE noisy", so the ball would stay dense enough to occlude what is behind it. The cost is
+    // that `inside` is a flat 2.2 everywhere surface < 0.58 - the dense interior is literally one slab of
+    // uniform material, which is the reported lack of internal structure.
+    //
+    // wx and wz are the two fbm samples already computed above for the domain warp. They cost nothing here,
+    // and because the warp feeds `n`, using them gives interior structure that is DECORRELATED from the
+    // surface displacement instead of being the same ridge seen twice.
+    //
+    // ZERO-MEAN, and that is the whole point: (wx + wz) - 2*FBM_MEAN averages 0, so the mean of `inside` is
+    // unchanged and the occlusion the original trade bought is preserved. This redistributes density
+    // inside the ball; it does not thin the ball out.
+    float interior = (wx + wz) - 2.0 * FBM_MEAN;
+    float insideDetail = max(1.0 + ScgInteriorDetail * interior, 0.0);
+    body += (1.0 - Smoke) * (inside * 2.2 * insideDetail + skirt) * (1.0 - breakup);
 
     // --- smoke: heavy, dark, low. What a dud or a plague leaves instead of a fireball.
     if (Smoke > 0.01) {
@@ -711,7 +743,21 @@ float sampleField(vec3 wp, out vec3 emission) {
             vec3 jitter = vec3(hash31(cell + 11.0), hash31(cell + 23.0), hash31(cell + 37.0)) - 0.5;
             float d = length(fract(q * 5.0) - 0.5 - jitter * 0.6);
             float twinkle = 0.5 + 0.5 * sin(Time * 9.0 + h * 60.0);
-            body += Sparks * (1.0 - smoothstep(0.0, 0.09, d)) * twinkle * 2.0;
+            // --- spark profile (phase 3). `1 - smoothstep(0, 0.09, d)` is a FLAT-TOPPED DISC: exactly 1.0
+            // across the whole interior, exactly 0.0 past 0.09. Measured, it drops 0.87 -> 0.00 over the
+            // last fifth of its radius and then stops dead. Combined with `bright` being one scalar for the
+            // whole cell, nothing inside a spark can differ from anything else inside it - which is exactly
+            // the "uniform bright discs, lacking internal structure or a smooth falloff, like superimposed
+            // sprites" report. It is not a sprite, but it is built like one.
+            //
+            // A Gaussian has no flat top and no rim: exp() of a negative argument is bounded in (0,1], so it
+            // cannot go negative or infinite, and it decays to nothing instead of stopping. sigma 0.045 keeps
+            // the peak at 1.0 and puts the old hard edge at 0.135 rather than 0.0, so the spark is a little
+            // larger and far softer rather than a different object.
+            float disc = 1.0 - smoothstep(0.0, 0.09, d);
+            float soft = exp(-(d * d) / (2.0 * 0.045 * 0.045));
+            float profile = mix(disc, soft, clamp(ScgSparkSoft, 0.0, 1.0));
+            body += Sparks * profile * twinkle * 2.0;
             bright *= mix(1.0, 2.4, Sparks * twinkle);
         }
     }
@@ -792,7 +838,16 @@ float sampleField(vec3 wp, out vec3 emission) {
     if (Nebula > 0.01) {
         float wisp = fbm(p * 0.55 + seedOffset * 0.2 + vec3(0.0, Time * 0.04, 0.0));
         float wisp2 = fbm(p * 1.1 + seedOffset * 0.4 - vec3(Time * 0.03, 0.0, 0.0));
-        float fill = (1.0 - smoothstep(0.3, 2.4, r)) * pow(max(0.0, wisp * wisp2 * 2.2), 1.6);
+        // --- wisp exponent (phase 3). 1.6 is a soft THRESHOLD rather than a shaping curve: measured, the
+        // factor swings 40x between x = 0.1 (0.025) and x = 1.0 (1.000), so a wisp goes from nothing to
+        // full across a narrow band of the noise and its edge reads as cut out rather than dissipating.
+        // Lowering the exponent spreads the same range over a much gentler ramp - at 1.15 the same span is
+        // 0.071 to 1.000, about a fifth the steepness at the bottom end.
+        //
+        // Clamped strictly above 0: pow(x, 0) is 1.0 everywhere, which would turn the wisps into solid fog,
+        // and a negative exponent is a division by zero at x = 0.
+        float fill = (1.0 - smoothstep(0.3, 2.4, r))
+                   * pow(max(0.0, wisp * wisp2 * 2.2), clamp(ScgWispExponent, 0.4, 2.5));
         body += Nebula * fill * 1.2;
         bright *= mix(1.0, 1.4, Nebula * fill);
     }
@@ -1229,5 +1284,19 @@ void main() {
     // Premultiplied output has to satisfy rgb <= a. The blend is ONE, ONE_MINUS_SRC_ALPHA, so anything
     // above the alpha adds past 1.0 and clips to flat white with no detail - the exact symptom reported.
     // With the knee on this is a no-op safety net; with it off it is the phase 1 behaviour, unchanged.
-    fragColor = vec4(min(acc, vec3(opacity)), opacity);
+    vec3 outColor = min(acc, vec3(opacity));
+    // --- dither (phase 3). The nebula is a smooth, low-contrast gradient and the framebuffer is 8-bit, so
+    // quantisation makes the gradient's iso-contours visible as the faint horizontal banding in the upper
+    // sky. Half an LSB of per-pixel offset breaks the contour up without adding visible noise, which is the
+    // standard fix and the cheap one.
+    //
+    // It reuses `jitter`, the hash already computed per pixel for the march, so this costs one multiply and
+    // no new hash. `jitter` is a function of gl_FragCoord alone and NOT of Time, so the pattern is stable
+    // across frames: it dithers without flickering, which a time-varying dither would not.
+    //
+    // The clamp is not decorative. Dithering pushes rgb up as well as down, and rgb <= a is what
+    // premultiplied alpha under ONE, ONE_MINUS_SRC_ALPHA requires - so the clamp to opacity keeps that
+    // invariant exactly and the dither can never add light the blend is not entitled to.
+    outColor = clamp(outColor + (jitter - 0.5) * (clamp(ScgDither, 0.0, 1.0) / 255.0), 0.0, opacity);
+    fragColor = vec4(outColor, opacity);
 }
