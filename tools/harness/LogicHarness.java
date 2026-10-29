@@ -2089,12 +2089,19 @@ public final class LogicHarness {
     /** Collects what the geometry builders emit, and where. */
     private static final class Collector implements com.shadowclangaming.client.BlastGeometry.Sink {
         int vertices;
+        int minAlpha = Integer.MAX_VALUE;
+        int maxAlpha = Integer.MIN_VALUE;
+        double maxRadius;
         double minX = Double.MAX_VALUE, minY = Double.MAX_VALUE, minZ = Double.MAX_VALUE;
         double maxX = -Double.MAX_VALUE, maxY = -Double.MAX_VALUE, maxZ = -Double.MAX_VALUE;
 
         @Override
         public void vertex(float x, float y, float z, int r, int g, int b, int a) {
             vertices++;
+            minAlpha = Math.min(minAlpha, a);
+            maxAlpha = Math.max(maxAlpha, a);
+            double radius = Math.sqrt((double) x * x + (double) y * y + (double) z * z);
+            maxRadius = Math.max(maxRadius, radius);
             minX = Math.min(minX, x);
             minY = Math.min(minY, y);
             minZ = Math.min(minZ, z);
@@ -2153,9 +2160,20 @@ public final class LogicHarness {
         check("a ring is flat", ring.spanY() < 0.001D);
         check("a ring is as wide as its diameter", Math.abs(ring.spanX() - 25.0D) < 1.5D);
 
+        // A mote used to be two perpendicular solid quads - two crossed squares, which is what it
+        // rendered as. It is now two perpendicular soft discs. The vertex count is the least interesting
+        // part of that; what has to hold is the alpha gradient, because a disc whose rim is not
+        // transparent is still a hard-edged polygon, just a round one.
         Collector cross = new Collector();
-        eq("a mote is two quads", 8,
+        eq("a mote is two soft discs of six wedges over two bands", 96,
                 com.shadowclangaming.client.BlastGeometry.crossSprite(cross, 0, 0, 0, 1.0F, 0x80FFFFFF));
+        eq("a mote's rim fades to nothing", 0, cross.minAlpha);
+        eq("a mote's centre keeps its authored alpha", 0x80, cross.maxAlpha);
+        // Every vertex sits at or inside the mote's own radius. A square of the same size puts its
+        // corners at sqrt(2) = 1.414 times it, which is the whole difference between the two - and why
+        // comparing spanX to spanY would not have worked, since a hexagon's spans are 2.0 and 1.732.
+        check("a mote is round, not square", cross.maxRadius <= 1.001D);
+        check("a mote reaches its full radius", cross.maxRadius >= 0.99D);
 
         // Every layer kind, driven through the real dispatch, at the midpoint of its own window.
         for (var layer : com.shadowclangaming.warhead.BlastMotif.Layer.values()) {
@@ -2198,7 +2216,11 @@ public final class LogicHarness {
                 !Double.isNaN(degenerate.minX) && !Double.isNaN(degenerate.maxX));
         Collector line = new Collector();
         com.shadowclangaming.client.BlastGeometry.segment(line, 0, 0, 0, 0, 5, 0, 1.0D, 0x80FFFFFF);
-        eq("a vertical segment still draws", 4, line.vertices);
+        // Two quads split down the spine, so the tendril has a soft cross-section. One quad was a flat
+        // ribbon with two knife edges; the outer edges now carry zero alpha.
+        eq("a vertical segment draws two quads", 8, line.vertices);
+        eq("a ribbon's outer edges fade to nothing", 0, line.minAlpha);
+        eq("a ribbon's spine keeps its authored alpha", 0x80, line.maxAlpha);
         check("a vertical segment is finite", !Double.isNaN(line.minX));
         Collector zero = new Collector();
         eq("a zero-length segment draws nothing", 0,
