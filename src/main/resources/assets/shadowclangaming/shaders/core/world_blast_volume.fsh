@@ -106,6 +106,39 @@ uniform float Shaft;
 // which are otherwise indistinguishable - both look like no effect at all.
 uniform float Solid;
 
+// ---------------------------------------------------------------- lighting (phase 1)
+//
+// WHAT THIS VOLUME IS. The march below is, and was always, a PURELY EMISSIVE volume: it accumulates
+// `emission * a * transmittance` and uses extinction only to attenuate itself. Nothing in the image ever
+// came from a light - which is why a solid core and a thin skirt were lit identically and both read as
+// coloured fog. These uniforms switch in single scattering. They are additive to emission, never a
+// replacement for it: an explosion is its own light source and has to stay one.
+//
+// ScgLighting 0.0 selects the ORIGINAL arithmetic verbatim. That is the fallback: the same program, the
+// same compiled code path, so reverting is a config change and not a shader reload.
+uniform float ScgLighting;
+// Direction the light comes FROM, pointing from the sample toward the light. Normalised in the shader.
+//
+// THIS IS A TEST VECTOR, NOT MINECRAFT'S SUN. Level.getSunAngle() returns getTimeOfDay()*2*PI, a day
+// fraction and not a direction; deriving the world-space sun from vanilla's sky rotations (sun quad at
+// local +Y under Ry(-90)*Rx(theta)) puts sunrise at the zenith, ninety degrees off from where it belongs,
+// and that discrepancy could not be resolved without running the game. Shipping a wrong vector dressed up
+// as the sun would be worse than an honest test light, so the light is explicitly a test light and its
+// direction is a config value.
+uniform vec3 ScgLightDir;
+uniform vec3 ScgLightColor;
+uniform float ScgLightStrength;
+// Henyey-Greenstein asymmetry. 0 isotropic, positive forward-scatters.
+uniform float ScgPhaseG;
+// 1.0 attenuates the light by an estimate of the volume in the way. NOT a shadow map: this pipeline binds
+// no samplers at all, so there is no depth or shadow texture to read. See lightTransmittance().
+uniform float ScgShadowMode;
+// 1.0 keeps the gradient rim as its own additive boundary term. 0.0 is the original whole-ray multiply.
+uniform float ScgSurfaceMode;
+uniform float ScgRimStrength;
+// The uniform halo term. Was the literal 0.30 in `acc += bloom * 0.30 * (1.0 - opacity)`.
+uniform float ScgGlowBoost;
+
 out vec4 fragColor;
 
 // Half-extent of the proxy cube, in blast radii. client/VolumetricFx draws a cube this size, so the two
@@ -210,6 +243,55 @@ float starPolygon(vec2 p, float n, float k, float rad, float thick, float spin) 
         d = min(d, segDist(p, va, vb));
     }
     return 1.0 - smoothstep(thick * 0.4, thick, d);
+}
+
+// ---------------------------------------------------------------- lighting helpers
+
+// Henyey-Greenstein phase, scaled by 4*PI so isotropic scattering (g = 0) evaluates to exactly 1.0. That
+// makes ScgLightStrength read as a direct multiplier on the light's radiance instead of burying a
+// 1/(4*PI) ~ 0.0796 factor inside it. The physically normalised HG - the one that integrates to 1 over the
+// sphere - is this divided by 4*PI.
+//
+// cosTheta is between the view direction and the direction the light is TRAVELLING, i.e. dot(rd, -lightDir).
+float phaseHG(float cosTheta, float g) {
+    // Clamped at 0.9: at |g| = 1 the denominator reaches zero at one angle and divides by nothing.
+    float gg = clamp(g, -0.9, 0.9);
+    // max() rather than trusting the algebra: a denormal here is an infinity across the whole blast.
+    float denom = max(1.0 + gg * gg - 2.0 * gg * clamp(cosTheta, -1.0, 1.0), 1e-5);
+    return (1.0 - gg * gg) / pow(denom, 1.5);
+}
+
+// How much of the light survives the volume between a sample and the lit side.
+//
+// The real answer is either a march toward the light integrating extinction, or a shadow map. Neither is
+// available here: this program binds no samplers at all, and a second field evaluation per step would
+// multiply the cost of an already twenty-nine-feature field by the march length - up to 224 steps.
+//
+// So the occluding column is estimated as the LOCAL density times the distance from the sample to the far
+// side of the proxy box along the light: the Beer-Lambert form under a uniform-density assumption along
+// that one ray. Reusing the march's own densityScale is what keeps it consistent - the column is measured
+// in exactly the optical-depth units the transmittance accumulation uses, so a volume tuned to opacity
+// 0.95 also self-shadows to about 0.95 across its widest chord.
+//
+// It is an approximation and it is wrong in detail: it cannot see a dense core between a thin sample and
+// the light. What it does give is the correct qualitative result - samples on the shadowed side of a thick
+// fireball are lit less than samples on the lit side - and that contrast is the whole of what makes a
+// volume read as a solid object rather than a tint.
+float lightTransmittance(vec3 pos, vec3 lightDir, vec3 bmin, vec3 bmax,
+                         float density, float densityScale) {
+    if (density <= 0.0) {
+        return 1.0;
+    }
+    // Safe reciprocal. An exactly axis-aligned light direction makes the naive reciprocal infinite, which
+    // is how a NaN reaches the screen; this is the same guard the main slab test uses.
+    vec3 invL = vec3((lightDir.x < 0.0 ? -1.0 : 1.0) / max(abs(lightDir.x), 1e-6),
+                     (lightDir.y < 0.0 ? -1.0 : 1.0) / max(abs(lightDir.y), 1e-6),
+                     (lightDir.z < 0.0 ? -1.0 : 1.0) / max(abs(lightDir.z), 1e-6));
+    vec3 tfar = max((bmax - pos) * invL, (bmin - pos) * invL);
+    // Distance to the exit face along the light. Clamped at zero: a sample outside the box would give a
+    // negative column, and exp() of a negative times a negative is a light BRIGHTER than the light.
+    float column = max(min(min(tfar.x, tfar.y), tfar.z), 0.0);
+    return exp(-density * column * densityScale);
 }
 
 float sampleField(vec3 wp, out vec3 emission) {
@@ -910,6 +992,23 @@ void main() {
                        : SkyPass > 0.5 ? 0.7 / max(radius * SkyBox, 1.0)
                        : 1.5 / max(radius, 1.0);
 
+    // ---------------------------------------------------------- directional single scattering
+    //
+    // Skipped for the sky pass on purpose. The skybox field is evaluated from DIRECTION ONLY - every sample
+    // along a ray sees the same nebula, which is what pins the stars to the sky - so it has no meaningful
+    // world position to light, and shading it would be a normal model applied to something with no surface.
+    //
+    // The phase and the radiance are constant along the whole ray (rd and lightDir are both constant), so
+    // they are evaluated once here rather than per step. Only the self-shadow term varies per sample.
+    bool useLight = ScgLighting > 0.5 && SkyPass < 0.5 && ScgLightStrength > 0.0;
+    // Normalised defensively. A zero-length direction from a hand-edited config would make normalize()
+    // return NaN and paint the entire blast with it; a unit +Y is a safe stand-in.
+    float lightLen = length(ScgLightDir);
+    vec3 lightDir = lightLen > 1e-5 ? ScgLightDir / lightLen : vec3(0.0, 1.0, 0.0);
+    // cosTheta between the view direction and the direction the light TRAVELS, hence the negation.
+    float phase = phaseHG(dot(rd, -lightDir), ScgPhaseG);
+    vec3 lightRadiance = ScgLightColor * (ScgLightStrength * phase);
+
     for (int i = 0; i < steps; i++) {
         vec3 emission;
         float density = sampleField(pos, emission);
@@ -919,7 +1018,24 @@ void main() {
         }
         if (density > 0.002) {
             float a = clamp(density * stepLen * densityScale, 0.0, 1.0);
-            acc += emission * a * transmittance;
+            // The source term, and the only thing phase 1 changes about the accumulation. Extinction `a`,
+            // `transmittance` and the early-out below are byte-for-byte what they were: this is the discrete
+            // form of
+            //     L = integral of [ sigma_e * emission + sigma_s * phase * L_light * T_light ] * T(s) ds
+            // with sigma folded into `a` exactly as the emissive term already folded it. Adding the
+            // in-scattered radiance to the source keeps the two terms sharing one extinction, so a denser
+            // sample both emits more and extinguishes more - no term can outrun the transmittance.
+            vec3 source = emission;
+            if (useLight) {
+                float tLight = ScgShadowMode > 0.5
+                             ? lightTransmittance(pos, lightDir, bmin, bmax, density, densityScale)
+                             : 1.0;
+                source += lightRadiance * tLight;
+            }
+            acc += source * a * transmittance;
+            // Deliberately EMISSION ONLY. glow/glowWeight feed the uniform halo below; folding the light in
+            // here would let the test light leak into the bloom and reintroduce the flat wash this phase is
+            // trying to measure, and it would make the halo term impossible to attribute.
             glow += emission * a;
             glowWeight += a;
             transmittance *= 1.0 - a;
@@ -949,15 +1065,32 @@ void main() {
         // Down the gradient: density falls away outwards, so -grad points out of the surface. The bias
         // keeps normalize() off a zero vector where the field is locally flat.
         vec3 n = -normalize(vec3(gx, gy, gz) + vec3(1e-5));
-        // Lit from the camera. An explosion is its own light source, so what the eye actually reads is the
-        // shape facing you plus a hot rim where the surface turns away - not a distant sun.
         float facing = clamp(dot(n, -rd), 0.0, 1.0);
         float rim = pow(max(0.0, 1.0 - facing), 3.0);
-        // Clamped to 1.0. This reaches 2.0 at a fully lit rim, which doubled acc and then hit the
-        // min(acc, opacity) clamp - so the shading itself was being flattened away at exactly the
-        // brightest points, the opposite of what it is for. As a modulator it should darken and shape,
-        // never amplify past what the blend can hold.
-        acc *= clamp(0.55 + 0.6 * facing + 0.85 * rim, 0.0, 1.0);
+        if (ScgLighting > 0.5 && ScgSurfaceMode > 0.5) {
+            // --- the boundary as its own contribution. The body was already lit per step inside the march,
+            // so the gradient normal is used here ONLY for the silhouette rim. It is deliberately NOT
+            // applied to the volume as a whole - that is what the original multiply below did, and it is why
+            // a solid core and a thin skirt came out the same shade: one scalar for every sample the ray
+            // integrated. A volume is not a surface, and only its boundary earns a normal.
+            //
+            // The rim is lit by the same light as the body, so the edge turning away from the view but
+            // toward the light is the one that glows - the backlit smoke edge. The 0.35 floor keeps the
+            // unlit side of the rim from vanishing entirely.
+            float rimLight = clamp(dot(n, lightDir), 0.0, 1.0);
+            float boundary = ScgRimStrength * rim * (0.35 + 0.65 * rimLight);
+            // ADDITIVE, and scaled by opacity so it lives inside the premultiplied envelope. The final
+            // min(acc, vec3(opacity)) below is the clamp: a rim can brighten the silhouette up to opaque
+            // and never past it, so rgb <= a holds and the blend stays correct.
+            acc += ColorA.rgb * (boundary * opacity);
+        } else {
+            // --- the original model, unchanged. Lit from the camera: an explosion is its own light source,
+            // so what the eye reads is the shape facing you plus a hot rim where the surface turns away.
+            // Clamped to 1.0 - this reaches 2.0 at a fully lit rim, which doubled acc and then hit the
+            // min(acc, opacity) clamp, flattening the shading away at exactly the brightest points. As a
+            // modulator it should darken and shape, never amplify past what the blend can hold.
+            acc *= clamp(0.55 + 0.6 * facing + 0.85 * rim, 0.0, 1.0);
+        }
         // And the body is solid. Past this much accumulated opacity the ray has gone through the thing, so
         // the world behind it should not survive - the thin outer skirt still composites over it.
         opacity = mix(opacity, 1.0, smoothstep(0.30, 0.80, opacity)
@@ -988,7 +1121,12 @@ void main() {
     // An average emission, not a running sum, so the halo is bounded by the brightest the volume gets
     // rather than by how far the ray travelled through it.
     vec3 bloom = glow / max(glowWeight, 1e-4);
-    acc += bloom * 0.30 * (1.0 - opacity);
+    // ScgGlowBoost replaces the literal 0.30 that was here. It is a separate knob precisely so the flat,
+    // washed-out look can be MEASURED: set it to 0.0 and whatever depth the directional model added is
+    // visible without a constant ambient term lifting every pixel of the volume by the same amount. This
+    // term is the reason the audit ranked "excessive uniform glow" as a suspect - it adds the volume's mean
+    // emission everywhere, weighted only by how transparent the pixel is, so it cannot express shape.
+    acc += bloom * ScgGlowBoost * (1.0 - opacity);
 
     // Not multiplied by ColorModulator. ShaderInstance.apply() overwrites that uniform every frame
     // with RenderSystem.getShaderColor() - whatever the previous pass left there - so folding it in

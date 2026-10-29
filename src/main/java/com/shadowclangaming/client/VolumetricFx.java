@@ -91,6 +91,25 @@ public final class VolumetricFx {
     /** The shader's own clamp is 224; going past it is wasted work the GPU throws away. */
     private static final int MAX_STEPS = 224;
 
+    // ------------------------------------------------ directional lighting (phase 1 experiment)
+
+    /**
+     * Colour of the volumetric test light, linear RGB. A slightly warm white: hot enough to read as a light
+     * rather than a tint, neutral enough not to fight a warhead's own palette. Kept as constants rather than
+     * config keys to keep the option list short - the DIRECTION is the value worth tuning per scene, and
+     * that one is configurable.
+     */
+    private static final float LIGHT_COLOR_R = 1.0F;
+    private static final float LIGHT_COLOR_G = 0.96F;
+    private static final float LIGHT_COLOR_B = 0.88F;
+
+    /**
+     * Weight of the gradient rim, kept as its own additive boundary contribution when the directional model
+     * is on. Not a multiplier on the whole ray: the body is lit per step inside the march, and only the
+     * silhouette boundary earns a normal. See world_blast_volume.fsh, ScgSurfaceMode.
+     */
+    private static final float RIM_STRENGTH = 0.85F;
+
     private static ShaderInstance shader;
     private static boolean loadFailed;
     /** Why the shader is unusable, for /scg fx status. Null while everything is fine. */
@@ -347,6 +366,29 @@ public final class VolumetricFx {
         set(program, "Time", time);
         // Fewer steps for distant volumes: the same march over a blast on the horizon is wasted work.
         set(program, "Steps", (float) stepsFor(effect, distance));
+
+        // ------------------------------------------------ directional lighting (phase 1 experiment)
+        //
+        // ScgLighting 0.0 makes the shader run the ORIGINAL camera-relative arithmetic, so this block is
+        // also the revert switch - the same compiled program either way, no shader reload. Everything here
+        // is read from config on every draw, so a change in the config screen takes effect on the next
+        // detonation without a restart.
+        //
+        // ScgLightDir is a TEST LIGHT, not Minecraft's sun. Level.getSunAngle() is getTimeOfDay()*2*PI, a
+        // day fraction rather than a direction, and deriving the world-space sun from vanilla's sky
+        // rotations put sunrise ninety degrees off at the zenith - unresolved without running the game, so
+        // no sun is claimed. See SCGConfig.VOLUMETRIC_LIGHT_DIRECTION.
+        set(program, "ScgLighting", SCGConfig.volumetricLightingMode());
+        float[] light = SCGConfig.volumetricLightDirection();
+        set(program, "ScgLightDir", light[0], light[1], light[2]);
+        set(program, "ScgLightColor", LIGHT_COLOR_R, LIGHT_COLOR_G, LIGHT_COLOR_B);
+        set(program, "ScgLightStrength", SCGConfig.volumetricLightStrength());
+        set(program, "ScgPhaseG", SCGConfig.volumetricPhaseG());
+        set(program, "ScgShadowMode", SCGConfig.volumetricSelfShadow() ? 1.0F : 0.0F);
+        set(program, "ScgSurfaceMode", SCGConfig.volumetricSeparateRim() ? 1.0F : 0.0F);
+        set(program, "ScgRimStrength", RIM_STRENGTH);
+        set(program, "ScgGlowBoost", SCGConfig.volumetricGlowBoost());
+
         set(program, "Beam", v.beam());
         set(program, "Ring", v.ring());
         set(program, "SkyRing", v.skyRing());

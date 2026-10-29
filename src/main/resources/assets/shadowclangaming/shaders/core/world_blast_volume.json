@@ -544,6 +544,82 @@
       "values": [
         0.0
       ]
+    },
+    {
+      "name": "ScgLighting",
+      "type": "float",
+      "count": 1,
+      "values": [
+        0.0
+      ]
+    },
+    {
+      "name": "ScgLightDir",
+      "type": "float",
+      "count": 3,
+      "values": [
+        0.35,
+        0.86,
+        -0.38
+      ]
+    },
+    {
+      "name": "ScgLightColor",
+      "type": "float",
+      "count": 3,
+      "values": [
+        1.0,
+        0.96,
+        0.88
+      ]
+    },
+    {
+      "name": "ScgLightStrength",
+      "type": "float",
+      "count": 1,
+      "values": [
+        1.0
+      ]
+    },
+    {
+      "name": "ScgPhaseG",
+      "type": "float",
+      "count": 1,
+      "values": [
+        0.35
+      ]
+    },
+    {
+      "name": "ScgShadowMode",
+      "type": "float",
+      "count": 1,
+      "values": [
+        1.0
+      ]
+    },
+    {
+      "name": "ScgSurfaceMode",
+      "type": "float",
+      "count": 1,
+      "values": [
+        1.0
+      ]
+    },
+    {
+      "name": "ScgRimStrength",
+      "type": "float",
+      "count": 1,
+      "values": [
+        0.85
+      ]
+    },
+    {
+      "name": "ScgGlowBoost",
+      "type": "float",
+      "count": 1,
+      "values": [
+        0.3
+      ]
     }
   ]
 }

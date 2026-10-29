@@ -37,6 +37,28 @@ public final class SCGConfig {
     public static final ModConfigSpec.BooleanValue SCREEN_SHAKE;
     public static final ModConfigSpec.DoubleValue SHAKE_STRENGTH;
     public static final ModConfigSpec.BooleanValue FLASH_ENABLED;
+
+    // ------------------------------------------------- volumetric lighting (phase 1 experiment)
+    //
+    // The raymarcher in world_blast_volume.fsh was, before phase 1, a PURELY EMISSIVE volume: the march
+    // added `emission * a * transmittance` and used extinction only to attenuate itself, so nothing in the
+    // image came from a light. These knobs switch in a single-scatter directional model. Every one of them
+    // is read per draw, so mode 0 restores the exact pre-phase-1 arithmetic - that is the fallback.
+
+    /** 0.0 = the original camera-relative lighting, 1.0 = directional single-scatter. */
+    public static final ModConfigSpec.DoubleValue VOLUMETRIC_LIGHTING_MODE;
+    /** Radiance of the test light. Not Minecraft's sun - see the note on volumetric_light_direction. */
+    public static final ModConfigSpec.DoubleValue VOLUMETRIC_LIGHT_STRENGTH;
+    /** Henyey-Greenstein asymmetry: 0 isotropic, >0 forward-scatter (smoke/fire), <0 back-scatter. */
+    public static final ModConfigSpec.DoubleValue VOLUMETRIC_PHASE_G;
+    /** Approximate self-shadowing by attenuating toward the light. Off = the light reaches everything. */
+    public static final ModConfigSpec.BooleanValue VOLUMETRIC_SELF_SHADOW;
+    /** Keep the gradient rim as its own additive boundary term instead of multiplying the whole ray. */
+    public static final ModConfigSpec.BooleanValue VOLUMETRIC_SEPARATE_RIM;
+    /** The uniform halo term, `bloom * X * (1 - opacity)`. 0.0 measures the model without it. */
+    public static final ModConfigSpec.DoubleValue VOLUMETRIC_GLOW_BOOST;
+    /** Test-light direction (world space). Explicitly NOT Minecraft's sun. */
+    public static final ModConfigSpec.ConfigValue<String> VOLUMETRIC_LIGHT_DIRECTION;
     // ------------------------------------------------------------------ common
 
     public static final ModConfigSpec COMMON_SPEC;
@@ -88,6 +110,45 @@ public final class SCGConfig {
                 .comment("The instant white-out on a detonation. Some players turn this off for migraines;",
                         "it is separate from shaders for exactly that reason.")
                 .define("flash_enabled", true);
+
+        VOLUMETRIC_LIGHTING_MODE = client
+                .comment("Volumetric lighting model. 0.0 = the original camera-relative shading, exactly as",
+                        "before phase 1. 1.0 = directional single-scatter with a phase function. Use 0.0 to",
+                        "revert instantly if the new model looks wrong on your hardware.")
+                .defineInRange("volumetric_lighting_mode", 1.0D, 0.0D, 1.0D);
+
+        VOLUMETRIC_LIGHT_STRENGTH = client
+                .comment("Radiance of the volumetric test light (0.0 - 4.0). The in-scattered term is added",
+                        "to the volume's own emission, so 0.0 leaves the effect fully self-lit.")
+                .defineInRange("volumetric_light_strength", 1.0D, 0.0D, 4.0D);
+
+        VOLUMETRIC_PHASE_G = client
+                .comment("Henyey-Greenstein asymmetry for the phase function. 0.0 = isotropic. Positive",
+                        "scatters forward (fire, smoke seen against the light), negative back-scatters.")
+                .defineInRange("volumetric_phase_g", 0.35D, -0.9D, 0.9D);
+
+        VOLUMETRIC_SELF_SHADOW = client
+                .comment("Attenuate the light by an estimate of the volume between the sample and the lit",
+                        "side. This is a boundary-distance approximation, not a shadow map - the pipeline",
+                        "binds no samplers at all.")
+                .define("volumetric_self_shadow", true);
+
+        VOLUMETRIC_SEPARATE_RIM = client
+                .comment("Add the gradient rim as its own boundary contribution rather than multiplying the",
+                        "whole accumulated ray by it. Applies only where the field has a real surface.")
+                .define("volumetric_separate_rim", true);
+
+        VOLUMETRIC_GLOW_BOOST = client
+                .comment("Weight of the uniform halo term (0.0 - 1.0). Was hard-coded at 0.30. Set 0.0 to",
+                        "measure how much of the flat, washed-out look comes from that term alone.")
+                .defineInRange("volumetric_glow_boost", 0.3D, 0.0D, 1.0D);
+
+        VOLUMETRIC_LIGHT_DIRECTION = client
+                .comment("World-space direction the volumetric test light comes FROM, as 'x,y,z'.",
+                        "THIS IS A TEST VECTOR, NOT MINECRAFT'S SUN. Deriving the real sun direction from",
+                        "Level.getSunAngle() is unresolved (see docs/RENDERING_AUDIT.md) so no sun is",
+                        "claimed here. The vector is normalised in the shader; a zero length is ignored.")
+                .define("volumetric_light_direction", "0.35,0.86,-0.38");
 
         SCREEN_SHAKE = client
                 .comment("Shake the camera when a warhead goes off nearby.")
@@ -177,6 +238,77 @@ public final class SCGConfig {
 
     public static boolean flashEnabled() {
         return or(FLASH_ENABLED, Boolean.TRUE);
+    }
+
+    /** 0.0 = the original lighting, 1.0 = the directional single-scatter model. */
+    public static float volumetricLightingMode() {
+        return (float) clamp(or(VOLUMETRIC_LIGHTING_MODE, 1.0D), 0.0D, 1.0D);
+    }
+
+    public static float volumetricLightStrength() {
+        return (float) clamp(or(VOLUMETRIC_LIGHT_STRENGTH, 1.0D), 0.0D, 4.0D);
+    }
+
+    public static float volumetricPhaseG() {
+        return (float) clamp(or(VOLUMETRIC_PHASE_G, 0.35D), -0.9D, 0.9D);
+    }
+
+    public static boolean volumetricSelfShadow() {
+        return or(VOLUMETRIC_SELF_SHADOW, Boolean.TRUE);
+    }
+
+    public static boolean volumetricSeparateRim() {
+        return or(VOLUMETRIC_SEPARATE_RIM, Boolean.TRUE);
+    }
+
+    public static float volumetricGlowBoost() {
+        return (float) clamp(or(VOLUMETRIC_GLOW_BOOST, 0.3D), 0.0D, 1.0D);
+    }
+
+    /**
+     * The test-light direction, as a unit vector pointing FROM the volume TOWARD the light.
+     *
+     * <p>Parsed defensively: a config value a player has hand-edited is untrusted text, and a NaN or a
+     * zero-length vector reaching the shader would put NaNs on screen across the whole blast. Anything
+     * unparsable falls back to the default rather than throwing during a draw.
+     */
+    public static float[] volumetricLightDirection() {
+        float[] fallback = {0.35F, 0.86F, -0.38F};
+        String raw = or(VOLUMETRIC_LIGHT_DIRECTION, "0.35,0.86,-0.38");
+        if (raw == null) {
+            return fallback;
+        }
+        String[] parts = raw.split(",");
+        if (parts.length != 3) {
+            return fallback;
+        }
+        float[] out = new float[3];
+        for (int i = 0; i < 3; i++) {
+            try {
+                float value = Float.parseFloat(parts[i].trim());
+                if (!Float.isFinite(value)) {
+                    return fallback;
+                }
+                out[i] = value;
+            } catch (RuntimeException unparsable) {
+                return fallback;
+            }
+        }
+        double length = Math.sqrt(out[0] * (double) out[0] + out[1] * (double) out[1] + out[2] * (double) out[2]);
+        if (!(length > 1.0E-5D) || !Double.isFinite(length)) {
+            return fallback;
+        }
+        out[0] /= (float) length;
+        out[1] /= (float) length;
+        out[2] /= (float) length;
+        return out;
+    }
+
+    private static double clamp(double value, double min, double max) {
+        if (Double.isNaN(value)) {
+            return min;
+        }
+        return Math.max(min, Math.min(max, value));
     }
 
     public static boolean screenShake() {
