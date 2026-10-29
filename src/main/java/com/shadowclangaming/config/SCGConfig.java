@@ -59,6 +59,21 @@ public final class SCGConfig {
     public static final ModConfigSpec.DoubleValue VOLUMETRIC_GLOW_BOOST;
     /** Test-light direction (world space). Explicitly NOT Minecraft's sun. */
     public static final ModConfigSpec.ConfigValue<String> VOLUMETRIC_LIGHT_DIRECTION;
+
+    // ------------------------------------------------- volumetric refinement (phase 2 experiment)
+    //
+    // Three corrections, each traced to a specific line rather than to the screenshot, which the coding
+    // model cannot see. All three default ON and all three are independently switchable back to the exact
+    // phase 1 image.
+
+    /** Emission modulation by the density field's own noise. 0.0 = flat phase 1 emission. */
+    public static final ModConfigSpec.DoubleValue VOLUMETRIC_EMISSION_DETAIL;
+    /** Replace the hard min(acc, opacity) clip with a hue-preserving soft knee. */
+    public static final ModConfigSpec.BooleanValue VOLUMETRIC_SOFT_KNEE;
+    /** Where the knee starts, as a fraction of the ceiling. Below it the image is unchanged. */
+    public static final ModConfigSpec.DoubleValue VOLUMETRIC_KNEE;
+    /** Make the halo fall off with distance from the blast instead of being a per-ray constant. */
+    public static final ModConfigSpec.BooleanValue VOLUMETRIC_HALO_FALLOFF;
     // ------------------------------------------------------------------ common
 
     public static final ModConfigSpec COMMON_SPEC;
@@ -149,6 +164,31 @@ public final class SCGConfig {
                         "Level.getSunAngle() is unresolved (see docs/RENDERING_AUDIT.md) so no sun is",
                         "claimed here. The vector is normalised in the shader; a zero length is ignored.")
                 .define("volumetric_light_direction", "0.35,0.86,-0.38");
+
+        VOLUMETRIC_EMISSION_DETAIL = client
+                .comment("How strongly the density field's own noise modulates emission (0.0 - 1.0).",
+                        "The tendrils were flat because emission saw the field only through a clamped heat",
+                        "term. This is ZERO-MEAN: it redistributes brightness locally and adds no energy,",
+                        "and at 0.0 the emission is exactly what phase 1 produced.")
+                .defineInRange("volumetric_emission_detail", 0.35D, 0.0D, 1.0D);
+
+        VOLUMETRIC_SOFT_KNEE = client
+                .comment("Compress bright cores with a hue-preserving knee instead of clipping them.",
+                        "The old hard clamp pinned every channel above the ceiling to the same number, so",
+                        "a pale palette went to (1,1,1) pure white and lost both its hue and its detail.",
+                        "Turn off to restore the phase 1 hard clip.")
+                .define("volumetric_soft_knee", true);
+
+        VOLUMETRIC_KNEE = client
+                .comment("Where the knee starts, as a fraction of the ceiling (0.05 - 0.95). Lower",
+                        "compresses more of the range and holds more core detail at the cost of contrast;")
+                .defineInRange("volumetric_knee", 0.75D, 0.05D, 0.95D);
+
+        VOLUMETRIC_HALO_FALLOFF = client
+                .comment("Let the emission halo fall off with the ray's distance from the blast.",
+                        "The halo term is fed by one average over the whole march, so without this it is",
+                        "the same strength everywhere and the outer transition reads as a shelf.")
+                .define("volumetric_halo_falloff", true);
 
         SCREEN_SHAKE = client
                 .comment("Shake the camera when a warhead goes off nearby.")
@@ -302,6 +342,30 @@ public final class SCGConfig {
         out[1] /= (float) length;
         out[2] /= (float) length;
         return out;
+    }
+
+    /** 0.0 = flat phase 1 emission; 1.0 = full modulation by the density field's own noise. */
+    public static float volumetricEmissionDetail() {
+        return (float) clamp(or(VOLUMETRIC_EMISSION_DETAIL, 0.35D), 0.0D, 1.0D);
+    }
+
+    public static boolean volumetricSoftKnee() {
+        return or(VOLUMETRIC_SOFT_KNEE, Boolean.TRUE);
+    }
+
+    /**
+     * Knee position as a fraction of the ceiling.
+     *
+     * <p>Held strictly inside (0, 1) at both ends: the shader's asymptote divides by {@code 1 - knee}, so a
+     * value of 1.0 would be a division by zero and a NaN across the entire blast. The shader clamps too;
+     * this is the half of the guard that keeps a hand-edited config from ever producing that value.
+     */
+    public static float volumetricKnee() {
+        return (float) clamp(or(VOLUMETRIC_KNEE, 0.75D), 0.05D, 0.95D);
+    }
+
+    public static boolean volumetricHaloFalloff() {
+        return or(VOLUMETRIC_HALO_FALLOFF, Boolean.TRUE);
     }
 
     private static double clamp(double value, double min, double max) {

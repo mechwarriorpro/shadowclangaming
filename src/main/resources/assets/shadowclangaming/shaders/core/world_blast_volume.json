@@ -620,6 +620,38 @@
       "values": [
         0.3
       ]
+    },
+    {
+      "name": "ScgEmissionDetail",
+      "type": "float",
+      "count": 1,
+      "values": [
+        0.0
+      ]
+    },
+    {
+      "name": "ScgSoftKnee",
+      "type": "float",
+      "count": 1,
+      "values": [
+        0.0
+      ]
+    },
+    {
+      "name": "ScgKnee",
+      "type": "float",
+      "count": 1,
+      "values": [
+        0.75
+      ]
+    },
+    {
+      "name": "ScgHaloFalloff",
+      "type": "float",
+      "count": 1,
+      "values": [
+        0.0
+      ]
     }
   ]
 }

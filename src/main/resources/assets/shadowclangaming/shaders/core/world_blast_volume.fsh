@@ -139,11 +139,35 @@ uniform float ScgRimStrength;
 // The uniform halo term. Was the literal 0.30 in `acc += bloom * 0.30 * (1.0 - opacity)`.
 uniform float ScgGlowBoost;
 
+// ---------------------------------------------------------------- refinement (phase 2)
+
+// Emission detail. The density field's fine structure lives in `n`, but emission only ever saw it through
+// `heat`, and heat is CLAMPED to [0,1] - so across the inner core, where 1.0 - r*0.8 already reaches 1.0,
+// every sample with n >= 0 lands on exactly 1.0 and the colour there is uniformly ColorA. Where no feature
+// is authored `bright` is 1.0 too, leaving emission = col * Glow with no local variation at all. That is
+// the reported uniform tendrils: the field is detailed, the emission is not. This folds the SAME already
+// computed sample back into the brightness - no new noise evaluation, no extra octave, and spatially
+// correlated with the density by construction, so the bright parts sit on the dense parts.
+uniform float ScgEmissionDetail;
+// 1.0 replaces the hard `min(acc, vec3(opacity))` clip with a hue-preserving soft knee.
+uniform float ScgSoftKnee;
+// Where the knee starts, as a fraction of the ceiling. Below it the image is bit-identical to phase 1.
+uniform float ScgKnee;
+// 1.0 makes the halo fall off with the ray's closest approach to the blast instead of being a per-ray
+// constant. `bloom` is one average over the whole march, so the term it feeds cannot express shape.
+uniform float ScgHaloFalloff;
+
 out vec4 fragColor;
 
 // Half-extent of the proxy cube, in blast radii. client/VolumetricFx draws a cube this size, so the two
 // must stay in step: the shader marches exactly the volume the geometry covers, no more and no less.
 const float PROXY_BOX = 2.0;
+
+// Mean of the `n` term used for emission detail. fbm sums weights 0.5 + 0.25 + 0.125 + 0.0625 = 0.9375
+// over value noise in [0,1), so fbm averages about 0.469 and n = fbm*2 - 1 averages about -0.0625 - NOT
+// zero. Deriving it from the weights rather than measuring it on screen keeps the two in step if the
+// octave count ever changes.
+const float N_MEAN = 2.0 * (0.5 + 0.25 + 0.125 + 0.0625) * 0.5 - 1.0;
 
 // ---------------------------------------------------------------- value noise
 
@@ -878,7 +902,25 @@ float sampleField(vec3 wp, out vec3 emission) {
         col *= 0.7 + 0.3 * sin(Time * 6.0 + r * 4.0);
     }
     col *= sheen;
-    emission = col * Glow * bright;
+    // --- emission detail (phase 2). The density field already has fine structure in `n` - it is the same
+    // sample that displaces the surface via `surface = r + n*0.42*Turb` - but emission only ever saw it
+    // through `heat`, which is clamped to [0,1] and saturates across the inner core. So the tendrils had
+    // detailed density and flat brightness.
+    //
+    // Multiplying by the sample the field ALREADY computed rather than evaluating new noise: no extra fbm,
+    // no new octave, no extra march step, and correlated with the density by construction, so bright ridges
+    // sit on dense ridges instead of speckling independently of them. The frequency is the field's own,
+    // which was deliberately lowered to avoid aliasing against the step length - so this inherits that.
+    //
+    // ZERO-MEAN. Subtracting N_MEAN is what keeps the baseline: without it the term averages 0.978 and the
+    // "detail" is partly a 2% dimming. With it, the integral of the modulation over the field is the same
+    // as before, so this redistributes energy locally and adds none globally.
+    //
+    // max(...,0.0) is a guard, not a clamp doing work: with ScgEmissionDetail <= 1.0 and n - N_MEAN in
+    // [-0.9375, 0.9375) the factor cannot go negative. At ScgEmissionDetail 0.0 it is exactly 1.0, i.e.
+    // phase 1 verbatim.
+    float detail = max(1.0 + ScgEmissionDetail * (n - N_MEAN), 0.0);
+    emission = col * Glow * bright * detail;
     // Hue-preserving cap, not a per-channel clamp. Glow is authored up to 1.9 and the palettes are
     // already pale, so this product routinely exceeds 1.0 in several channels at once. Clamping each one
     // pins them all at 1.0 and the result is pure white - #F6E7C1 at glow 1.9 becomes exactly
@@ -1126,7 +1168,59 @@ void main() {
     // visible without a constant ambient term lifting every pixel of the volume by the same amount. This
     // term is the reason the audit ranked "excessive uniform glow" as a suspect - it adds the volume's mean
     // emission everywhere, weighted only by how transparent the pixel is, so it cannot express shape.
-    acc += bloom * ScgGlowBoost * (1.0 - opacity);
+    //
+    // --- halo falloff (phase 2). `bloom` is ONE average over the entire march, so the term it feeds has no
+    // spatial structure at all beyond `opacity`: two rays clipping the same thin wisp get the same halo
+    // colour and the same strength whether they graze the fireball or pass a hundred blocks from it. That
+    // is the reported uniform halo, and it is also why the outer transition reads as a shelf rather than a
+    // fade - the wash is still at full strength where the density is already nothing. Weighting by the
+    // ray's closest approach to the blast makes the halo belong to the silhouette it is meant to belong to.
+    //
+    // Blast pass only. The sky volume is a dome at infinity and the shaft is a collimated column; neither
+    // has a meaningful distance-from-centre, and applying a radial falloff to them would only dim them.
+    float haloShape = 1.0;
+    if (ScgHaloFalloff > 0.5 && SkyPass < 0.5 && ShaftPass < 0.5) {
+        // Closest approach of the ray to the centre. rd is unit length, so this dot is that distance
+        // directly. Clamped at 0: with the centre behind the camera the perpendicular foot is not on the
+        // ray, and its length would misreport the distance.
+        float tClose = max(dot(Center - ro, rd), 0.0);
+        float dClose = length(ro + rd * tClose - Center);
+        // Across the proxy the geometry actually covers, so the falloff reaches zero where the volume does
+        // instead of cutting the halo off inside it. No division, no normalisation: nothing to go NaN.
+        haloShape = 1.0 - smoothstep(radius, radius * PROXY_BOX, dClose);
+    }
+    acc += bloom * ScgGlowBoost * (1.0 - opacity) * haloShape;
+
+    // --- soft knee (phase 2). `min(acc, vec3(opacity))` on its own is a HARD clamp, and a hard clamp is a
+    // hue destroyer: every channel above the ceiling is pinned to the SAME number. arcane_singularity's
+    // palette is a pale lavender, ColorA.rgb = (0.800, 0.714, 0.949), min/max ratio 0.752 - so it needs
+    // only bright >= 1.90 for all three of capHue's channels to clear 1.0 together, and then the clamp
+    // returns (1,1,1). Lens reaches 3.4, Circle 3.0, Star 3.2, Hole 2.4. The core was not "bright", it was
+    // white, with the authored hue and every step's contribution flattened into it.
+    //
+    // capHue above maps [1,inf) onto [1,1.5) specifically to preserve channel RATIOS, and its comment says
+    // that is what keeps the inside of the blast a coloured fireball rather than a white screen. It is
+    // right about the mechanism and half undone by this clamp: capHue's ceiling is 1.5 but the
+    // framebuffer's is 1.0, so the ratios it preserved are discarded again one line later.
+    //
+    // The knee reaches the same rgb <= a constraint that premultiplied alpha needs, but by scaling the
+    // WHOLE VECTOR by its loudest channel instead of clipping each channel. Ratios survive, so the hue
+    // survives. Identity below the knee - the mid-tones, the silhouette and the outer wisps are
+    // bit-identical to phase 1 - and above it the loudest channel asymptotes to the ceiling instead of
+    // slamming into it, with a continuous first derivative at the knee so there is no visible band.
+    if (ScgSoftKnee > 0.5) {
+        // Away from 1.0: the asymptote divides by (1 - knee), so a knee at 1.0 is a division by zero and
+        // a NaN across the whole blast. Java clamps too; this is the guard that matters at the GL level.
+        float knee = clamp(ScgKnee, 0.05, 0.95);
+        float ceiling = max(opacity, 1e-4);
+        float loudest = max(acc.r, max(acc.g, acc.b)) / ceiling;
+        float over = max(loudest - knee, 0.0);
+        // min(loudest, knee) is what makes this the identity below the knee: without it `shaped` would be
+        // `knee` there and the divide below would BRIGHTEN every mid-tone.
+        float shaped = min(loudest, knee) + over / (1.0 + over / (1.0 - knee));
+        // shaped <= loudest always, so acc only ever shrinks - never a hidden gain.
+        acc *= shaped / max(loudest, 1e-5);
+    }
 
     // Not multiplied by ColorModulator. ShaderInstance.apply() overwrites that uniform every frame
     // with RenderSystem.getShaderColor() - whatever the previous pass left there - so folding it in
@@ -1134,5 +1228,6 @@ void main() {
     // magenta box while the march showed nothing: the bypass returns before this line.
     // Premultiplied output has to satisfy rgb <= a. The blend is ONE, ONE_MINUS_SRC_ALPHA, so anything
     // above the alpha adds past 1.0 and clips to flat white with no detail - the exact symptom reported.
+    // With the knee on this is a no-op safety net; with it off it is the phase 1 behaviour, unchanged.
     fragColor = vec4(min(acc, vec3(opacity)), opacity);
 }

@@ -389,6 +389,24 @@ public final class VolumetricFx {
         set(program, "ScgRimStrength", RIM_STRENGTH);
         set(program, "ScgGlowBoost", SCGConfig.volumetricGlowBoost());
 
+        // -------------------------------------------------- refinement (phase 2 experiment)
+        //
+        // Three corrections, each traced to a line in the shader rather than to the screenshot:
+        //   ScgEmissionDetail - emission saw the density field only through a heat term clamped to [0,1],
+        //                       which saturates across the inner core, so detailed density met flat
+        //                       brightness. This folds the field's own sample back in, zero-mean.
+        //   ScgSoftKnee/Knee  - min(acc, opacity) is a hard clamp that pins every channel above the ceiling
+        //                       to the same number, turning a pale palette into (1,1,1). arcane needs only
+        //                       bright >= 1.90 to get there and Lens reaches 3.4, so the core went white.
+        //   ScgHaloFalloff    - bloom is one average over the whole march, so the halo it feeds is the same
+        //                       strength everywhere and the outer transition reads as a shelf.
+        // Every one degrades to the exact phase 1 image at its off value, and the JSON defaults are the off
+        // values, so a uniform this method somehow fails to set cannot half-apply the experiment.
+        set(program, "ScgEmissionDetail", SCGConfig.volumetricEmissionDetail());
+        set(program, "ScgSoftKnee", SCGConfig.volumetricSoftKnee() ? 1.0F : 0.0F);
+        set(program, "ScgKnee", SCGConfig.volumetricKnee());
+        set(program, "ScgHaloFalloff", SCGConfig.volumetricHaloFalloff() ? 1.0F : 0.0F);
+
         set(program, "Beam", v.beam());
         set(program, "Ring", v.ring());
         set(program, "SkyRing", v.skyRing());
