@@ -465,8 +465,23 @@ public final class BlastMotif {
                 case "abyssal_covenant" -> shape.portals(1.0F).rift(0.45F).dark(0.7F).glow(1.5F).vortex(0.7F).sparks(0.6F).cracks(0.5F).nebula(0.8F).circle(0.6F).sky(0.6F);
                 case "soul_furnace" -> shape.lightning(0.95F).skyRing(1.0F).hole(0.6F).dark(0.85F)
                         .implode(0.8F).swirlUp(1.0F).glow(1.8F).vortex(1.0F).sparks(0.7F).cracks(0.6F).halo(0.5F).nebula(0.6F).disc(0.5F).circle(0.8F).sky(0.7F);
-                case "arcane_singularity" -> shape.glyphs(0.95F).skyRing(1.0F).hole(0.55F)
-                        .swirlUp(0.9F).glow(1.7F).vortex(0.8F).sparks(0.8F).halo(0.6F).lens(0.7F).disc(0.6F).nebula(0.5F).circle(1.0F).sky(0.5F);
+                // Re-authored for MASS. The previous row was almost entirely planar and linear features
+                // - disc (a 0.05-thick plane), circle and skyRing (flat rings), glyphs (line strokes),
+                // lens (a 0.035-thick spherical shell) - with smoke, dust, embers and debris all at zero
+                // and nebula at 0.5 as the only real cloud. The one volumetric term the shader always
+                // adds, the fireball, was then multiplied by (1 - hole*0.92) = 0.49 and its brightness by
+                // mix(1, 0.1, 0.55) = 0.51, putting the core at a quarter of its emission. Turbulence was
+                // 0.45, the lowest of any major theme, so the surface noise was n*0.19 and the silhouette
+                // stayed smooth and hard-edged.
+                //
+                // That combination is precisely "transparent planes and arcs with sharp edges and no light
+                // from a central source". A singularity should be a dense, turbulent, glowing mass with a
+                // void at its heart - not a void with a few bright rings around it. So: the carving is
+                // nearly gone, the cloud and the rising motes carry the volume, the turbulence is up where
+                // the other big themes sit, and the planar features are support rather than the effect.
+                case "arcane_singularity" -> shape.glyphs(0.55F).skyRing(0.75F).hole(0.12F).turb(1.30F)
+                        .swirlUp(0.9F).glow(1.7F).vortex(0.9F).sparks(0.8F).halo(0.6F).lens(0.28F)
+                        .disc(0.32F).nebula(0.95F).circle(0.65F).sky(0.5F).embers(0.60F);
                 case "quasar_lance" -> shape.jet(1.0F).waves(0.7F).streaks(0.6F).glow(1.8F).halo(0.7F).sparks(0.6F).dust(0.6F).cracks(0.5F).cone(1.0F).disc(0.8F).lens(0.5F).nebula(0.6F).sky(0.9F).shaft(1.00F);
                 case "starforge" -> shape.star(0.95F).embers(0.9F).flash(0.7F).glow(1.8F)
                         .ring(0.6F).rise(0.6F).halo(0.8F).dust(0.7F).cracks(0.6F).sparks(0.5F).granule(1.0F).prominence(1.0F).cone(0.3F).nebula(0.5F).sky(0.9F).shaft(0.70F);

@@ -2274,7 +2274,12 @@ public final class LogicHarness {
                     java.util.Map.entry("world_rune", "glyphs=0.9,cracks=1.0,circle=1.0"),
                     java.util.Map.entry("abyssal_covenant", "portals=0.9,nebula=0.8"),
                     java.util.Map.entry("soul_furnace", "lightning=0.9,skyRing=0.9,dark=0.8,vortex=1.0,circle=0.8,sky=0.7"),
-                    java.util.Map.entry("arcane_singularity", "glyphs=0.9,skyRing=0.9,lens=0.7,circle=1.0,sky=0.5"),
+                    // Re-documented when the warhead was re-authored for mass. The old signature was
+                    // entirely planar and linear - glyphs, skyRing, lens, circle - which is exactly what
+                    // it rendered as: transparent planes and arcs with hard edges. The identity is now a
+                    // dense turbulent cloud with those as support, so the floors cover the mass first.
+                    java.util.Map.entry("arcane_singularity",
+                            "nebula=0.9,vortex=0.9,embers=0.6,glyphs=0.5,skyRing=0.7,circle=0.6,sky=0.5"),
                     java.util.Map.entry("quasar_lance", "jet=0.9,cone=1.0,disc=0.8,sky=0.9"),
                     java.util.Map.entry("starforge", "star=0.9,embers=0.8,granule=1.0,prominence=1.0,sky=0.9"),
                     java.util.Map.entry("big_bang_seed", "star=0.9,flash=0.9,halo=1.0,shell=1.0,nebula=0.9,sky=1.0"),
@@ -2452,6 +2457,21 @@ public final class LogicHarness {
             shapes.put(id, vector);
         }
         eq("every warhead has a documented signature", WARHEADS.length, SIGNATURE_FEATURES.size());
+
+        // The regression guard for the flat-planes bug, which a minimum-only table cannot express: a
+        // warhead can satisfy every feature floor above and still render as transparent sheets, if it
+        // carves its own core out and leaves the surface smooth. Arcane Singularity did both - hole 0.55
+        // multiplied the fireball's density by 0.49 and its brightness by 0.51, putting the core at a
+        // quarter of its emission, while turb 0.45 left the silhouette displacement at 0.42*0.45 = 0.19,
+        // the lowest of any major theme. Neither number appears in a feature floor, so neither was caught.
+        com.shadowclangaming.warhead.BlastMotif.Volume singularity =
+                com.shadowclangaming.warhead.BlastMotif.forWarhead("arcane_singularity").volume();
+        check("a singularity does not hollow out its own core", singularity.hole() <= 0.20F);
+        check("a singularity's core is therefore near full density",
+                (1.0F - singularity.hole() * 0.92F) >= 0.80F);
+        check("a singularity's surface is turbulent enough to be soft-edged",
+                singularity.turb() >= 1.0F);
+        check("a singularity carries a real cloud, not just rings", singularity.nebula() >= 0.9F);
 
         // Two warheads in the same theme must not be the same effect in a different colour. The floor is
         // deliberately loose - palettes still differ - but a pair with no feature difference at all fails.
