@@ -85,6 +85,20 @@ public final class SCGConfig {
     public static final ModConfigSpec.DoubleValue VOLUMETRIC_WISP_EXPONENT;
     /** Half-LSB output dither, to break up banding in smooth gradients like the nebula sky. */
     public static final ModConfigSpec.BooleanValue VOLUMETRIC_DITHER;
+
+    // ------------------------------------------------------- tuning knobs
+    //
+    // Every one of these is a number that was chosen without being able to see the result. They are config
+    // so they can be compared in-game instead of needing a rebuilt jar per guess.
+
+    /** Standard deviation of the spark Gaussian, in cell units. 0.045 was the shipped guess. */
+    public static final ModConfigSpec.DoubleValue VOLUMETRIC_SPARK_SIGMA;
+    /** Dither amplitude as a multiplier on the half-LSB offset. 1.0 is what shipped. */
+    public static final ModConfigSpec.DoubleValue VOLUMETRIC_DITHER_AMOUNT;
+    /** Test-light colour as "r,g,b" linear. Not normalised - the magnitude IS the brightness. */
+    public static final ModConfigSpec.ConfigValue<String> VOLUMETRIC_LIGHT_COLOR;
+    /** Weight of the gradient rim, kept as a separate boundary contribution. 0.85 was the guess. */
+    public static final ModConfigSpec.DoubleValue VOLUMETRIC_RIM_STRENGTH;
     // ------------------------------------------------------------------ common
 
     public static final ModConfigSpec COMMON_SPEC;
@@ -227,6 +241,29 @@ public final class SCGConfig {
                         "frames, so it does not flicker.")
                 .define("volumetric_dither", true);
 
+        VOLUMETRIC_SPARK_SIGMA = client
+                .comment("Size of the soft sparks, as a Gaussian standard deviation in cell units",
+                        "(0.005 - 0.25). The cell is 0.2 wide, so 0.045 is a tight point and 0.1 is a",
+                        "noticeable blob. 0.045 was picked without being able to see it.")
+                .defineInRange("volumetric_spark_sigma", 0.045D, 0.005D, 0.25D);
+
+        VOLUMETRIC_DITHER_AMOUNT = client
+                .comment("Dither amplitude (0.0 - 4.0), as a multiplier on the half-LSB offset.",
+                        "1.0 is what the banding fix shipped with. Raise it if banding survives; lower it",
+                        "if the grain becomes visible.")
+                .defineInRange("volumetric_dither_amount", 1.0D, 0.0D, 4.0D);
+
+        VOLUMETRIC_LIGHT_COLOR = client
+                .comment("Colour of the volumetric test light as 'r,g,b' in linear 0-4.",
+                        "NOT normalised, so the magnitude is the brightness. A negative channel would",
+                        "subtract light and invert the shading, so values are clamped to [0,4].")
+                .define("volumetric_light_color", "1.0,0.96,0.88");
+
+        VOLUMETRIC_RIM_STRENGTH = client
+                .comment("Weight of the backlit silhouette rim (0.0 - 2.0). Only applies where the field",
+                        "has a real boundary; the body is lit per step. 0.85 was picked blind.")
+                .defineInRange("volumetric_rim_strength", 0.85D, 0.0D, 2.0D);
+
         SCREEN_SHAKE = client
                 .comment("Shake the camera when a warhead goes off nearby.")
                 .define("screen_shake", true);
@@ -350,34 +387,60 @@ public final class SCGConfig {
      * unparsable falls back to the default rather than throwing during a draw.
      */
     public static float[] volumetricLightDirection() {
-        float[] fallback = {0.35F, 0.86F, -0.38F};
-        String raw = or(VOLUMETRIC_LIGHT_DIRECTION, "0.35,0.86,-0.38");
+        float[] raw = parseVec3(or(VOLUMETRIC_LIGHT_DIRECTION, "0.35,0.86,-0.38"),
+                new float[] {0.35F, 0.86F, -0.38F});
+        double length = Math.sqrt(raw[0] * (double) raw[0] + raw[1] * (double) raw[1] + raw[2] * (double) raw[2]);
+        // parseVec3 already rejected anything non-finite. A zero-length vector still has to fall back here,
+        // because normalising it is exactly how a NaN direction reaches the shader.
+        if (!(length > 1.0E-5D) || !Double.isFinite(length)) {
+            return new float[] {0.35F, 0.86F, -0.38F};
+        }
+        return new float[] {(float) (raw[0] / length), (float) (raw[1] / length), (float) (raw[2] / length)};
+    }
+
+    /**
+     * The test light's colour, as linear RGB.
+     *
+     * <p>Deliberately NOT normalised: a colour's magnitude is its brightness, and normalising it would make
+     * the colour key secretly control the intensity as well. Clamped to [0, 4] so a hand-edited value cannot
+     * go negative - which would subtract light and invert the shading - or run away.
+     */
+    public static float[] volumetricLightColor() {
+        float[] raw = parseVec3(or(VOLUMETRIC_LIGHT_COLOR, "1.0,0.96,0.88"),
+                new float[] {1.0F, 0.96F, 0.88F});
+        for (int i = 0; i < 3; i++) {
+            raw[i] = (float) clamp(raw[i], 0.0D, 4.0D);
+        }
+        return raw;
+    }
+
+    /**
+     * Parse an "x,y,z" config string into three floats.
+     *
+     * <p>A config value a player has hand-edited is untrusted text. A NaN reaching the shader paints the
+     * entire blast with it, so anything unparsable returns the fallback instead of throwing from inside a
+     * draw call. Returns a copy, so callers are free to clamp in place.
+     */
+    private static float[] parseVec3(String raw, float[] fallback) {
         if (raw == null) {
-            return fallback;
+            return fallback.clone();
         }
         String[] parts = raw.split(",");
         if (parts.length != 3) {
-            return fallback;
+            return fallback.clone();
         }
         float[] out = new float[3];
         for (int i = 0; i < 3; i++) {
             try {
                 float value = Float.parseFloat(parts[i].trim());
                 if (!Float.isFinite(value)) {
-                    return fallback;
+                    return fallback.clone();
                 }
                 out[i] = value;
             } catch (RuntimeException unparsable) {
-                return fallback;
+                return fallback.clone();
             }
         }
-        double length = Math.sqrt(out[0] * (double) out[0] + out[1] * (double) out[1] + out[2] * (double) out[2]);
-        if (!(length > 1.0E-5D) || !Double.isFinite(length)) {
-            return fallback;
-        }
-        out[0] /= (float) length;
-        out[1] /= (float) length;
-        out[2] /= (float) length;
         return out;
     }
 
@@ -425,6 +488,24 @@ public final class SCGConfig {
 
     public static boolean volumetricDither() {
         return or(VOLUMETRIC_DITHER, Boolean.TRUE);
+    }
+
+    /**
+     * Spark Gaussian sigma, in cell units.
+     *
+     * <p>Held strictly above zero: the shader's exponent divides by {@code 2 * sigma * sigma}, so 0.0 is a
+     * division by zero and {@code exp(-Inf)} is not a value every driver recovers from cleanly.
+     */
+    public static float volumetricSparkSigma() {
+        return (float) clamp(or(VOLUMETRIC_SPARK_SIGMA, 0.045D), 0.005D, 0.25D);
+    }
+
+    public static float volumetricDitherAmount() {
+        return (float) clamp(or(VOLUMETRIC_DITHER_AMOUNT, 1.0D), 0.0D, 4.0D);
+    }
+
+    public static float volumetricRimStrength() {
+        return (float) clamp(or(VOLUMETRIC_RIM_STRENGTH, 0.85D), 0.0D, 2.0D);
     }
 
     private static double clamp(double value, double min, double max) {

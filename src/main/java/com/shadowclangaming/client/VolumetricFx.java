@@ -91,25 +91,6 @@ public final class VolumetricFx {
     /** The shader's own clamp is 224; going past it is wasted work the GPU throws away. */
     private static final int MAX_STEPS = 224;
 
-    // ------------------------------------------------ directional lighting (phase 1 experiment)
-
-    /**
-     * Colour of the volumetric test light, linear RGB. A slightly warm white: hot enough to read as a light
-     * rather than a tint, neutral enough not to fight a warhead's own palette. Kept as constants rather than
-     * config keys to keep the option list short - the DIRECTION is the value worth tuning per scene, and
-     * that one is configurable.
-     */
-    private static final float LIGHT_COLOR_R = 1.0F;
-    private static final float LIGHT_COLOR_G = 0.96F;
-    private static final float LIGHT_COLOR_B = 0.88F;
-
-    /**
-     * Weight of the gradient rim, kept as its own additive boundary contribution when the directional model
-     * is on. Not a multiplier on the whole ray: the body is lit per step inside the march, and only the
-     * silhouette boundary earns a normal. See world_blast_volume.fsh, ScgSurfaceMode.
-     */
-    private static final float RIM_STRENGTH = 0.85F;
-
     private static ShaderInstance shader;
     private static boolean loadFailed;
     /** Why the shader is unusable, for /scg fx status. Null while everything is fine. */
@@ -381,12 +362,13 @@ public final class VolumetricFx {
         set(program, "ScgLighting", SCGConfig.volumetricLightingMode());
         float[] light = SCGConfig.volumetricLightDirection();
         set(program, "ScgLightDir", light[0], light[1], light[2]);
-        set(program, "ScgLightColor", LIGHT_COLOR_R, LIGHT_COLOR_G, LIGHT_COLOR_B);
+        float[] lightColor = SCGConfig.volumetricLightColor();
+        set(program, "ScgLightColor", lightColor[0], lightColor[1], lightColor[2]);
         set(program, "ScgLightStrength", SCGConfig.volumetricLightStrength());
         set(program, "ScgPhaseG", SCGConfig.volumetricPhaseG());
         set(program, "ScgShadowMode", SCGConfig.volumetricSelfShadow() ? 1.0F : 0.0F);
         set(program, "ScgSurfaceMode", SCGConfig.volumetricSeparateRim() ? 1.0F : 0.0F);
-        set(program, "ScgRimStrength", RIM_STRENGTH);
+        set(program, "ScgRimStrength", SCGConfig.volumetricRimStrength());
         set(program, "ScgGlowBoost", SCGConfig.volumetricGlowBoost());
 
         // -------------------------------------------------- refinement (phase 2 experiment)
@@ -423,6 +405,13 @@ public final class VolumetricFx {
         set(program, "ScgInteriorDetail", SCGConfig.volumetricInteriorDetail());
         set(program, "ScgWispExponent", SCGConfig.volumetricWispExponent());
         set(program, "ScgDither", SCGConfig.volumetricDither() ? 1.0F : 0.0F);
+
+        // ---------------------------------------------------------- tuning knobs
+        // Numbers that were chosen without being able to see the result, exposed so they can be compared
+        // in-game instead of needing a rebuilt jar per guess. Read every draw, so a change in the config
+        // screen takes effect on the next detonation.
+        set(program, "ScgSparkSigma", SCGConfig.volumetricSparkSigma());
+        set(program, "ScgDitherAmount", SCGConfig.volumetricDitherAmount());
 
         set(program, "Beam", v.beam());
         set(program, "Ring", v.ring());

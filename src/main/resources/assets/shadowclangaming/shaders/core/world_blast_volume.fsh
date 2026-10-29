@@ -174,6 +174,18 @@ uniform float ScgWispExponent;
 // framebuffer quantises it into the faint horizontal banding in the upper sky.
 uniform float ScgDither;
 
+// ---------------------------------------------------------------- tuning knobs
+//
+// Every constant below was a judgement call made without being able to see the result. They are uniforms
+// rather than literals so they can be tuned in the config screen and compared in-game, instead of needing
+// a rebuild per guess.
+
+// Standard deviation of the spark Gaussian, in cell units. 0.045 puts the old hard disc edge at 0.135.
+// Smaller is a tighter point, larger is a softer blob; the cell itself is 0.2 of q wide.
+uniform float ScgSparkSigma;
+// Dither amplitude as a multiplier on the half-LSB offset. 1.0 is the value the banding fix shipped with.
+uniform float ScgDitherAmount;
+
 out vec4 fragColor;
 
 // Half-extent of the proxy cube, in blast radii. client/VolumetricFx draws a cube this size, so the two
@@ -755,7 +767,10 @@ float sampleField(vec3 wp, out vec3 emission) {
             // the peak at 1.0 and puts the old hard edge at 0.135 rather than 0.0, so the spark is a little
             // larger and far softer rather than a different object.
             float disc = 1.0 - smoothstep(0.0, 0.09, d);
-            float soft = exp(-(d * d) / (2.0 * 0.045 * 0.045));
+            // sigma is a uniform, not a literal: 0.045 was a guess. Clamped strictly above zero - at 0 the
+            // exponent divides by nothing, and exp(-inf) is not a recoverable value on every driver.
+            float sigma = clamp(ScgSparkSigma, 0.005, 0.25);
+            float soft = exp(-(d * d) / (2.0 * sigma * sigma));
             float profile = mix(disc, soft, clamp(ScgSparkSoft, 0.0, 1.0));
             body += Sparks * profile * twinkle * 2.0;
             bright *= mix(1.0, 2.4, Sparks * twinkle);
@@ -1297,6 +1312,8 @@ void main() {
     // The clamp is not decorative. Dithering pushes rgb up as well as down, and rgb <= a is what
     // premultiplied alpha under ONE, ONE_MINUS_SRC_ALPHA requires - so the clamp to opacity keeps that
     // invariant exactly and the dither can never add light the blend is not entitled to.
-    outColor = clamp(outColor + (jitter - 0.5) * (clamp(ScgDither, 0.0, 1.0) / 255.0), 0.0, opacity);
+    outColor = clamp(outColor + (jitter - 0.5) * (clamp(ScgDither, 0.0, 1.0)
+                                                  * clamp(ScgDitherAmount, 0.0, 4.0) / 255.0),
+                     0.0, opacity);
     fragColor = vec4(outColor, opacity);
 }

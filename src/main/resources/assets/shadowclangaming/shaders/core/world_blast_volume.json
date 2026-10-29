@@ -684,6 +684,22 @@
       "values": [
         0.0
       ]
+    },
+    {
+      "name": "ScgSparkSigma",
+      "type": "float",
+      "count": 1,
+      "values": [
+        0.045
+      ]
+    },
+    {
+      "name": "ScgDitherAmount",
+      "type": "float",
+      "count": 1,
+      "values": [
+        1.0
+      ]
     }
   ]
 }
