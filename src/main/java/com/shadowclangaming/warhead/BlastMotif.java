@@ -393,7 +393,12 @@ public final class BlastMotif {
             // hue is 0.11 and cools toward deep red, and fusion, whose hue is 0.56 and cools toward
             // deeper blue. One signed offset got one of them right and pushed the other through
             // yellow-green, which is how a blue star ended up with khaki edges.
-            float coolHue = hue < 0.42F ? hue - ramp[4] : hue + ramp[4];
+            // A negative rotation is a forced direction and overrides the half-wheel rule. ARCANE needs
+            // it: the rule sends a violet hue upward toward magenta, and the Arcane Singularity is asked
+            // for deep indigo at its cool end, which is downward toward blue. The theme knows which way
+            // its own colour cools; the general rule is only the default.
+            float coolHue = ramp[4] < 0.0F ? hue + ramp[4]
+                    : hue < 0.42F ? hue - ramp[4] : hue + ramp[4];
             int a = fromHsb(hue, ramp[1], ramp[0]);
             int c = fromHsb(coolHue, ramp[3], ramp[2]);
             int b = mix(a, c, 0.5F);
@@ -638,8 +643,9 @@ public final class BlastMotif {
          * A theme's thermal ramp, as {hot brightness, hot saturation, cool brightness, cool saturation,
          * cool hue rotation in turns, fallback hue}.
          *
-         * <p>The rotation is a magnitude, not a signed offset; the caller picks the direction from the
-         * warhead's own hue. See paletteHue.
+         * <p>The rotation is normally a magnitude and the caller picks the direction from the warhead's
+         * own hue - see paletteHue. A negative value means the theme forces the direction instead, which
+         * ARCANE does: its violet cools downward into indigo, against the general rule.
          *
          * <p>The hot end is deliberately near-white for the themes that are supposed to be hot: a real
          * fireball's core is over-exposed and only its edges carry the colour. The dark themes are the
@@ -650,7 +656,7 @@ public final class BlastMotif {
                 case ORDNANCE -> new float[] {0.98F, 0.18F, 0.22F, 0.95F, 0.030F, 0.08F};
                 case INFERNO -> new float[] {1.00F, 0.12F, 0.20F, 1.00F, 0.050F, 0.03F};
                 case NUCLEAR -> new float[] {1.00F, 0.16F, 0.22F, 0.95F, 0.020F, 0.22F};
-                case ARCANE -> new float[] {0.95F, 0.25F, 0.28F, 0.90F, 0.050F, 0.78F};
+                case ARCANE -> new float[] {0.95F, 0.25F, 0.28F, 0.90F, -0.070F, 0.78F};
                 case STELLAR -> new float[] {1.00F, 0.06F, 0.82F, 0.30F, 0.060F, 0.58F};
                 case CATACLYSM -> new float[] {1.00F, 0.14F, 0.24F, 1.00F, 0.040F, 0.98F};
                 case VOID -> new float[] {0.72F, 0.45F, 0.14F, 1.00F, 0.030F, 0.78F};

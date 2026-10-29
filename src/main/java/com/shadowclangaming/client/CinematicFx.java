@@ -398,6 +398,61 @@ public final class CinematicFx {
             }
         }
 
+        // The singularity's torrent: matter dragged in, wound up, and flung back out.
+        //
+        // Two populations rather than one. A vanilla particle integrates a constant velocity and there
+        // is no per-tick hook here to curve its path, so a genuine spiral trajectory is not reachable
+        // this way. What IS reachable is an inward radial velocity plus a tangential one, which draws a
+        // chord; emitted at every angle every few ticks, the chords of successive generations land at
+        // different radii and the whole reads as material winding down the funnel. The ejection is the
+        // same construction outwards from the core.
+        //
+        // A true curved infall needs a custom Particle class, and a custom particle needs a texture in
+        // the particle atlas. There is not one in this repository and there is no way to verify from
+        // here that one would load, so this deliberately uses sprites that already exist. Invisible
+        // particles would be worse than approximate ones.
+        if (volume.vortex() > 0.30F && !charging) {
+            int torrent = (int) Math.max(10.0D, Math.min(72.0D, 42.0D * scale * volume.vortex()));
+            double swirlDir = volume.swirl() >= 0.0F ? 1.0D : -1.0D;
+            for (int i = 0; i < torrent; i++) {
+                double u = BlastGeometry.hash01((int) (seed + i * 37L));
+                double theta = Math.PI * 2.0D * BlastGeometry.hash01((int) (seed + i * 53L))
+                        + age * 0.11D;
+                // Roughly five eighths are falling in, three eighths are the ejection. More infall than
+                // outflow, because that is what a singularity does until the moment it does not.
+                boolean infall = u < 0.62D;
+                double rad = infall
+                        ? Math.max(2.0D, radius * (0.95D - 0.55D * progress) * (0.45D + 0.55D * u))
+                        : Math.max(0.8D, radius * 0.12D * (0.35D + u));
+                double px = x + Math.cos(theta) * rad;
+                double pz = z + Math.sin(theta) * rad;
+                double py = y + (BlastGeometry.hash01((int) (seed + i * 11L)) - 0.35D) * radius * 0.55D;
+                // Unit radial and tangential in the XZ plane. The tangential term is the whole point:
+                // without it this is a pump, not a vortex.
+                double ux = (px - x) / Math.max(1.0E-3D, rad);
+                double uz = (pz - z) / Math.max(1.0E-3D, rad);
+                double spin = 0.13D + 0.09D * progress;
+                double vx;
+                double vy;
+                double vz;
+                net.minecraft.core.particles.ParticleOptions kind;
+                if (infall) {
+                    double pull = 0.05D + 0.07D * progress;
+                    vx = -ux * pull - uz * spin * swirlDir;
+                    vz = -uz * pull + ux * spin * swirlDir;
+                    vy = -0.012D - 0.02D * progress;
+                    kind = net.minecraft.core.particles.ParticleTypes.REVERSE_PORTAL;
+                } else {
+                    double out = 0.10D + 0.13D * progress;
+                    vx = ux * out - uz * spin * 0.6D * swirlDir;
+                    vz = uz * out + ux * spin * 0.6D * swirlDir;
+                    vy = 0.09D + BlastGeometry.hash01((int) (seed + i * 71L)) * 0.14D;
+                    kind = motifParticle(motif.theme(), i * 5 + age);
+                }
+                mc.level.addParticle(kind, px, py, pz, vx, vy, vz);
+            }
+        }
+
         // A ring on the ground, so the effect reads from above as well as from the side.
         int ringCount = (int) Math.max(10.0D, Math.min(56.0D, 28.0D * scale));
         double ringRadius = Math.max(2.0D, radius * (charging ? 0.35D + 0.65D * progress

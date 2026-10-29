@@ -152,6 +152,13 @@ float fbm(vec3 p) {
 // up to 1.9) and then by a local multiplier of 2.4 to 3.4, so the product routinely lands between 4 and
 // 6. Clamping each channel pins them all at 1.0 and the result is pure white - which is what the sky was
 // doing. Dividing by the loudest channel holds the ratios, so the colour survives at full brightness.
+// Thin-film interference: the colour a soap bubble or an oil slick shows. It comes from the optical
+// path difference through the film, not from any pigment, so it shifts as the viewing angle changes -
+// which is what makes a membrane read as refracting light rather than as a flat glowing ring.
+vec3 iridescence(float phase) {
+    return 0.5 + 0.5 * cos(6.2831853 * (phase + vec3(0.0, 0.33, 0.67)));
+}
+
 vec3 capHue(vec3 c) {
     float loudest = max(c.r, max(c.g, c.b));
     if (loudest <= 1.0) {
@@ -308,6 +315,11 @@ float sampleField(vec3 wp, out vec3 emission) {
     float body = 0.0;
     float heat = clamp(1.0 - r * 0.8 + n * 0.35, 0.0, 1.0);
     float bright = 1.0;
+    // Per-feature colour, folded into the palette at the end. Every other feature only adds density and
+    // brightness, so until this existed there was no way for one part of the volume to be a different
+    // hue from the rest - which is why an arcane membrane could not be iridescent. Starts neutral so
+    // warheads that never write it are unchanged.
+    vec3 sheen = vec3(1.0);
 
     // --- fireball: the turbulent body. Dense all the way through, with only the SURFACE noisy, so the
     // blast occludes what is behind it. It used to carve the interior out as the effect aged, which left
@@ -557,11 +569,22 @@ float sampleField(vec3 wp, out vec3 emission) {
     // --- vortex: a twisting funnel, three arms winding as they rise
     if (Vortex > 0.01) {
         float wide = 0.12 + 0.5 * max(0.0, q.y + 0.9);
-        float arms = pow(max(0.0, sin(atan(q.z, q.x) + q.y * 2.4 - Time * 2.2) * 3.0), 6.0);
+        // The arm angle now advances with 1/r, which is what a Keplerian spiral looks like: material far
+        // out lags, material near the core has already wound several times round. A linear q.y term made
+        // every radius turn at the same rate, so the whole funnel rotated as one rigid cone.
+        float winding = atan(q.z, q.x) + q.y * 2.4 + 1.1 / max(rr, 0.16) - Time * 2.2;
+        float arms = pow(max(0.0, sin(winding) * 3.0), 6.0);
+        // Infall streaks: thin radial filaments that sweep inward and thin out as they go, so the eye
+        // reads matter being dragged down the funnel rather than a pattern painted on it.
+        float infall = pow(max(0.0, sin(winding * 2.0 + rr * 9.0 + Time * 5.0)), 22.0)
+                * (1.0 - smoothstep(0.05, 1.3, rr));
         float funnel = (1.0 - smoothstep(0.0, wide, rr))
                      * (1.0 - smoothstep(0.0, 2.3, max(0.0, q.y + 0.9)));
-        body += Vortex * funnel * (0.45 + arms) * 1.4;
+        body += Vortex * funnel * (0.45 + arms + infall * 1.6) * 1.4;
         bright *= mix(1.0, 1.8, Vortex * arms * funnel);
+        // The core goes silver-white: raw power at the centre of the funnel, against an amethyst body.
+        bright *= mix(1.0, 2.6, Vortex * infall);
+        sheen = mix(sheen, vec3(0.92, 0.90, 1.0), clamp(Vortex * infall * 0.9, 0.0, 1.0));
     }
 
     // --- cracks: glowing veins shot through the ground, pulsing outward
@@ -691,22 +714,48 @@ float sampleField(vec3 wp, out vec3 emission) {
             float ringR = 0.55 + fi * 0.45;
             float spin = Time * (0.25 + fi * 0.15) * (i == 1 ? -1.0 : 1.0);
             float ang = atan(q.z, q.x) + spin;
-            float rim = 1.0 - smoothstep(0.0, 0.035, abs(rr - ringR));
+            // Not a perfect circle. A uniform ring is a line somebody drew; a shockwave is a front
+            // moving through a medium, so it runs ahead where the medium is thin and lags where it is
+            // thick, and it ripples as it propagates. The warp is sampled in world position so the
+            // ripple travels with the front instead of spinning in place.
+            // Named for what it is rather than `dir`: there are already two `dir` locals elsewhere in
+            // this function, and shadowing a name across sibling blocks is legal GLSL but not worth
+            // relying on in a shader nobody here can compile.
+            vec2 ringDir = vec2(cos(ang), sin(ang));
+            float warp = fbm(vec3(ringDir * ringR * 2.2, Time * 0.35) + seedOffset);
+            float waveR = ringR * (1.0 + 0.085 * (warp * 2.0 - 1.0) + 0.030 * sin(ang * 5.0 - Time * 1.7));
+            float rim = 1.0 - smoothstep(0.0, 0.030, abs(rr - waveR));
+            // The membrane, not just its edge: a translucent film spanning the front. Thin-film colour
+            // driven by the local film thickness, which varies with the same noise that warps the front,
+            // so the sheen breaks up instead of banding into concentric rainbows.
+            float film = 1.0 - smoothstep(waveR * 0.30, waveR, rr);
+            float thickness = (1.0 - film) * 0.55
+                    + 0.45 * fbm(vec3(q.xz * 3.0, Time * 0.25) + seedOffset);
+            vec3 membrane = iridescence(thickness + rr * 0.9 - Time * 0.12 + fi * 0.17);
+            // Bias the interference toward the warhead's own palette so an arcane membrane reads amethyst
+            // and indigo rather than as a full rainbow, and keep a silver-white component for the raw
+            // power at the crest.
+            membrane = mix(membrane, vec3(0.78, 0.72, 1.0), 0.35);
+            sheen = mix(sheen, membrane, clamp(Circle * ground * (rim * 0.85 + film * 0.30), 0.0, 1.0));
             float teeth = pow(max(0.0, sin(ang * (14.0 + fi * 8.0))), 16.0);
             float spokes = pow(max(0.0, sin(ang * 6.0)), 24.0);
-            float inner = 1.0 - smoothstep(ringR * 0.55, ringR, rr);
-            float lobes = abs(sin(ang * 3.0)) * ringR;
+            float inner = 1.0 - smoothstep(waveR * 0.55, waveR, rr);
+            float lobes = abs(sin(ang * 3.0)) * waveR;
             float figure = 1.0 - smoothstep(0.0, 0.03, abs(rr - lobes));
             // The signature: a pentagram on the ground ring, turning with it, and a hexagram counter-turning
             // over it. Drawn as real line segments rather than a polar trick, so the chords stay straight at
             // any radius instead of bowing - which is the difference between a sigil and a flower.
             vec2 sigilPos = vec2(q.x, q.z);
-            float pent = starPolygon(sigilPos, 5.0, 2.0, ringR * 0.98, 0.030, spin);
-            float hexa = starPolygon(sigilPos, 6.0, 2.0, ringR * 1.12, 0.024, -spin * 1.5);
-            float sigilCore = 1.0 - smoothstep(0.0, ringR * 0.34, rr);
-            body += Circle * ground * (rim * 1.6 + teeth * rim * 1.3 + spokes * inner * 0.9 + figure * 1.1
-                    + pent * 1.9 + hexa * 1.4 + sigilCore * 0.35);
+            float pent = starPolygon(sigilPos, 5.0, 2.0, waveR * 0.98, 0.030, spin);
+            float hexa = starPolygon(sigilPos, 6.0, 2.0, waveR * 1.12, 0.024, -spin * 1.5);
+            float sigilCore = 1.0 - smoothstep(0.0, waveR * 0.34, rr);
+            // film * 0.55 is the translucent body of the membrane: faint enough that the sigil and the
+            // crest still dominate, present enough that the front reads as a sheet of force rather than
+            // as a wire circle.
+            body += Circle * ground * (rim * 1.6 + film * 0.55 + teeth * rim * 1.3 + spokes * inner * 0.9
+                    + figure * 1.1 + pent * 1.9 + hexa * 1.4 + sigilCore * 0.35);
             bright *= mix(1.0, 3.0, Circle * ground * max(rim, pent));
+            bright *= mix(1.0, 1.5, Circle * ground * film);
 
             // Overhead: bigger, thinner, and rotating the opposite way, so the two do not lock together.
             float plane = 1.0 - smoothstep(0.0, 0.07, abs(q.y - (1.7 + fi * 0.22)));
@@ -746,6 +795,7 @@ float sampleField(vec3 wp, out vec3 emission) {
     if (charging) {
         col *= 0.7 + 0.3 * sin(Time * 6.0 + r * 4.0);
     }
+    col *= sheen;
     emission = col * Glow * bright;
     // Hue-preserving cap, not a per-channel clamp. Glow is authored up to 1.9 and the palettes are
     // already pale, so this product routinely exceeds 1.0 in several channels at once. Clamping each one
