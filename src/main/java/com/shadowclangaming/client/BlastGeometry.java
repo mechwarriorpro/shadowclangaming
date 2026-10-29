@@ -122,6 +122,39 @@ public final class BlastGeometry {
     // ------------------------------------------------------------------ primitives
 
     /** A single quad. Returns 4. */
+    /**
+     * A quad whose four corners carry their own alpha, as a multiplier on the colour's own.
+     *
+     * <p>This is the whole fix for the hard edges. {@link #quad} writes one flat colour to all four
+     * corners, so every primitive this class builds - motes, arcs, rings, sigils - had a uniform interior
+     * and a knife-edge boundary. The vertex format is POSITION_COLOR, so there are no UVs and no texture
+     * to soften anything with, and the fragment shader deliberately outputs the interpolated vertex colour
+     * and nothing else. Per-vertex alpha was already in the {@link Sink} contract and no call site used
+     * it; interpolating it across the quad is what turns a hard square into a soft round sprite without
+     * adding a single attribute, sampler or branch to the shader.
+     *
+     * @param aa,ab,ac,ad 0..1 alpha multiplier per corner
+     */
+    public static int quadShaded(Sink sink,
+                                 float ax, float ay, float az, float aa,
+                                 float bx, float by, float bz, float ab,
+                                 float cx, float cy, float cz, float ac,
+                                 float dx, float dy, float dz, float ad, int argb) {
+        int r = (argb >>> 16) & 0xFF;
+        int g = (argb >>> 8) & 0xFF;
+        int b = argb & 0xFF;
+        int base = (argb >>> 24) & 0xFF;
+        sink.vertex(ax, ay, az, r, g, b, alphaAt(base, aa));
+        sink.vertex(bx, by, bz, r, g, b, alphaAt(base, ab));
+        sink.vertex(cx, cy, cz, r, g, b, alphaAt(base, ac));
+        sink.vertex(dx, dy, dz, r, g, b, alphaAt(base, ad));
+        return 4;
+    }
+
+    private static int alphaAt(int base, float multiplier) {
+        return Math.max(0, Math.min(255, Math.round(base * Math.max(0.0F, Math.min(1.0F, multiplier)))));
+    }
+
     public static int quad(Sink sink,
                            float ax, float ay, float az,
                            float bx, float by, float bz,
@@ -420,18 +453,75 @@ public final class BlastGeometry {
         return emitted;
     }
 
-    /** Two perpendicular quads: a dot that is visible from any direction. */
+    /**
+     * Segments around a {@link #softDisc}. Six reads as round at mote scale, and the vertex cost stays
+     * inside budget: 96 vertices a mote puts the heaviest motif on the roster (ragnarok, 160 motes) at
+     * 15,360 of {@code CinematicFx.MAX_VERTICES} 48,000. Eight segments would read marginally rounder and
+     * cost a third more of the cap for nothing visible at this size.
+     */
+    private static final int DISC_SEGMENTS = 6;
+
+    /**
+     * A glowing mote: two perpendicular soft discs.
+     *
+     * <p>This used to be two perpendicular solid quads, which is to say two crossed squares - the reported
+     * "white square-like particles ... simple sprites or decals placed on top of the scene". There is no
+     * texture atlas entry to round them off with and the fragment shader is deliberately branch-free, so
+     * the roundness has to come from the geometry: a fan of wedges whose alpha falls from full at the
+     * centre to nothing at the rim. Six segments over two radial bands is 48 vertices a disc, 96 a mote,
+     * which keeps a 130-mote column near 12,500 of the 48,000 available.
+     *
+     * <p>Still a cross rather than a billboard, for the reason the original gave: this class has no camera,
+     * and a cross is legible from every angle.
+     */
     public static int crossSprite(Sink sink, float x, float y, float z, float size, int argb) {
-        int emitted = quad(sink,
-                x - size, y - size, z,
-                x + size, y - size, z,
-                x + size, y + size, z,
-                x - size, y + size, z, argb);
-        emitted += quad(sink,
-                x, y - size, z - size,
-                x, y - size, z + size,
-                x, y + size, z + size,
-                x, y + size, z - size, argb);
+        // Disc in the XY plane, then in the ZY plane.
+        int emitted = softDisc(sink, x, y, z, 1.0F, 0.0F, 0.0F, 0.0F, 1.0F, 0.0F, size, argb);
+        emitted += softDisc(sink, x, y, z, 0.0F, 0.0F, 1.0F, 0.0F, 1.0F, 0.0F, size, argb);
+        return emitted;
+    }
+
+    /**
+     * One soft disc in the plane spanned by the unit vectors U and V, full alpha at the centre and nothing
+     * at the rim, built as degenerate quads because the buffer is in QUADS mode.
+     */
+    private static int softDisc(Sink sink, float cx, float cy, float cz,
+                                float ux, float uy, float uz,
+                                float vx, float vy, float vz,
+                                float size, int argb) {
+        int emitted = 0;
+        // Two radial bands: 0 -> 0.5 holds most of the brightness, 0.5 -> 1 is the falloff to nothing.
+        // A single band would make a cone, which still shows a visible seam at half radius.
+        float[] radii = {0.0F, 0.5F, 1.0F};
+        float[] alphas = {1.0F, 0.42F, 0.0F};
+        for (int band = 0; band < 2; band++) {
+            float t0 = radii[band] * size;
+            float t1 = radii[band + 1] * size;
+            float a0 = alphas[band];
+            float a1 = alphas[band + 1];
+            for (int i = 0; i < DISC_SEGMENTS; i++) {
+                double ang0 = Math.PI * 2.0D * i / DISC_SEGMENTS;
+                double ang1 = Math.PI * 2.0D * (i + 1) / DISC_SEGMENTS;
+                float c0 = (float) Math.cos(ang0);
+                float s0 = (float) Math.sin(ang0);
+                float c1 = (float) Math.cos(ang1);
+                float s1 = (float) Math.sin(ang1);
+                emitted += quadShaded(sink,
+                        cx + (ux * c0 + vx * s0) * t0,
+                        cy + (uy * c0 + vy * s0) * t0,
+                        cz + (uz * c0 + vz * s0) * t0, a0,
+                        cx + (ux * c1 + vx * s1) * t0,
+                        cy + (uy * c1 + vy * s1) * t0,
+                        cz + (uz * c1 + vz * s1) * t0, a0,
+                        cx + (ux * c1 + vx * s1) * t1,
+                        cy + (uy * c1 + vy * s1) * t1,
+                        cz + (uz * c1 + vz * s1) * t1, a1,
+                        cx + (ux * c0 + vx * s0) * t1,
+                        cy + (uy * c0 + vy * s0) * t1,
+                        cz + (uz * c0 + vz * s0) * t1, a1,
+                        argb);
+            }
+        }
         return emitted;
     }
 
@@ -460,12 +550,27 @@ public final class BlastGeometry {
         sx /= sideLength;
         sz /= sideLength;
         double h = thickness * 0.5D;
-        return quad(sink,
-                (float) (x0 - sx * h), (float) (y0 - h * 0.5D), (float) (z0 - sz * h),
-                (float) (x1 - sx * h), (float) (y1 - h * 0.5D), (float) (z1 - sz * h),
-                (float) (x1 + sx * h), (float) (y1 + h * 0.5D), (float) (z1 + sz * h),
-                (float) (x0 + sx * h), (float) (y0 + h * 0.5D), (float) (z0 + sz * h),
+        // Two quads across the width instead of one, with the outer edges at zero alpha and the spine at
+        // full. A single quad is a flat ribbon with two knife edges, which is exactly the reported "flat
+        // purple arcs ... solid, flat, following perfect geometric paths". Splitting it down the middle
+        // and fading to nothing at both sides gives the tendril a soft, glowing cross-section - still two
+        // quads' worth of geometry, but it reads as a stream of light with thickness rather than as a
+        // strip of coloured paper.
+        float y0e = (float) (y0 - h * 0.5D);
+        float y1e = (float) (y1 + h * 0.5D);
+        int emitted = quadShaded(sink,
+                (float) (x0 - sx * h), y0e, (float) (z0 - sz * h), 0.0F,
+                (float) (x1 - sx * h), y1e, (float) (z1 - sz * h), 0.0F,
+                (float) x1, y1e, (float) z1, 1.0F,
+                (float) x0, y0e, (float) z0, 1.0F,
                 argb);
+        emitted += quadShaded(sink,
+                (float) x0, y0e, (float) z0, 1.0F,
+                (float) x1, y1e, (float) z1, 1.0F,
+                (float) (x1 + sx * h), y1e, (float) (z1 + sz * h), 0.0F,
+                (float) (x0 + sx * h), y0e, (float) (z0 + sz * h), 0.0F,
+                argb);
+        return emitted;
     }
 
 
