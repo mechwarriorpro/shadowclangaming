@@ -38,6 +38,21 @@ public final class SCGBlockEntities {
                     .of(ProcessorBlockEntity::new, SCGBlocks.DECOMPOSER.get(), SCGBlocks.SYNTHESIZER.get())
                     .build(null));
 
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.shadowclangaming.block.MicroscopeBlockEntity>> MICROSCOPE =
+            BLOCK_ENTITIES.register("microscope", () -> BlockEntityType.Builder
+                    .of(com.shadowclangaming.block.MicroscopeBlockEntity::new, SCGBlocks.MICROSCOPE.get())
+                    .build(null));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.shadowclangaming.block.ChemicalReactorBlockEntity>> CHEMICAL_REACTOR =
+            BLOCK_ENTITIES.register("chemical_reactor", () -> BlockEntityType.Builder
+                    .of(com.shadowclangaming.block.ChemicalReactorBlockEntity::new, SCGBlocks.CHEMICAL_REACTOR.get())
+                    .build(null));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.shadowclangaming.block.CentrifugeBlockEntity>> CENTRIFUGE =
+            BLOCK_ENTITIES.register("centrifuge", () -> BlockEntityType.Builder
+                    .of(com.shadowclangaming.block.CentrifugeBlockEntity::new, SCGBlocks.CENTRIFUGE.get())
+                    .build(null));
+
     /** The Auto-Trader: one per block, holds the Bank Card and the FE buffer. */
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<AutoTraderBlockEntity>> AUTO_TRADER =
             BLOCK_ENTITIES.register("auto_trader", () -> BlockEntityType.Builder

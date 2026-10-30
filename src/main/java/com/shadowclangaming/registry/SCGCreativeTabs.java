@@ -160,6 +160,11 @@ public final class SCGCreativeTabs {
                         output.accept(SCGItems.RAIDER_BOOTS.get());
                         output.accept(SCGItems.DECOMPOSER.get());
                         output.accept(SCGItems.SYNTHESIZER.get());
+                        output.accept(SCGItems.MICROSCOPE.get());
+                        output.accept(SCGItems.CHEMICAL_REACTOR.get());
+                        output.accept(SCGItems.CENTRIFUGE.get());
+                        output.accept(SCGItems.POCKET_MICROSCOPE.get());
+                        output.accept(SCGItems.CHEMIST_JOURNAL.get());
                         output.accept(SCGItems.URANIUM_ORE.get());
                         output.accept(SCGItems.RAW_URANIUM.get());
                         output.accept(SCGItems.ENRICHED_URANIUM.get());

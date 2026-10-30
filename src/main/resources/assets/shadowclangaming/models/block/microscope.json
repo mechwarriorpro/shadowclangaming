@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "shadowclangaming:block/microscope_top",
+    "bottom": "shadowclangaming:block/microscope_bottom",
+    "side": "shadowclangaming:block/microscope_side"
+  }
+}

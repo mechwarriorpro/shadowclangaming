@@ -132,6 +132,7 @@ public class ShadowClanGaming {
                         com.shadowclangaming.magic.ManaSources.tickPlayer(player);
                         com.shadowclangaming.magic.CreepingEvil.tickPlayer(player);
                         com.shadowclangaming.armor.ArmorSets.tickPlayer(player);
+                        com.shadowclangaming.chem.RadiationSystem.tickPlayer(player);
                     }
                 });
 

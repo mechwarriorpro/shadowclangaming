@@ -227,6 +227,14 @@ public final class SCGDataComponents {
             builder -> builder.persistent(com.mojang.serialization.Codec.STRING)
                     .networkSynchronized(net.minecraft.network.codec.ByteBufCodecs.STRING_UTF8));
 
+    /** Chemical formulas discovered and logged into the Chemist's Journal. */
+    public static final Supplier<DataComponentType<java.util.List<String>>> JOURNAL_DISCOVERIES =
+            DATA_COMPONENTS.registerComponentType(
+                    "journal_discoveries",
+                    builder -> builder.persistent(com.mojang.serialization.Codec.STRING.listOf())
+                            .networkSynchronized(net.minecraft.network.codec.ByteBufCodecs.STRING_UTF8
+                                    .apply(net.minecraft.network.codec.ByteBufCodecs.list(500))));
+
     private SCGDataComponents() {
     }
 

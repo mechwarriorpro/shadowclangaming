@@ -50,6 +50,24 @@ public final class SynthesisTable {
         // Basic chemistry: gunpowder from its elements. Cheap, always useful, teaches the machine.
         add(synthesis(80, new ItemStack(Items.GUNPOWDER, 2),
                 Element.S, 1, Element.N, 2, Element.K, 1, Element.C, 1));
+
+        // Mineral synthesis: reconstruct valuable minerals from pure elements.
+        add(synthesis(120, new ItemStack(Items.DIAMOND, 1),
+                Element.C, 8));
+        add(synthesis(100, new ItemStack(Items.EMERALD, 1),
+                Element.BE, 1, Element.AL, 1, Element.SI, 2, Element.O, 3));
+        add(synthesis(60, new ItemStack(Items.QUARTZ, 2),
+                Element.SI, 3, Element.O, 6));
+        add(synthesis(80, new ItemStack(Items.GLOWSTONE_DUST, 2),
+                Element.P, 2, Element.S, 1, Element.HE, 1));
+        add(synthesis(80, new ItemStack(Items.REDSTONE, 2),
+                Element.FE, 1, Element.CU, 1, Element.SI, 1));
+        add(synthesis(90, new ItemStack(Items.TNT, 1),
+                Element.C, 3, Element.H, 2, Element.N, 3, Element.O, 4));
+        add(synthesis(140, new ItemStack(Items.ENDER_PEARL, 1),
+                Element.SI, 2, Element.C, 1, Element.N, 2, Element.TI, 1));
+        add(synthesis(180, new ItemStack(Items.NETHERITE_SCRAP, 1),
+                Element.AU, 2, Element.TI, 2, Element.W, 1, Element.C, 1));
     }
 
     private static Synthesis synthesis(int ticks, ItemStack result, Object... elementCountPairs) {

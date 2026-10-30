@@ -71,6 +71,42 @@ public final class SCGBlocks {
                     .requiresCorrectToolForDrops());
 
     /**
+     * Chemistry workstation #3: inspect items to reveal their elemental formula.
+     */
+    public static final DeferredBlock<com.shadowclangaming.block.MicroscopeBlock> MICROSCOPE = BLOCKS.registerBlock(
+            "microscope",
+            com.shadowclangaming.block.MicroscopeBlock::new,
+            BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.METAL)
+                    .strength(2.5F, 4.0F)
+                    .sound(SoundType.METAL)
+                    .noOcclusion());
+
+    /**
+     * Chemistry machine #4: nuclear fission & fusion of elements.
+     */
+    public static final DeferredBlock<com.shadowclangaming.block.ChemicalReactorBlock> CHEMICAL_REACTOR = BLOCKS.registerBlock(
+            "chemical_reactor",
+            com.shadowclangaming.block.ChemicalReactorBlock::new,
+            BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.METAL)
+                    .strength(4.0F, 8.0F)
+                    .sound(SoundType.HEAVY_METAL)
+                    .requiresCorrectToolForDrops());
+
+    /**
+     * Chemistry machine #5: high-speed isotope separation.
+     */
+    public static final DeferredBlock<com.shadowclangaming.block.CentrifugeBlock> CENTRIFUGE = BLOCKS.registerBlock(
+            "centrifuge",
+            com.shadowclangaming.block.CentrifugeBlock::new,
+            BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.METAL)
+                    .strength(3.5F, 6.0F)
+                    .sound(SoundType.METAL)
+                    .requiresCorrectToolForDrops());
+
+    /**
      * Auto-Trader: items in -> money, FE in -> money, redstone -> buys the template item.
      * Holds a Bank Card; that card's owner is the account.
      */

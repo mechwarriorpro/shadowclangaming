@@ -611,6 +611,18 @@ public final class SCGItems {
     public static final DeferredItem<Item> TRITIUM_CELL = ITEMS.registerSimpleItem(
             "tritium_cell", new Item.Properties());
 
+    /** Handheld Pocket Microscope / Chemist's Lens. */
+    public static final DeferredItem<com.shadowclangaming.item.PocketMicroscopeItem> POCKET_MICROSCOPE =
+            ITEMS.registerItem("pocket_microscope",
+                    com.shadowclangaming.item.PocketMicroscopeItem::new,
+                    new Item.Properties().stacksTo(1));
+
+    /** The Chemist's Field Journal for logging discovered chemical recipes. */
+    public static final DeferredItem<com.shadowclangaming.item.ChemistJournalItem> CHEMIST_JOURNAL =
+            ITEMS.registerItem("chemist_journal",
+                    com.shadowclangaming.item.ChemistJournalItem::new,
+                    new Item.Properties().stacksTo(1));
+
     // ------------------------------------------------------------------ block items
 
     public static final DeferredItem<BlockItem> LAUNCH_PAD = ITEMS.registerSimpleBlockItem(SCGBlocks.LAUNCH_PAD);
@@ -625,6 +637,9 @@ public final class SCGItems {
             new Item.Properties());
     public static final DeferredItem<BlockItem> DECOMPOSER = ITEMS.registerSimpleBlockItem(SCGBlocks.DECOMPOSER);
     public static final DeferredItem<BlockItem> SYNTHESIZER = ITEMS.registerSimpleBlockItem(SCGBlocks.SYNTHESIZER);
+    public static final DeferredItem<BlockItem> MICROSCOPE = ITEMS.registerSimpleBlockItem(SCGBlocks.MICROSCOPE);
+    public static final DeferredItem<BlockItem> CHEMICAL_REACTOR = ITEMS.registerSimpleBlockItem(SCGBlocks.CHEMICAL_REACTOR);
+    public static final DeferredItem<BlockItem> CENTRIFUGE = ITEMS.registerSimpleBlockItem(SCGBlocks.CENTRIFUGE);
     public static final DeferredItem<BlockItem> URANIUM_ORE = ITEMS.registerSimpleBlockItem(SCGBlocks.URANIUM_ORE);
     public static final DeferredItem<BlockItem> FABRICATOR = ITEMS.registerSimpleBlockItem(SCGBlocks.FABRICATOR);
     public static final DeferredItem<BlockItem> CONTROL_PANEL = ITEMS.registerSimpleBlockItem(SCGBlocks.CONTROL_PANEL);
