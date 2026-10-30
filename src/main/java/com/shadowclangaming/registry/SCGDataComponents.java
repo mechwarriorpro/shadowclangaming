@@ -235,6 +235,20 @@ public final class SCGDataComponents {
                             .networkSynchronized(net.minecraft.network.codec.ByteBufCodecs.STRING_UTF8
                                     .apply(net.minecraft.network.codec.ByteBufCodecs.list(500))));
 
+    /** Chemical coating applied to a weapon: element and remaining hit charges. */
+    public static final Supplier<DataComponentType<com.shadowclangaming.chem.ChemicalCoating>> CHEMICAL_COATING =
+            DATA_COMPONENTS.registerComponentType(
+                    "chemical_coating",
+                    builder -> builder.persistent(com.shadowclangaming.chem.ChemicalCoating.CODEC)
+                            .networkSynchronized(com.shadowclangaming.chem.ChemicalCoating.STREAM_CODEC));
+
+    /** Chemical toxicant / element laced into a food item. */
+    public static final Supplier<DataComponentType<Element>> POISONED_FOOD =
+            DATA_COMPONENTS.registerComponentType(
+                    "poisoned_food",
+                    builder -> builder.persistent(Element.CODEC)
+                            .networkSynchronized(Element.STREAM_CODEC));
+
     private SCGDataComponents() {
     }
 

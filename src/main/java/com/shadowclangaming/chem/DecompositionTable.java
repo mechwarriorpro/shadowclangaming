@@ -96,7 +96,9 @@ public final class DecompositionTable {
     }
 
     public static boolean isDecomposable(ItemStack stack) {
-        return !stack.isEmpty() && TABLE.containsKey(stack.getItem());
+        if (stack.isEmpty()) return false;
+        if (stack.is(SCGItems.CHEMICAL_BUCKET.get())) return true;
+        return TABLE.containsKey(stack.getItem());
     }
 
     /**
@@ -106,6 +108,10 @@ public final class DecompositionTable {
     public static List<Yield> yieldsFor(ItemStack stack) {
         if (stack.isEmpty()) {
             return List.of();
+        }
+        if (stack.is(SCGItems.CHEMICAL_BUCKET.get())) {
+            Element e = com.shadowclangaming.item.ChemicalBucketItem.elementOf(stack);
+            return List.of(new Yield(e, 8, 8));
         }
         List<Yield> yields = TABLE.get(stack.getItem());
         return yields == null ? List.of() : yields;
@@ -120,6 +126,16 @@ public final class DecompositionTable {
      * A "vial" is one unit of one element - see {@link com.shadowclangaming.item.ElementVialItem}.
      */
     public static List<ItemStack> decompose(ItemStack stack, net.minecraft.util.RandomSource random) {
+        if (stack.is(SCGItems.CHEMICAL_BUCKET.get())) {
+            Element e = com.shadowclangaming.item.ChemicalBucketItem.elementOf(stack);
+            List<ItemStack> out = new ArrayList<>();
+            for (int i = 0; i < 8; i++) {
+                out.add(com.shadowclangaming.item.ElementVialItem.create(e, 1));
+            }
+            out.add(new ItemStack(Items.BUCKET));
+            return out;
+        }
+
         List<Yield> yields = TABLE.get(stack.getItem());
         List<ItemStack> out = new ArrayList<>();
         if (yields == null) {

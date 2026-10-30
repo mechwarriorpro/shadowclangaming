@@ -26,11 +26,11 @@ public final class SCGClientColorRegistration {
             if (tintIndex == 0) {
                 Element element = stack.get(SCGDataComponents.ELEMENT.get());
                 if (element == null) {
-                    return 0x00000000; // empty vial: completely clear liquid
+                    return 0x00000000; // empty: completely clear liquid
                 }
                 return FastColor.ARGB32.opaque(element.colour());
             }
-            return -1; // untinted glass bottle frame on layer 1
-        }, SCGItems.ELEMENT_VIAL.get());
+            return -1; // untinted container frame on layer 1
+        }, SCGItems.ELEMENT_VIAL.get(), SCGItems.CHEMICAL_BUCKET.get());
     }
 }

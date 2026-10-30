@@ -173,6 +173,18 @@ public class ShadowClanGaming {
                     }
                 });
 
+        // Chemistry combat and interaction: weapon chemical coatings, poisoned food, sneak-right-click gestures
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                com.shadowclangaming.chem.WeaponCoatingSystem::onDamage);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                com.shadowclangaming.chem.WeaponCoatingSystem::onTooltip);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                com.shadowclangaming.chem.FoodPoisoningSystem::onFinishUsingItem);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                com.shadowclangaming.chem.FoodPoisoningSystem::onTooltip);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                com.shadowclangaming.chem.ChemicalInteractionEvents::onRightClickItem);
+
         // Operator commands (/shadowclangaming scar ...)
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 com.shadowclangaming.command.SCGCommands::register);

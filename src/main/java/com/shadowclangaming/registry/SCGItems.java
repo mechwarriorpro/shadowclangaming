@@ -602,6 +602,12 @@ public final class SCGItems {
     public static final DeferredItem<ElementVialItem> ELEMENT_VIAL = ITEMS.registerItem(
             "element_vial", ElementVialItem::new, new Item.Properties().stacksTo(64));
 
+    /** Liquid chemical bucket containing 8 units of an element. */
+    public static final DeferredItem<com.shadowclangaming.item.ChemicalBucketItem> CHEMICAL_BUCKET =
+            ITEMS.registerItem("chemical_bucket",
+                    com.shadowclangaming.item.ChemicalBucketItem::new,
+                    new Item.Properties().stacksTo(1).craftRemainder(net.minecraft.world.item.Items.BUCKET));
+
     public static final DeferredItem<Item> RAW_URANIUM = ITEMS.registerSimpleItem(
             "raw_uranium", new Item.Properties());
 

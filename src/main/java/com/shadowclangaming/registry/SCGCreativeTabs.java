@@ -165,6 +165,14 @@ public final class SCGCreativeTabs {
                         output.accept(SCGItems.CENTRIFUGE.get());
                         output.accept(SCGItems.POCKET_MICROSCOPE.get());
                         output.accept(SCGItems.CHEMIST_JOURNAL.get());
+                        // chemical buckets
+                        output.accept(com.shadowclangaming.item.ChemicalBucketItem.create(Element.N));
+                        output.accept(com.shadowclangaming.item.ChemicalBucketItem.create(Element.CL));
+                        output.accept(com.shadowclangaming.item.ChemicalBucketItem.create(Element.HG));
+                        output.accept(com.shadowclangaming.item.ChemicalBucketItem.create(Element.U235));
+                        output.accept(com.shadowclangaming.item.ChemicalBucketItem.create(Element.NA));
+                        output.accept(com.shadowclangaming.item.ChemicalBucketItem.create(Element.H));
+                        output.accept(com.shadowclangaming.item.ChemicalBucketItem.create(Element.O));
                         output.accept(SCGItems.URANIUM_ORE.get());
                         output.accept(SCGItems.RAW_URANIUM.get());
                         output.accept(SCGItems.ENRICHED_URANIUM.get());
