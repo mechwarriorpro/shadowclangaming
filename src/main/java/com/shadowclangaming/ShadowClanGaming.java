@@ -184,6 +184,8 @@ public class ShadowClanGaming {
                 com.shadowclangaming.chem.FoodPoisoningSystem::onTooltip);
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 com.shadowclangaming.chem.ChemicalInteractionEvents::onRightClickItem);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                com.shadowclangaming.item.PolytoolEvents::onLivingDrops);
 
         // Operator commands (/shadowclangaming scar ...)
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(

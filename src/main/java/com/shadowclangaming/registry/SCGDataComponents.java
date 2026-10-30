@@ -263,12 +263,12 @@ public final class SCGDataComponents {
                     builder -> builder.persistent(com.shadowclangaming.chem.Compound.CODEC)
                             .networkSynchronized(com.shadowclangaming.chem.Compound.STREAM_CODEC));
 
-    /** Chemical element infused into the Polytool. */
-    public static final Supplier<DataComponentType<Element>> POLYTOOL_UPGRADE =
+    /** Chemical element upgrades installed on the Polytool. */
+    public static final Supplier<DataComponentType<java.util.List<com.shadowclangaming.item.PolytoolUpgrade>>> POLYTOOL_UPGRADES =
             DATA_COMPONENTS.registerComponentType(
-                    "polytool_upgrade",
-                    builder -> builder.persistent(Element.CODEC)
-                            .networkSynchronized(Element.STREAM_CODEC));
+                    "polytool_upgrades",
+                    builder -> builder.persistent(com.shadowclangaming.item.PolytoolUpgrade.CODEC.listOf())
+                            .networkSynchronized(com.shadowclangaming.item.PolytoolUpgrade.STREAM_CODEC.apply(ByteBufCodecs.list())));
 
     private SCGDataComponents() {
     }
