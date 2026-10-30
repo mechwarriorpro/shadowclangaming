@@ -98,6 +98,7 @@ public final class DecompositionTable {
     public static boolean isDecomposable(ItemStack stack) {
         if (stack.isEmpty()) return false;
         if (stack.is(SCGItems.CHEMICAL_BUCKET.get())) return true;
+        if (stack.is(SCGItems.COMPOUND_VIAL.get())) return true;
         return TABLE.containsKey(stack.getItem());
     }
 
@@ -112,6 +113,17 @@ public final class DecompositionTable {
         if (stack.is(SCGItems.CHEMICAL_BUCKET.get())) {
             Element e = com.shadowclangaming.item.ChemicalBucketItem.elementOf(stack);
             return List.of(new Yield(e, 8, 8));
+        }
+        if (stack.is(SCGItems.COMPOUND_VIAL.get())) {
+            Compound c = com.shadowclangaming.item.CompoundVialItem.compoundOf(stack);
+            if (c == null) {
+                return List.of();
+            }
+            List<Yield> list = new ArrayList<>();
+            for (Map.Entry<Element, Integer> entry : c.elements().entrySet()) {
+                list.add(new Yield(entry.getKey(), entry.getValue(), entry.getValue()));
+            }
+            return list;
         }
         List<Yield> yields = TABLE.get(stack.getItem());
         return yields == null ? List.of() : yields;
@@ -133,6 +145,20 @@ public final class DecompositionTable {
                 out.add(com.shadowclangaming.item.ElementVialItem.create(e, 1));
             }
             out.add(new ItemStack(Items.BUCKET));
+            return out;
+        }
+
+        if (stack.is(SCGItems.COMPOUND_VIAL.get())) {
+            Compound c = com.shadowclangaming.item.CompoundVialItem.compoundOf(stack);
+            List<ItemStack> out = new ArrayList<>();
+            if (c == null) {
+                return out;
+            }
+            for (Map.Entry<Element, Integer> entry : c.elements().entrySet()) {
+                for (int i = 0; i < entry.getValue(); i++) {
+                    out.add(com.shadowclangaming.item.ElementVialItem.create(entry.getKey(), 1));
+                }
+            }
             return out;
         }
 

@@ -608,6 +608,18 @@ public final class SCGItems {
                     com.shadowclangaming.item.ChemicalBucketItem::new,
                     new Item.Properties().stacksTo(1).craftRemainder(net.minecraft.world.item.Items.BUCKET));
 
+    /** Chemical compound vial / test tube. */
+    public static final DeferredItem<com.shadowclangaming.item.CompoundVialItem> COMPOUND_VIAL =
+            ITEMS.registerItem("compound_vial",
+                    com.shadowclangaming.item.CompoundVialItem::new,
+                    new Item.Properties().stacksTo(64));
+
+    /** The Chemical Polytool multi-tool. */
+    public static final DeferredItem<com.shadowclangaming.item.PolytoolItem> POLYTOOL =
+            ITEMS.registerItem("polytool",
+                    com.shadowclangaming.item.PolytoolItem::new,
+                    new Item.Properties().durability(2048));
+
     public static final DeferredItem<Item> RAW_URANIUM = ITEMS.registerSimpleItem(
             "raw_uranium", new Item.Properties());
 

@@ -17,21 +17,7 @@ import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
 import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 
 /**
- * Handles poisoning / spiking food with chemical elements and compounds.
- *
- * <p>Inspired by the classic MineChem food poisoning & pharmacological effects:
- * <ul>
- *   <li>Food can be laced with chemical elements (Arsenic, Mercury, Polonium, Chlorine, etc.).</li>
- *   <li>The spiked food appears normal to unsuspecting players unless inspected with a Microscope.</li>
- *   <li>Ingesting the food triggers severe pharmacological & toxicological symptoms:
- *     <ul>
- *       <li><b>Arsenic / Mercury / Lead (As, Hg, Pb):</b> Lethal toxicity (Poison IV, Nausea, Slowness).</li>
- *       <li><b>Radioactive (U, Pu, Po, Ra):</b> Internal acute radiation syndrome (Wither III, Blindness).</li>
- *       <li><b>Halogens (Cl, F, Br):</b> Internal caustic acid burn (Instant damage, Nausea).</li>
- *       <li><b>Combustive (P, S, Na):</b> Internal combustion (sets consumer on fire).</li>
- *     </ul>
- *   </li>
- * </ul>
+ * Handles poisoning / spiking food with chemical elements and MineChem compounds.
  */
 public final class FoodPoisoningSystem {
 
@@ -41,20 +27,38 @@ public final class FoodPoisoningSystem {
         food.set(SCGDataComponents.POISONED_FOOD.get(), toxicant);
     }
 
+    public static void poisonFoodWithCompound(ItemStack food, Compound compound) {
+        food.set(SCGDataComponents.POISONED_COMPOUND.get(), compound);
+    }
+
     public static Element getToxicant(ItemStack food) {
         return food.get(SCGDataComponents.POISONED_FOOD.get());
+    }
+
+    public static Compound getCompoundToxicant(ItemStack food) {
+        return food.get(SCGDataComponents.POISONED_COMPOUND.get());
     }
 
     @SubscribeEvent
     public static void onFinishUsingItem(LivingEntityUseItemEvent.Finish event) {
         ItemStack item = event.getItem();
-        Element toxicant = getToxicant(item);
-        if (toxicant == null) {
+        LivingEntity consumer = event.getEntity();
+
+        Compound compound = getCompoundToxicant(item);
+        if (compound != null) {
+            compound.applyEffect(consumer);
+            if (consumer instanceof ServerPlayer player) {
+                player.displayClientMessage(
+                        Component.translatable("message.shadowclangaming.food.poisoned_alert")
+                                .withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD), true);
+            }
             return;
         }
 
-        LivingEntity consumer = event.getEntity();
-        applyFoodToxicity(consumer, toxicant);
+        Element toxicant = getToxicant(item);
+        if (toxicant != null) {
+            applyFoodToxicity(consumer, toxicant);
+        }
     }
 
     private static void applyFoodToxicity(LivingEntity consumer, Element toxicant) {
@@ -109,17 +113,23 @@ public final class FoodPoisoningSystem {
 
     @SubscribeEvent
     public static void onTooltip(ItemTooltipEvent event) {
-        Element toxicant = getToxicant(event.getItemStack());
-        if (toxicant == null) {
+        Compound comp = getCompoundToxicant(event.getItemStack());
+        if (comp != null) {
+            if (net.minecraft.client.gui.screens.Screen.hasShiftDown()) {
+                event.getToolTip().add(
+                        Component.literal("§c⚠ Laced with " + comp.displayName() + " (" + comp.formula() + ")§r"));
+            }
             return;
         }
 
-        // Only revealed if shift is held or player has chemist tools
-        if (net.minecraft.client.gui.screens.Screen.hasShiftDown()) {
-            event.getToolTip().add(
-                    Component.translatable("tooltip.shadowclangaming.food.laced_with",
-                                    Component.translatable(toxicant.translationKey()))
-                            .withStyle(ChatFormatting.RED, ChatFormatting.ITALIC));
+        Element toxicant = getToxicant(event.getItemStack());
+        if (toxicant != null) {
+            if (net.minecraft.client.gui.screens.Screen.hasShiftDown()) {
+                event.getToolTip().add(
+                        Component.translatable("tooltip.shadowclangaming.food.laced_with",
+                                        Component.translatable(toxicant.translationKey()))
+                                .withStyle(ChatFormatting.RED, ChatFormatting.ITALIC));
+            }
         }
     }
 }

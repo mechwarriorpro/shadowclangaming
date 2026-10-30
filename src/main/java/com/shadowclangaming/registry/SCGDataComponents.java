@@ -249,6 +249,27 @@ public final class SCGDataComponents {
                     builder -> builder.persistent(Element.CODEC)
                             .networkSynchronized(Element.STREAM_CODEC));
 
+    /** Chemical compound inside a compound test tube / vial. */
+    public static final Supplier<DataComponentType<com.shadowclangaming.chem.Compound>> COMPOUND =
+            DATA_COMPONENTS.registerComponentType(
+                    "compound",
+                    builder -> builder.persistent(com.shadowclangaming.chem.Compound.CODEC)
+                            .networkSynchronized(com.shadowclangaming.chem.Compound.STREAM_CODEC));
+
+    /** Chemical compound laced into a food item. */
+    public static final Supplier<DataComponentType<com.shadowclangaming.chem.Compound>> POISONED_COMPOUND =
+            DATA_COMPONENTS.registerComponentType(
+                    "poisoned_compound",
+                    builder -> builder.persistent(com.shadowclangaming.chem.Compound.CODEC)
+                            .networkSynchronized(com.shadowclangaming.chem.Compound.STREAM_CODEC));
+
+    /** Chemical element infused into the Polytool. */
+    public static final Supplier<DataComponentType<Element>> POLYTOOL_UPGRADE =
+            DATA_COMPONENTS.registerComponentType(
+                    "polytool_upgrade",
+                    builder -> builder.persistent(Element.CODEC)
+                            .networkSynchronized(Element.STREAM_CODEC));
+
     private SCGDataComponents() {
     }
 

@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "SPA",
+    " I ",
+    " I "
+  ],
+  "key": {
+    "S": {
+      "item": "minecraft:diamond_shovel"
+    },
+    "P": {
+      "item": "minecraft:diamond_pickaxe"
+    },
+    "A": {
+      "item": "minecraft:diamond_axe"
+    },
+    "I": {
+      "item": "minecraft:iron_ingot"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:polytool",
+    "count": 1
+  }
+}

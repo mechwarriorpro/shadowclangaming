@@ -32,5 +32,16 @@ public final class SCGClientColorRegistration {
             }
             return -1; // untinted container frame on layer 1
         }, SCGItems.ELEMENT_VIAL.get(), SCGItems.CHEMICAL_BUCKET.get());
+
+        event.register((stack, tintIndex) -> {
+            if (tintIndex == 0) {
+                Compound compound = stack.get(SCGDataComponents.COMPOUND.get());
+                if (compound == null) {
+                    return 0x00000000;
+                }
+                return FastColor.ARGB32.opaque(compound.colour());
+            }
+            return -1;
+        }, SCGItems.COMPOUND_VIAL.get());
     }
 }

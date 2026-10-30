@@ -165,6 +165,7 @@ public final class SCGCreativeTabs {
                         output.accept(SCGItems.CENTRIFUGE.get());
                         output.accept(SCGItems.POCKET_MICROSCOPE.get());
                         output.accept(SCGItems.CHEMIST_JOURNAL.get());
+                        output.accept(SCGItems.POLYTOOL.get());
                         // chemical buckets
                         output.accept(com.shadowclangaming.item.ChemicalBucketItem.create(Element.N));
                         output.accept(com.shadowclangaming.item.ChemicalBucketItem.create(Element.CL));
@@ -180,6 +181,10 @@ public final class SCGCreativeTabs {
                         // one vial of every element
                         for (Element element : Element.values()) {
                             output.accept(ElementVialItem.create(element, 1));
+                        }
+                        // one vial of every chemical compound
+                        for (com.shadowclangaming.chem.Compound compound : com.shadowclangaming.chem.Compound.values()) {
+                            output.accept(com.shadowclangaming.item.CompoundVialItem.create(compound, 1));
                         }
                     })
                     .build());

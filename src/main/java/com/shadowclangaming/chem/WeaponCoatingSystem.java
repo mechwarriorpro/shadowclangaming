@@ -17,23 +17,7 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 
 /**
- * Handles weapon chemical coatings.
- *
- * <p>Inspired by the classic MineChem weapon coating mechanic:
- * <ul>
- *   <li>Weapons can be coated with chemical elements (16 hits from a vial, 128 from a bucket).</li>
- *   <li>Attacking enemies discharges the chemical onto the target:
- *     <ul>
- *       <li><b>Radioactive (U, Pu, Ra, Po):</b> Irradiating strike (Wither II, Weakness, Glowing).</li>
- *       <li><b>Toxic Heavy Metals (As, Hg, Pb, Cd):</b> Fatal toxicity (Poison II, Nausea, Slowness).</li>
- *       <li><b>Alkali Metals (Na, K, Li, Cs):</b> Exothermic fiery blast & burning.</li>
- *       <li><b>Halogens / Acids (Cl, F, Br, I):</b> Caustic acid burn & armor corrosion.</li>
- *       <li><b>Cryogenic (N, He, Ne):</b> Extreme freeze slowness & frostbite.</li>
- *       <li><b>Precious Catalysts (Au, Ag, Pt):</b> Consecrated strike (+50% bonus damage to undead).</li>
- *       <li><b>Refractory Carbides (C, W, Ti):</b> Hardened edge (+3 armor-piercing damage).</li>
- *     </ul>
- *   </li>
- * </ul>
+ * Handles weapon chemical coatings using both elements and classic MineChem compounds.
  */
 public final class WeaponCoatingSystem {
 
@@ -42,11 +26,12 @@ public final class WeaponCoatingSystem {
 
     private WeaponCoatingSystem() {}
 
-    /**
-     * Applies a chemical coating to a weapon.
-     */
     public static void applyCoating(ItemStack weapon, Element element, int charges) {
-        weapon.set(SCGDataComponents.CHEMICAL_COATING.get(), new ChemicalCoating(element, charges));
+        weapon.set(SCGDataComponents.CHEMICAL_COATING.get(), ChemicalCoating.ofElement(element, charges));
+    }
+
+    public static void applyCompoundCoating(ItemStack weapon, Compound compound, int charges) {
+        weapon.set(SCGDataComponents.CHEMICAL_COATING.get(), ChemicalCoating.ofCompound(compound, charges));
     }
 
     public static ChemicalCoating getCoating(ItemStack weapon) {
@@ -66,8 +51,15 @@ public final class WeaponCoatingSystem {
         }
 
         LivingEntity victim = event.getEntity();
-        Element elem = coating.element();
-        applyChemicalHitEffect(attacker, victim, elem, event);
+
+        // 1. If coated with a Compound:
+        if (coating.isCompound()) {
+            coating.compound().applyEffect(victim);
+        }
+        // 2. If coated with an Element:
+        else if (coating.isElement()) {
+            applyChemicalHitEffect(attacker, victim, coating.element(), event);
+        }
 
         // Decrement charges
         int remaining = coating.charges() - 1;
@@ -163,17 +155,25 @@ public final class WeaponCoatingSystem {
             return;
         }
 
-        Element element = coating.element();
-        event.getToolTip().add(
-                Component.translatable("tooltip.shadowclangaming.coating.header",
-                                Component.translatable(element.translationKey()), coating.charges())
-                        .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+        if (coating.isCompound()) {
+            Compound comp = coating.compound();
+            event.getToolTip().add(
+                    Component.literal("§6Coated: §f" + comp.displayName() + " §7(" + comp.formula() + " - " + coating.charges() + " hits)"));
+            event.getToolTip().add(
+                    Component.literal("§eEffect: §7" + (comp.isToxic() ? "Lethal Toxicity" : comp.isAcid() ? "Caustic Acid Burn" : comp.isExplosive() ? "High Explosive Shockwave" : "Pharmacological Agent")));
+        } else if (coating.isElement()) {
+            Element element = coating.element();
+            event.getToolTip().add(
+                    Component.translatable("tooltip.shadowclangaming.coating.header",
+                                    Component.translatable(element.translationKey()), coating.charges())
+                            .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
 
-        String effectKey = getEffectDescriptionKey(element);
-        event.getToolTip().add(
-                Component.translatable("tooltip.shadowclangaming.coating.effect",
-                                Component.translatable(effectKey))
-                        .withStyle(ChatFormatting.YELLOW));
+            String effectKey = getEffectDescriptionKey(element);
+            event.getToolTip().add(
+                    Component.translatable("tooltip.shadowclangaming.coating.effect",
+                                    Component.translatable(effectKey))
+                            .withStyle(ChatFormatting.YELLOW));
+        }
     }
 
     public static String getEffectDescriptionKey(Element element) {

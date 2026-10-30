@@ -68,6 +68,32 @@ public final class SynthesisTable {
                 Element.SI, 2, Element.C, 1, Element.N, 2, Element.TI, 1));
         add(synthesis(180, new ItemStack(Items.NETHERITE_SCRAP, 1),
                 Element.AU, 2, Element.TI, 2, Element.W, 1, Element.C, 1));
+
+        // Chemical Compounds from classic MineChem:
+        add(synthesis(60, com.shadowclangaming.item.CompoundVialItem.create(Compound.SULFURIC_ACID, 1),
+                Element.H, 2, Element.S, 1, Element.O, 4));
+        add(synthesis(40, com.shadowclangaming.item.CompoundVialItem.create(Compound.HYDROCHLORIC_ACID, 1),
+                Element.H, 1, Element.CL, 1));
+        add(synthesis(60, com.shadowclangaming.item.CompoundVialItem.create(Compound.CYANIDE, 1),
+                Element.K, 1, Element.C, 1, Element.N, 1));
+        add(synthesis(40, com.shadowclangaming.item.CompoundVialItem.create(Compound.AMMONIA, 1),
+                Element.N, 1, Element.H, 3));
+        add(synthesis(60, com.shadowclangaming.item.CompoundVialItem.create(Compound.PHOSGENE, 1),
+                Element.C, 1, Element.O, 1, Element.CL, 2));
+        add(synthesis(80, com.shadowclangaming.item.CompoundVialItem.create(Compound.SARIN, 1),
+                Element.C, 4, Element.H, 10, Element.F, 1, Element.O, 2, Element.P, 1));
+        add(synthesis(80, com.shadowclangaming.item.CompoundVialItem.create(Compound.PENICILLIN, 1),
+                Element.C, 8, Element.H, 9, Element.N, 1, Element.O, 2, Element.S, 1));
+        add(synthesis(60, com.shadowclangaming.item.CompoundVialItem.create(Compound.ASPIRIN, 1),
+                Element.C, 9, Element.H, 8, Element.O, 4));
+        add(synthesis(60, com.shadowclangaming.item.CompoundVialItem.create(Compound.CAFFEINE, 1),
+                Element.C, 8, Element.H, 10, Element.N, 4, Element.O, 2));
+        add(synthesis(50, com.shadowclangaming.item.CompoundVialItem.create(Compound.ETHANOL, 1),
+                Element.C, 2, Element.H, 6, Element.O, 1));
+        add(synthesis(40, com.shadowclangaming.item.CompoundVialItem.create(Compound.SALT, 1),
+                Element.NA, 1, Element.CL, 1));
+        add(synthesis(80, com.shadowclangaming.item.CompoundVialItem.create(Compound.TETRODOTOXIN, 1),
+                Element.C, 11, Element.H, 17, Element.N, 3, Element.O, 8));
     }
 
     private static Synthesis synthesis(int ticks, ItemStack result, Object... elementCountPairs) {

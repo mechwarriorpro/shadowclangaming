@@ -50,11 +50,15 @@ public final class ChemicalInteractionEvents {
         }
 
         Element element = null;
+        Compound compound = null;
         int charges = 0;
         boolean fromBucket = false;
 
         if (off.getItem() instanceof ElementVialItem) {
             element = ElementVialItem.elementOf(off);
+            charges = WeaponCoatingSystem.VIAL_CHARGES;
+        } else if (off.getItem() instanceof com.shadowclangaming.item.CompoundVialItem) {
+            compound = com.shadowclangaming.item.CompoundVialItem.compoundOf(off);
             charges = WeaponCoatingSystem.VIAL_CHARGES;
         } else if (off.getItem() instanceof ChemicalBucketItem) {
             element = ChemicalBucketItem.elementOf(off);
@@ -62,13 +66,17 @@ public final class ChemicalInteractionEvents {
             fromBucket = true;
         }
 
-        if (element == null) {
+        if (element == null && compound == null) {
             return;
         }
 
         // 1. Weapon Chemical Coating
         if (isWeapon(main)) {
-            WeaponCoatingSystem.applyCoating(main, element, charges);
+            if (compound != null) {
+                WeaponCoatingSystem.applyCompoundCoating(main, compound, charges);
+            } else {
+                WeaponCoatingSystem.applyCoating(main, element, charges);
+            }
 
             if (!player.isCreative()) {
                 off.shrink(1);
@@ -85,11 +93,9 @@ public final class ChemicalInteractionEvents {
                         15, 0.3, 0.3, 0.3, 0.05);
 
                 if (player instanceof ServerPlayer serverPlayer) {
+                    String chemName = compound != null ? compound.displayName() : element.displayName();
                     serverPlayer.displayClientMessage(
-                            Component.translatable("message.shadowclangaming.coating.applied",
-                                    main.getHoverName(),
-                                    Component.translatable(element.translationKey()),
-                                    charges).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), true);
+                            Component.literal("§6Coated §f" + main.getHoverName().getString() + "§6 with §f" + chemName + " §7(" + charges + " hits)!"), true);
                 }
             }
 
@@ -100,7 +106,11 @@ public final class ChemicalInteractionEvents {
 
         // 2. Poisoning Food
         if (main.has(DataComponents.FOOD)) {
-            FoodPoisoningSystem.poisonFood(main, element);
+            if (compound != null) {
+                FoodPoisoningSystem.poisonFoodWithCompound(main, compound);
+            } else {
+                FoodPoisoningSystem.poisonFood(main, element);
+            }
 
             if (!player.isCreative()) {
                 off.shrink(1);
@@ -117,11 +127,9 @@ public final class ChemicalInteractionEvents {
                         12, 0.2, 0.2, 0.2, 0.02);
 
                 if (player instanceof ServerPlayer serverPlayer) {
+                    String chemName = compound != null ? compound.displayName() : element.displayName();
                     serverPlayer.displayClientMessage(
-                            Component.translatable("message.shadowclangaming.food.laced",
-                                    main.getHoverName(),
-                                    Component.translatable(element.translationKey()))
-                                    .withStyle(ChatFormatting.RED, ChatFormatting.BOLD), true);
+                            Component.literal("§cLaced §f" + main.getHoverName().getString() + "§c with §f" + chemName + "!"), true);
                 }
             }
 
