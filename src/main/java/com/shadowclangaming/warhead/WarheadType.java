@@ -157,7 +157,36 @@ public enum WarheadType {
      * Beef Supreme: a cow with 5000 health, a boss bar, and a 30-damage ram it telegraphs for five
      * seconds. See BeefSupremeEntity.
      */
-    BEEF("beef", 0.0F);
+    BEEF("beef", 0.0F),
+
+    // ------------------------------------------------------------------ optional mod integration warheads
+
+    /** Create rotational overtorque implosion: kinetic shockwave flinging entities and shearing machinery. */
+    KINETIC("kinetic", 28.0F),
+    /** Mekanism supercritical phase reactor breach: radioactive fallout, polonium ionizing blast, and energy drain. */
+    SUPERCRITICAL("supercritical", 36.0F),
+    /** Applied Energistics 2 matter condenser: gravitational matter compression, ME cable wipeout, and singularity formation. */
+    MATTER_CONDENSER("matter_condenser", 32.0F),
+    /** Dyson Cube Project solar collector beam: focused orbital death-ray vaporizing a shaft from sky to bedrock. */
+    STELLAR_SWARM("stellar_swarm", 42.0F),
+    /** ProjectE transmutation burst: matter-to-EMC conversion wave that siphons alchemical energy into condensers. */
+    TRANSMUTATION("transmutation", 30.0F),
+    /** Project EX colossal star rupture: astronomical alchemical supernova unleashing unformatted infinity EMC. */
+    COLOSSAL_STAR("colossal_star", 50.0F),
+    /** Railcraft steam boiler catastrophe: superheated locomotive steam explosion scalding living targets and shattering tracks. */
+    STEAM_RUPTURE("steam_rupture", 24.0F),
+    /** RedPower / ProjectRed blulectric overload: voltage surge burning out logic circuits, alloy wires, and redstone gates. */
+    VOLTMETER("voltmeter", 18.0F),
+    /** Witchery / Bewitchment coven hex: dark voodoo malediction inflicting crippling curses, phantom shades, and eclipse. */
+    VOODOO("voodoo", 20.0F),
+    /** Thermal Series entropy cataclysm: dual-phase Pyrotheum and Cryotheum thermal shockwave shattering matter. */
+    THERMAL_ENTROPY("thermal_entropy", 26.0F),
+    /** Botania mana pool overcharge: hyper-condensed mana discharge releasing shimmering pixies and floral shockwaves. */
+    MANA_OVERLOAD("mana_overload", 22.0F),
+    /** Draconic Evolution reactor core failure: apocalyptic chaos containment failure disintegrating everything in its wake. */
+    DRACONIC_REACTOR("draconic_reactor", 60.0F),
+    /** Blood Magic sanguine sacrifice: vampiric essence harvest siphoning life force and inscribing demonic blood glyphs. */
+    SANGUINE("sanguine", 25.0F);
 
     private final String id;
     private final float basePower;
@@ -511,7 +540,404 @@ public enum WarheadType {
                         Component.translatable("message.shadowclangaming.numismatic_detonation",
                                 String.format("%,d", funding), radius), false);
             }
+            case KINETIC -> detonateKinetic(level, pos, power);
+            case SUPERCRITICAL -> detonateSupercritical(level, pos, power);
+            case MATTER_CONDENSER -> detonateMatterCondenser(level, pos, power);
+            case STELLAR_SWARM -> detonateStellarSwarm(level, pos, power);
+            case TRANSMUTATION -> detonateTransmutation(level, pos, power);
+            case COLOSSAL_STAR -> detonateColossalStar(level, pos, power);
+            case STEAM_RUPTURE -> detonateSteamRupture(level, pos, power);
+            case VOLTMETER -> detonateVoltmeter(level, pos, power);
+            case VOODOO -> detonateVoodoo(level, pos, power);
+            case THERMAL_ENTROPY -> detonateThermalEntropy(level, pos, power);
+            case MANA_OVERLOAD -> detonateManaOverload(level, pos, power);
+            case DRACONIC_REACTOR -> detonateDraconicReactor(level, pos, power);
+            case SANGUINE -> detonateSanguine(level, pos, power);
         }
+    }
+
+    private static void detonateKinetic(ServerLevel level, Vec3 pos, float power) {
+        boom(level, pos, power);
+        int radius = Math.max(8, Math.round(power * 1.2F));
+        AABB box = new AABB(pos, pos).inflate(radius);
+        for (Entity entity : level.getEntities((Entity) null, box, Entity::isAlive)) {
+            double distance = Math.sqrt(entity.position().distanceToSqr(pos));
+            if (distance > radius || distance < 0.01) {
+                continue;
+            }
+            double falloff = 1.0 - distance / radius;
+            Vec3 away = entity.position().subtract(pos).normalize();
+            Vec3 torque = new Vec3(-away.z, 0.4, away.x).scale(falloff * 2.0);
+            Vec3 push = away.scale(falloff * 3.5).add(torque);
+            entity.push(push.x, Math.min(2.5, push.y + 0.5), push.z);
+            entity.hurt(level.damageSources().generic(), (float) (power * falloff * 2.5F));
+        }
+        BlockPos centre = BlockPos.containing(pos.x, pos.y, pos.z);
+        int blockRadius = Math.min(radius, 24);
+        for (BlockPos p : BlockPos.betweenClosed(
+                centre.offset(-blockRadius, -blockRadius / 2, -blockRadius),
+                centre.offset(blockRadius, blockRadius / 2, blockRadius))) {
+            if (level.getRandom().nextFloat() > 0.35F) {
+                continue;
+            }
+            var state = level.getBlockState(p);
+            String name = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(state.getBlock()).getPath();
+            if (name.contains("shaft") || name.contains("cog") || name.contains("gear") || name.contains("belt")
+                    || name.contains("bearing") || name.contains("piston") || name.contains("kinetic")
+                    || name.contains("flywheel") || name.contains("glass")) {
+                level.destroyBlock(p, true);
+            }
+        }
+        FxBudget.send(level, ParticleTypes.CRIT, pos, 80, radius * 0.5, radius * 0.3, radius * 0.5, 0.4);
+        level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.ANVIL_DESTROY, SoundSource.BLOCKS, 2.0F, 0.8F);
+        level.getServer().getPlayerList().broadcastSystemMessage(
+                Component.translatable("message.shadowclangaming.kinetic_cataclysm"), false);
+    }
+
+    private static void detonateSupercritical(ServerLevel level, Vec3 pos, float power) {
+        boom(level, pos, power);
+        int radius = Math.max(10, Math.round(power * 1.5F));
+        AABB box = new AABB(pos, pos).inflate(radius);
+        for (Entity entity : level.getEntities((Entity) null, box, e -> e instanceof Player)) {
+            if (entity instanceof Player player) {
+                player.addEffect(new MobEffectInstance(MobEffects.WITHER, 300, 3));
+                player.addEffect(new MobEffectInstance(MobEffects.GLOWING, 1200, 0));
+                player.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 300, 0));
+                player.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 400, 1));
+                player.addEffect(new MobEffectInstance(MobEffects.POISON, 300, 1));
+                player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 200, 1));
+            }
+        }
+        BlockPos centre = BlockPos.containing(pos.x, pos.y, pos.z);
+        int meltRadius = Math.min(radius / 2, 16);
+        for (BlockPos p : BlockPos.betweenClosed(
+                centre.offset(-meltRadius, -meltRadius / 2, -meltRadius),
+                centre.offset(meltRadius, meltRadius / 2, meltRadius))) {
+            if (level.getRandom().nextFloat() < 0.25F && !level.getBlockState(p).isAir()
+                    && level.getBlockState(p.above()).isAir()) {
+                level.setBlockAndUpdate(p, Blocks.MAGMA_BLOCK.defaultBlockState());
+            }
+        }
+        FxBudget.send(level, ParticleTypes.SCULK_SOUL, pos, 100, 4.0, 3.0, 4.0, 0.2);
+        FxBudget.send(level, ParticleTypes.ELECTRIC_SPARK, pos, 80, 5.0, 4.0, 5.0, 0.3);
+        level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.WITHER_SPAWN, SoundSource.BLOCKS, 2.0F, 0.7F);
+        level.getServer().getPlayerList().broadcastSystemMessage(
+                Component.translatable("message.shadowclangaming.supercritical_detonation"), false);
+    }
+
+    private static void detonateMatterCondenser(ServerLevel level, Vec3 pos, float power) {
+        int radius = Math.max(8, Math.round(power * 1.0F));
+        AABB box = new AABB(pos, pos).inflate(radius);
+        for (Entity entity : level.getEntities((Entity) null, box, Entity::isAlive)) {
+            Vec3 toward = pos.subtract(entity.position());
+            double dist = toward.length();
+            if (dist > 0.1) {
+                entity.push(toward.x * 0.3, toward.y * 0.3 + 0.2, toward.z * 0.3);
+            }
+            entity.hurt(level.damageSources().magic(), power * 1.2F);
+        }
+        boom(level, pos, power * 0.8F);
+        BlockPos dropPos = BlockPos.containing(pos.x, pos.y + 1, pos.z);
+        level.addFreshEntity(new net.minecraft.world.entity.item.ItemEntity(level,
+                dropPos.getX() + 0.5, dropPos.getY() + 0.5, dropPos.getZ() + 0.5,
+                new ItemStack(Blocks.IRON_BLOCK, 4)));
+        FxBudget.send(level, ParticleTypes.REVERSE_PORTAL, pos, 120, 3.0, 3.0, 3.0, 0.3);
+        FxBudget.send(level, ParticleTypes.DRAGON_BREATH, pos, 60, 4.0, 2.0, 4.0, 0.1);
+        level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.END_PORTAL_SPAWN, SoundSource.BLOCKS, 1.8F, 1.4F);
+        level.getServer().getPlayerList().broadcastSystemMessage(
+                Component.translatable("message.shadowclangaming.matter_condenser_collapse"), false);
+    }
+
+    private static void detonateStellarSwarm(ServerLevel level, Vec3 pos, float power) {
+        int radius = Math.max(4, Math.round(power * 0.2F));
+        int maxY = level.getMaxBuildHeight();
+        int minY = level.getMinBuildHeight();
+        BlockPos centre = BlockPos.containing(pos.x, pos.y, pos.z);
+        for (int x = -radius; x <= radius; x++) {
+            for (int z = -radius; z <= radius; z++) {
+                if (x * x + z * z <= radius * radius) {
+                    for (int y = maxY; y >= minY; y--) {
+                        BlockPos p = new BlockPos(centre.getX() + x, y, centre.getZ() + z);
+                        var state = level.getBlockState(p);
+                        if (!state.isAir() && state.getBlock() != Blocks.BEDROCK) {
+                            if (y == minY + 1 || level.getRandom().nextFloat() < 0.1F) {
+                                level.setBlockAndUpdate(p, Blocks.MAGMA_BLOCK.defaultBlockState());
+                            } else {
+                                level.setBlockAndUpdate(p, Blocks.AIR.defaultBlockState());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        boom(level, pos, power);
+        ignite(level, pos, (int) (power * 1.5F));
+        blindPlayers(level, pos, 128, 240);
+        FxBudget.send(level, ParticleTypes.FLASH, pos, 2, 0, 0, 0, 0);
+        FxBudget.send(level, ParticleTypes.LAVA, pos, 80, radius * 1.5, 4.0, radius * 1.5, 0.2);
+        level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.BLOCKS, 4.0F, 1.2F);
+        level.getServer().getPlayerList().broadcastSystemMessage(
+                Component.translatable("message.shadowclangaming.stellar_swarm_beam"), false);
+    }
+
+    private static void detonateTransmutation(ServerLevel level, Vec3 pos, float power) {
+        boom(level, pos, power * 0.8F);
+        int radius = Math.max(8, Math.round(power * 1.2F));
+        BlockPos centre = BlockPos.containing(pos.x, pos.y, pos.z);
+        for (BlockPos p : BlockPos.betweenClosed(
+                centre.offset(-radius, -radius / 3, -radius),
+                centre.offset(radius, radius / 3, radius))) {
+            double d2 = p.distSqr(centre);
+            if (d2 < 16 || d2 > radius * radius || level.getRandom().nextFloat() > 0.20F) {
+                continue;
+            }
+            var state = level.getBlockState(p);
+            if (state.is(Blocks.STONE) || state.is(Blocks.DIRT) || state.is(Blocks.GRASS_BLOCK) || state.is(Blocks.COBBLESTONE)) {
+                float roll = level.getRandom().nextFloat();
+                if (roll < 0.05F) {
+                    level.setBlockAndUpdate(p, Blocks.DIAMOND_BLOCK.defaultBlockState());
+                } else if (roll < 0.20F) {
+                    level.setBlockAndUpdate(p, Blocks.GOLD_BLOCK.defaultBlockState());
+                } else if (roll < 0.50F) {
+                    level.setBlockAndUpdate(p, Blocks.REDSTONE_BLOCK.defaultBlockState());
+                } else {
+                    level.setBlockAndUpdate(p, Blocks.OBSIDIAN.defaultBlockState());
+                }
+            }
+        }
+        if (com.shadowclangaming.compat.projecte.ProjectEEmc.isAvailable()) {
+            for (BlockPos p : BlockPos.betweenClosed(centre.offset(-16, -8, -16), centre.offset(16, 8, 16))) {
+                var be = level.getBlockEntity(p);
+                if (be != null && com.shadowclangaming.compat.projecte.ProjectEEmc.isEmcStorage(be)) {
+                    com.shadowclangaming.compat.projecte.ProjectEEmc.insertEmc(be, 204800L, null);
+                }
+            }
+        }
+        FxBudget.send(level, ParticleTypes.ENCHANT, pos, 120, radius * 0.5, radius * 0.3, radius * 0.5, 0.3);
+        FxBudget.send(level, ParticleTypes.WITCH, pos, 60, radius * 0.4, radius * 0.2, radius * 0.4, 0.1);
+        level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.PLAYER_LEVELUP, SoundSource.BLOCKS, 2.0F, 1.2F);
+        level.getServer().getPlayerList().broadcastSystemMessage(
+                Component.translatable("message.shadowclangaming.transmutation_nova"), false);
+    }
+
+    private static void detonateColossalStar(ServerLevel level, Vec3 pos, float power) {
+        boom(level, pos, power * 0.6F);
+        boom(level, pos, power);
+        int radius = Math.max(12, Math.round(power * 1.4F));
+        BlockPos centre = BlockPos.containing(pos.x, pos.y, pos.z);
+        for (BlockPos p : BlockPos.betweenClosed(
+                centre.offset(-radius, -radius / 3, -radius),
+                centre.offset(radius, radius / 3, radius))) {
+            double d2 = p.distSqr(centre);
+            if (d2 > radius * radius || level.getRandom().nextFloat() > 0.15F) {
+                continue;
+            }
+            var state = level.getBlockState(p);
+            if (!state.isAir() && state.getBlock() != Blocks.BEDROCK) {
+                level.setBlockAndUpdate(p, Blocks.GLOWSTONE.defaultBlockState());
+            }
+        }
+        blindPlayers(level, pos, (int) (power * 3.0F), 300);
+        FxBudget.send(level, ParticleTypes.TOTEM_OF_UNDYING, pos, 150, 8.0, 6.0, 8.0, 0.5);
+        FxBudget.send(level, ParticleTypes.FLASH, pos, 4, 0, 0, 0, 0);
+        level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.BELL_RESONATE, SoundSource.BLOCKS, 3.0F, 1.0F);
+        level.getServer().getPlayerList().broadcastSystemMessage(
+                Component.translatable("message.shadowclangaming.colossal_star_rupture"), false);
+    }
+
+    private static void detonateSteamRupture(ServerLevel level, Vec3 pos, float power) {
+        boom(level, pos, power);
+        int radius = Math.max(10, Math.round(power * 1.3F));
+        BlockPos centre = BlockPos.containing(pos.x, pos.y, pos.z);
+        for (BlockPos p : BlockPos.betweenClosed(
+                centre.offset(-radius, -radius / 2, -radius),
+                centre.offset(radius, radius / 2, radius))) {
+            var state = level.getBlockState(p);
+            if (state.is(net.minecraft.tags.BlockTags.RAILS)) {
+                level.destroyBlock(p, true);
+            }
+        }
+        AABB box = new AABB(pos, pos).inflate(radius);
+        for (Entity entity : level.getEntities((Entity) null, box, Entity::isAlive)) {
+            entity.hurt(level.damageSources().onFire(), power * 1.5F);
+            if (entity instanceof Player player) {
+                player.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 240, 0));
+                player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 200, 2));
+            }
+        }
+        FxBudget.send(level, ParticleTypes.CAMPFIRE_SIGNAL_SMOKE, pos, 140, radius * 0.6, 3.0, radius * 0.6, 0.05);
+        FxBudget.send(level, ParticleTypes.CLOUD, pos, 100, radius * 0.5, 2.5, radius * 0.5, 0.08);
+        level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.LAVA_EXTINGUISH, SoundSource.BLOCKS, 2.5F, 0.6F);
+        level.getServer().getPlayerList().broadcastSystemMessage(
+                Component.translatable("message.shadowclangaming.steam_rupture_catastrophe"), false);
+    }
+
+    private static void detonateVoltmeter(ServerLevel level, Vec3 pos, float power) {
+        int radius = Math.max(8, Math.round(power * 1.2F));
+        BlockPos centre = BlockPos.containing(pos.x, pos.y, pos.z);
+        for (BlockPos p : BlockPos.betweenClosed(
+                centre.offset(-radius, -radius / 2, -radius),
+                centre.offset(radius, radius / 2, radius))) {
+            var state = level.getBlockState(p);
+            String path = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(state.getBlock()).getPath();
+            if (path.contains("redstone") || path.contains("repeater") || path.contains("comparator")
+                    || path.contains("wire") || path.contains("gate") || path.contains("torch")) {
+                level.destroyBlock(p, true);
+            }
+        }
+        int bolts = 6;
+        for (int i = 0; i < bolts; i++) {
+            double angle = (Math.PI * 2.0 / bolts) * i;
+            double dist = 2.0 + level.getRandom().nextDouble() * (radius * 0.7);
+            BlockPos strike = BlockPos.containing(pos.x + Math.cos(angle) * dist, pos.y, pos.z + Math.sin(angle) * dist);
+            var lightning = net.minecraft.world.entity.EntityType.LIGHTNING_BOLT.create(level);
+            if (lightning != null) {
+                lightning.moveTo(Vec3.atBottomCenterOf(strike));
+                level.addFreshEntity(lightning);
+            }
+        }
+        AABB box = new AABB(pos, pos).inflate(radius);
+        for (Entity entity : level.getEntities((Entity) null, box, Entity::isAlive)) {
+            entity.hurt(level.damageSources().lightningBolt(), power * 1.5F);
+            if (entity instanceof Player player) {
+                player.addEffect(new MobEffectInstance(MobEffects.DIG_SLOWDOWN, 300, 2));
+                player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 160, 2));
+            }
+        }
+        FxBudget.send(level, ParticleTypes.ELECTRIC_SPARK, pos, 120, radius * 0.5, 3.0, radius * 0.5, 0.4);
+        level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.BLOCKS, 2.0F, 1.4F);
+        level.getServer().getPlayerList().broadcastSystemMessage(
+                Component.translatable("message.shadowclangaming.voltmeter_discharge"), false);
+    }
+
+    private static void detonateVoodoo(ServerLevel level, Vec3 pos, float power) {
+        boom(level, pos, power * 0.5F);
+        int radius = Math.max(10, Math.round(power * 1.5F));
+        AABB box = new AABB(pos, pos).inflate(radius);
+        for (Entity entity : level.getEntities((Entity) null, box, Entity::isAlive)) {
+            entity.hurt(level.damageSources().magic(), power * 1.2F);
+            if (entity instanceof Player player) {
+                player.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 400, 0));
+                player.addEffect(new MobEffectInstance(MobEffects.WITHER, 300, 2));
+                player.addEffect(new MobEffectInstance(MobEffects.HUNGER, 400, 3));
+                player.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 600, 2));
+                player.addEffect(new MobEffectInstance(MobEffects.DIG_SLOWDOWN, 600, 2));
+            }
+        }
+        BlockPos centre = BlockPos.containing(pos.x, pos.y, pos.z);
+        for (BlockPos p : BlockPos.betweenClosed(
+                centre.offset(-radius, -radius / 3, -radius),
+                centre.offset(radius, radius / 3, radius))) {
+            var state = level.getBlockState(p);
+            if (state.is(Blocks.TORCH) || state.is(Blocks.WALL_TORCH) || state.is(Blocks.LANTERN)) {
+                level.setBlockAndUpdate(p, Blocks.AIR.defaultBlockState());
+            }
+        }
+        for (int i = 0; i < 4; i++) {
+            var phantom = net.minecraft.world.entity.EntityType.PHANTOM.create(level);
+            if (phantom != null) {
+                phantom.moveTo(pos.x + (level.getRandom().nextDouble() - 0.5) * 6, pos.y + 3, pos.z + (level.getRandom().nextDouble() - 0.5) * 6);
+                level.addFreshEntity(phantom);
+            }
+        }
+        FxBudget.send(level, ParticleTypes.SOUL, pos, 80, radius * 0.4, 2.0, radius * 0.4, 0.05);
+        FxBudget.send(level, ParticleTypes.SQUID_INK, pos, 80, radius * 0.5, 2.0, radius * 0.5, 0.1);
+        level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.WITHER_DEATH, SoundSource.BLOCKS, 2.0F, 0.5F);
+        level.getServer().getPlayerList().broadcastSystemMessage(
+                Component.translatable("message.shadowclangaming.voodoo_curse_storm"), false);
+    }
+
+    private static void detonateThermalEntropy(ServerLevel level, Vec3 pos, float power) {
+        int radius = Math.max(8, Math.round(power * 1.1F));
+        BlockPos centre = BlockPos.containing(pos.x, pos.y, pos.z);
+        for (BlockPos p : BlockPos.betweenClosed(
+                centre.offset(-radius, -radius / 3, -radius),
+                centre.offset(radius, radius / 3, radius))) {
+            var state = level.getBlockState(p);
+            if (state.is(Blocks.WATER)) {
+                level.setBlockAndUpdate(p, Blocks.PACKED_ICE.defaultBlockState());
+            } else if (state.is(Blocks.LAVA)) {
+                level.setBlockAndUpdate(p, Blocks.OBSIDIAN.defaultBlockState());
+            }
+        }
+        AABB box = new AABB(pos, pos).inflate(radius);
+        for (Entity entity : level.getEntities((Entity) null, box, Entity::isAlive)) {
+            entity.setTicksFrozen(300);
+            entity.hurt(level.damageSources().freeze(), power * 1.2F);
+        }
+        boom(level, pos, power);
+        ignite(level, pos, (int) (power * 1.2F));
+        FxBudget.send(level, ParticleTypes.SNOWFLAKE, pos, 100, radius * 0.5, 3.0, radius * 0.5, 0.1);
+        FxBudget.send(level, ParticleTypes.FLAME, pos, 100, radius * 0.5, 3.0, radius * 0.5, 0.2);
+        level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.GLASS_BREAK, SoundSource.BLOCKS, 2.0F, 0.7F);
+        level.getServer().getPlayerList().broadcastSystemMessage(
+                Component.translatable("message.shadowclangaming.thermal_entropy_burst"), false);
+    }
+
+    private static void detonateManaOverload(ServerLevel level, Vec3 pos, float power) {
+        boom(level, pos, power * 0.75F);
+        int radius = Math.max(8, Math.round(power * 1.2F));
+        BlockPos centre = BlockPos.containing(pos.x, pos.y, pos.z);
+        for (BlockPos p : BlockPos.betweenClosed(
+                centre.offset(-radius, -radius / 3, -radius),
+                centre.offset(radius, radius / 3, radius))) {
+            var state = level.getBlockState(p);
+            if (state.is(Blocks.DIRT) || state.is(Blocks.GRASS_BLOCK)) {
+                if (level.getRandom().nextFloat() < 0.25F && level.getBlockState(p.above()).isAir()) {
+                    level.setBlockAndUpdate(p.above(), Blocks.POPPY.defaultBlockState());
+                }
+            }
+        }
+        AABB box = new AABB(pos, pos).inflate(radius);
+        for (Entity entity : level.getEntities((Entity) null, box, Entity::isAlive)) {
+            if (entity instanceof Player player) {
+                player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 300, 1));
+                player.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 600, 1));
+            } else {
+                entity.hurt(level.damageSources().magic(), power * 2.0F);
+            }
+        }
+        FxBudget.send(level, ParticleTypes.END_ROD, pos, 100, radius * 0.5, 3.0, radius * 0.5, 0.15);
+        FxBudget.send(level, ParticleTypes.GLOW, pos, 80, radius * 0.4, 2.5, radius * 0.4, 0.1);
+        level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.BLOCKS, 2.0F, 1.2F);
+        level.getServer().getPlayerList().broadcastSystemMessage(
+                Component.translatable("message.shadowclangaming.mana_overload_burst"), false);
+    }
+
+    private static void detonateDraconicReactor(ServerLevel level, Vec3 pos, float power) {
+        boom(level, pos, power * 0.5F);
+        boom(level, pos, power);
+        int radius = Math.max(14, Math.round(power * 1.6F));
+        AABB box = new AABB(pos, pos).inflate(radius);
+        for (Entity entity : level.getEntities((Entity) null, box, Entity::isAlive)) {
+            Vec3 away = entity.position().subtract(pos).normalize();
+            entity.push(away.x * 2.5, 2.0, away.z * 2.5);
+            entity.hurt(level.damageSources().dragonBreath(), power * 2.5F);
+        }
+        FxBudget.send(level, ParticleTypes.DRAGON_BREATH, pos, 150, radius * 0.5, 4.0, radius * 0.5, 0.2);
+        FxBudget.send(level, ParticleTypes.EXPLOSION_EMITTER, pos, 20, 6.0, 4.0, 6.0, 0.0);
+        level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.ENDER_DRAGON_DEATH, SoundSource.BLOCKS, 3.0F, 0.8F);
+        level.getServer().getPlayerList().broadcastSystemMessage(
+                Component.translatable("message.shadowclangaming.draconic_reactor_meltdown"), false);
+    }
+
+    private static void detonateSanguine(ServerLevel level, Vec3 pos, float power) {
+        boom(level, pos, power * 0.6F);
+        int radius = Math.max(8, Math.round(power * 1.2F));
+        AABB box = new AABB(pos, pos).inflate(radius);
+        for (Entity entity : level.getEntities((Entity) null, box, Entity::isAlive)) {
+            if (entity instanceof net.minecraft.world.entity.LivingEntity living) {
+                float siphon = Math.max(4.0F, living.getHealth() * 0.5F);
+                living.hurt(level.damageSources().magic(), siphon);
+                living.addEffect(new MobEffectInstance(MobEffects.WITHER, 200, 1));
+                living.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 200, 1));
+            }
+        }
+        FxBudget.send(level, ParticleTypes.CRIMSON_SPORE, pos, 120, radius * 0.5, 2.5, radius * 0.5, 0.2);
+        FxBudget.send(level, ParticleTypes.DAMAGE_INDICATOR, pos, 40, radius * 0.3, 1.5, radius * 0.3, 0.1);
+        level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.RAVAGER_ROAR, SoundSource.BLOCKS, 2.0F, 0.7F);
+        level.getServer().getPlayerList().broadcastSystemMessage(
+                Component.translatable("message.shadowclangaming.sanguine_sacrifice"), false);
     }
 
     // ------------------------------------------------------------------ helpers

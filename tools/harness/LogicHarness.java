@@ -1404,19 +1404,22 @@ public final class LogicHarness {
             "world_rune", "abyssal_covenant", "soul_furnace", "arcane_singularity", "quasar_lance", "starforge", "big_bang_seed", "reality_corruptor",
             "absolute_zero", "omega", "absolute_annihilation", "bulwark", "contagion", "spell", "cargo", "minefield",
             "tracking", "constructor", "spatial", "clucker", "violator", "beef",
+            "kinetic", "supercritical", "matter_condenser", "stellar_swarm", "transmutation",
+            "colossal_star", "steam_rupture", "voltmeter", "voodoo", "thermal_entropy",
+            "mana_overload", "draconic_reactor", "sanguine",
     };
 
     private static void explosivePackagingTests() {
         section("explosive packaging");
 
-        // The roster is the source of truth: 38 warheads, all packable, none skipped.
+        // The roster is the source of truth: 51 warheads, all packable, none skipped.
         int packable = 0;
         for (String id : WARHEADS) {
             if (com.shadowclangaming.warhead.ExplosivePackaging.packable(id)) {
                 packable++;
             }
         }
-        eq("the roster is 38 warheads", 38, WARHEADS.length);
+        eq("the roster is 51 warheads", 51, WARHEADS.length);
         eq("every warhead is packable", WARHEADS.length, packable);
         check("dud is packable too (a training charge)",
                 com.shadowclangaming.warhead.ExplosivePackaging.packable("dud"));
@@ -1460,14 +1463,14 @@ public final class LogicHarness {
                         && !form.impact()
                         && !com.shadowclangaming.warhead.ExplosivePackaging.Form.GRENADE.impact());
 
-        // Three forms for every warhead: 38 warheads -> 114 ids, no duplicates.
+        // Three forms for every warhead: 51 warheads -> 153 ids, no duplicates.
         java.util.Set<String> ids = new java.util.HashSet<>();
         for (String id : WARHEADS) {
             for (var f : com.shadowclangaming.warhead.ExplosivePackaging.Form.values()) {
                 ids.add(com.shadowclangaming.warhead.ExplosivePackaging.id(f, id));
             }
         }
-        eq("114 packaged ids, all distinct", 3 * WARHEADS.length, ids.size());
+        eq("153 packaged ids, all distinct", 3 * WARHEADS.length, ids.size());
     }
 
     // ------------------------------------------------------------------ barrage
@@ -2319,7 +2322,20 @@ public final class LogicHarness {
                     java.util.Map.entry("spatial", "rift=0.7"),
                     java.util.Map.entry("clucker", "embers=0.7"),
                     java.util.Map.entry("violator", "smoke=0.8,dark=0.8"),
-                    java.util.Map.entry("beef", "smoke=0.6,embers=0.6"));
+                    java.util.Map.entry("beef", "smoke=0.6,embers=0.6"),
+                    java.util.Map.entry("kinetic", "waves=0.9,debris=0.8"),
+                    java.util.Map.entry("supercritical", "flash=0.8,cap=0.8"),
+                    java.util.Map.entry("matter_condenser", "hole=0.8,vortex=0.8"),
+                    java.util.Map.entry("stellar_swarm", "shaft=0.9,prominence=0.8"),
+                    java.util.Map.entry("transmutation", "glyphs=0.8,sparks=0.8"),
+                    java.util.Map.entry("colossal_star", "star=0.9,halo=0.8"),
+                    java.util.Map.entry("steam_rupture", "smoke=0.8,dust=0.8"),
+                    java.util.Map.entry("voltmeter", "lightning=0.9,sparks=0.8"),
+                    java.util.Map.entry("voodoo", "portals=0.8,glyphs=0.7"),
+                    java.util.Map.entry("thermal_entropy", "embers=0.8,cracks=0.8"),
+                    java.util.Map.entry("mana_overload", "circle=0.8,sparks=0.8"),
+                    java.util.Map.entry("draconic_reactor", "meteors=0.8,lightning=0.8"),
+                    java.util.Map.entry("sanguine", "glyphs=0.8,vortex=0.7"));
 
     /** Read one feature weight by the name the shader uses, so the table above stays in the shader's words. */
     private static float feature(com.shadowclangaming.warhead.BlastMotif.Volume v, String name) {

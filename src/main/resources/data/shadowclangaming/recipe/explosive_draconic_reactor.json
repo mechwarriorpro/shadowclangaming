@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_draconic_reactor"
+    },
+    {
+      "item": "shadowclangaming:grenade_draconic_reactor"
+    },
+    {
+      "item": "shadowclangaming:grenade_draconic_reactor"
+    },
+    {
+      "item": "shadowclangaming:grenade_draconic_reactor"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_draconic_reactor",
+    "count": 1
+  }
+}

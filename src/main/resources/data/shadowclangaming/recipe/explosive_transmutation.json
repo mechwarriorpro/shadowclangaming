@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_transmutation"
+    },
+    {
+      "item": "shadowclangaming:grenade_transmutation"
+    },
+    {
+      "item": "shadowclangaming:grenade_transmutation"
+    },
+    {
+      "item": "shadowclangaming:grenade_transmutation"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_transmutation",
+    "count": 1
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "minecraft:gunpowder"
+    },
+    {
+      "item": "minecraft:iron_ingot"
+    },
+    {
+      "item": "minecraft:packed_mud"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:grenade_thermal_entropy",
+    "count": 2
+  }
+}

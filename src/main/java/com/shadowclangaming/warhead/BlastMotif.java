@@ -510,6 +510,19 @@ public final class BlastMotif {
                 case "violator" -> shape.smoke(0.85F).dark(0.85F).glyphs(0.4F).lightning(0.35F)
                         .glow(1.1F).cracks(0.7F).vortex(0.5F).sparks(0.4F).circle(0.4F);
                 case "beef" -> shape.smoke(0.7F).embers(0.7F).coins(0.3F).rise(0.6F).glow(0.75F).dust(0.6F).sparks(0.5F);
+                case "kinetic" -> shape.waves(0.95F).debris(0.90F).dust(0.80F).cracks(0.70F).sparks(0.60F).shell(0.50F).turb(0.90F);
+                case "supercritical" -> shape.waves(0.85F).flash(0.85F).cap(0.85F).lightning(0.60F).streaks(0.70F).smoke(0.50F).halo(0.60F).nebula(0.50F).sky(0.50F);
+                case "matter_condenser" -> shape.hole(0.85F).vortex(0.85F).implode(0.90F).dark(0.70F).disc(0.70F).lens(0.75F).cracks(0.60F).sparks(0.50F);
+                case "stellar_swarm" -> shape.shaft(0.95F).prominence(0.85F).star(0.80F).flash(0.85F).glow(1.80F).halo(0.80F).sky(0.90F).beam(0.90F);
+                case "transmutation" -> shape.glyphs(0.85F).sparks(0.85F).circle(0.80F).waves(0.60F).halo(0.70F).glow(1.40F).nebula(0.40F);
+                case "colossal_star" -> shape.star(0.95F).halo(0.90F).flash(0.90F).granule(0.85F).prominence(0.85F).glow(1.90F).sky(0.85F).nebula(0.60F);
+                case "steam_rupture" -> shape.smoke(0.90F).dust(0.85F).debris(0.75F).waves(0.70F).turb(1.10F).sparks(0.40F);
+                case "voltmeter" -> shape.lightning(0.95F).sparks(0.90F).cracks(0.75F).waves(0.65F).glow(1.30F).halo(0.50F);
+                case "voodoo" -> shape.portals(0.85F).dark(0.85F).glyphs(0.75F).smoke(0.70F).vortex(0.70F).cracks(0.60F).circle(0.65F);
+                case "thermal_entropy" -> shape.hole(0.60F).embers(0.85F).waves(0.80F).cracks(0.80F).flash(0.70F).sparks(0.65F).nebula(0.50F);
+                case "mana_overload" -> shape.circle(0.85F).sparks(0.85F).halo(0.80F).glow(1.50F).dust(0.50F).nebula(0.60F).glyphs(0.50F);
+                case "draconic_reactor" -> shape.meteors(0.85F).lightning(0.90F).waves(0.95F).skyRing(0.85F).hole(0.75F).dark(0.80F).cracks(0.85F).glow(1.85F).sky(0.90F);
+                case "sanguine" -> shape.glyphs(0.85F).vortex(0.80F).portals(0.75F).dark(0.75F).smoke(0.60F).sparks(0.70F).circle(0.75F);
                 default -> { }
             }
         }
@@ -1094,6 +1107,62 @@ public final class BlastMotif {
                     tendrils(0.15, 1.00, 1.15, 0xA06020A0, 20, 0.0045),
                     wave(0.10, 0.80, 1.70, 0xA0D0B0FF)));
 
+            // --- optional mod integration warheads -----------------------------------------
+            case "kinetic" -> new Motif("kinetic", Theme.MACHINE, 280, 1.0F, List.of(
+                    wave(0.00, 0.60, 1.25, 0xC0D4AF37),
+                    shards(0.05, 0.90, 0.85, 0xB0A0A0A0, 36, 0.0040),
+                    rings(0.02, 0.75, 1.10, 0x90B8860B, 8, 0.0080)));
+            case "supercritical" -> new Motif("supercritical", Theme.NUCLEAR, 480, 1.2F, List.of(
+                    core(0.00, 0.50, 0.75, 0xE050FF70),
+                    wave(0.05, 0.70, 1.40, 0xA020DF80),
+                    scan(0.10, 0.95, 1.65, 0x8030FFA0, 8)));
+            case "matter_condenser" -> new Motif("matter_condenser", Theme.VOID, 390, 1.0F, List.of(
+                    core(0.00, 0.60, 0.40, 0xF0100520),
+                    circle(0.05, 0.85, 0.90, 0xB0402060, 16, -0.0060),
+                    wave(0.20, 0.90, 1.15, 0x90603080)));
+            case "stellar_swarm" -> new Motif("stellar_swarm", Theme.STELLAR, 510, 1.3F, List.of(
+                    beam(0.00, 0.90, 1.20, 0xF0FFF590, 2.5),
+                    wave(0.10, 0.75, 1.50, 0xC0FFA500),
+                    sky(0.05, 0.95, 1.80, 0xA0FFD700, 24, 0.0025)));
+            case "transmutation" -> new Motif("transmutation", Theme.ARCANE, 360, 1.0F, List.of(
+                    glyphs(0.00, 0.80, 1.20, 0xD0FF007F, 18),
+                    core(0.02, 0.55, 0.65, 0xC0E0115F),
+                    circle(0.10, 0.90, 1.35, 0x90FFD700, 12, -0.0030)));
+            case "colossal_star" -> new Motif("colossal_star", Theme.STELLAR, 550, 1.4F, List.of(
+                    core(0.00, 0.65, 0.95, 0xFFFFFFFF),
+                    rings(0.00, 0.80, 1.60, 0xD0FF80DF, 10, 0.0050),
+                    wave(0.15, 0.85, 1.70, 0xB0FF1493),
+                    embers(0.05, 1.00, 1.10, 0xC0FFD700, 48, 0.0020)));
+            case "steam_rupture" -> new Motif("steam_rupture", Theme.ORDNANCE, 260, 1.0F, List.of(
+                    wave(0.00, 0.50, 1.05, 0xB0E0E8F0),
+                    shards(0.02, 0.85, 0.75, 0xC0404040, 40, -0.0030),
+                    core(0.00, 0.40, 0.50, 0x90F0F8FF)));
+            case "voltmeter" -> new Motif("voltmeter", Theme.MACHINE, 240, 0.8F, List.of(
+                    arc(0.00, 0.75, 1.15, 0xE000BFFF, 24),
+                    wave(0.05, 0.65, 1.10, 0xB0FF2020),
+                    scan(0.02, 0.80, 1.30, 0x801E90FF, 6)));
+            case "voodoo" -> new Motif("voodoo", Theme.SOUL, 340, 0.7F, List.of(
+                    core(0.00, 0.60, 0.55, 0xD0301040),
+                    glyphs(0.05, 0.85, 1.10, 0xB0800080, 14),
+                    sky(0.10, 0.95, 1.50, 0x90200530, 8, 0.0015)));
+            case "thermal_entropy" -> new Motif("thermal_entropy", Theme.CRYO, 320, 1.0F, List.of(
+                    core(0.00, 0.45, 0.60, 0xD000FFFF),
+                    wave(0.15, 0.75, 1.30, 0xD0FF4500),
+                    circle(0.20, 0.85, 1.45, 0x90E0FFFF, 14, 0.0020)));
+            case "mana_overload" -> new Motif("mana_overload", Theme.ARCANE, 290, 0.9F, List.of(
+                    core(0.00, 0.55, 0.60, 0xD000FA9A),
+                    circle(0.05, 0.80, 1.15, 0xB000FFFF, 20, 0.0045),
+                    embers(0.02, 0.90, 0.80, 0xC0FF69B4, 32, 0.0020)));
+            case "draconic_reactor" -> new Motif("draconic_reactor", Theme.CATACLYSM, 620, 1.5F, List.of(
+                    core(0.00, 0.70, 1.00, 0xFF4B0082),
+                    wave(0.10, 0.85, 1.80, 0xE0FF4500),
+                    arc(0.05, 0.90, 1.50, 0xD09400D3, 28),
+                    sky(0.15, 1.00, 2.00, 0xB0FF8C00, 16, -0.0035)));
+            case "sanguine" -> new Motif("sanguine", Theme.SOUL, 310, 0.8F, List.of(
+                    glyphs(0.00, 0.80, 1.25, 0xE08B0000, 16),
+                    core(0.02, 0.55, 0.50, 0xD0DC143C),
+                    tendrils(0.10, 0.85, 1.05, 0xB0FF0000, 18, -0.0050)));
+
             // --- anything else: the honest, boring version of "something went off" ---------
             default -> new Motif(id.isEmpty() ? "he" : id, Theme.ORDNANCE, 130, 1.0F, List.of(
                     core(0.00, 0.45, 0.60, 0xD0FFE9C0),
@@ -1129,7 +1198,10 @@ public final class BlastMotif {
             "soul_furnace", "arcane_singularity", "quasar_lance", "starforge", "big_bang_seed",
             "reality_corruptor", "absolute_zero", "omega", "absolute_annihilation", "bulwark",
             "contagion", "spell", "cargo", "minefield", "tracking", "constructor", "spatial",
-            "clucker", "violator", "beef");
+            "clucker", "violator", "beef",
+            "kinetic", "supercritical", "matter_condenser", "stellar_swarm", "transmutation",
+            "colossal_star", "steam_rupture", "voltmeter", "voodoo", "thermal_entropy",
+            "mana_overload", "draconic_reactor", "sanguine");
 
     // ------------------------------------------------------------------ spec builders
 

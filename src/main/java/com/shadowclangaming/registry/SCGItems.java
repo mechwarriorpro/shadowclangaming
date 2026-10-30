@@ -455,6 +455,73 @@ public final class SCGItems {
             "absolute_annihilation_missile", props -> new MissileItem(props, WarheadType.ABSOLUTE_ANNIHILATION, 0.8D),
             new Item.Properties().stacksTo(1));
 
+    // ------------------------------------------------------------------ optional mod integration warheads
+
+    /** Create kinetic cataclysm: runaway rotational torque implosion. */
+    public static final DeferredItem<MissileItem> KINETIC_MISSILE = ITEMS.registerItem(
+            "kinetic_missile", props -> new MissileItem(props, WarheadType.KINETIC, 0.9D),
+            new Item.Properties().stacksTo(8));
+
+    /** Mekanism supercritical phase: ionizing radiation and polonium reactor breach. */
+    public static final DeferredItem<MissileItem> SUPERCRITICAL_MISSILE = ITEMS.registerItem(
+            "supercritical_missile", props -> new MissileItem(props, WarheadType.SUPERCRITICAL, 0.9D),
+            new Item.Properties().stacksTo(8));
+
+    /** Applied Energistics 2 matter condenser: gravitational matter compression. */
+    public static final DeferredItem<MissileItem> MATTER_CONDENSER_MISSILE = ITEMS.registerItem(
+            "matter_condenser_missile", props -> new MissileItem(props, WarheadType.MATTER_CONDENSER, 0.9D),
+            new Item.Properties().stacksTo(8));
+
+    /** Dyson Cube Project stellar swarm: orbital planetary solar collector death-ray. */
+    public static final DeferredItem<MissileItem> STELLAR_SWARM_MISSILE = ITEMS.registerItem(
+            "stellar_swarm_missile", props -> new MissileItem(props, WarheadType.STELLAR_SWARM, 0.8D),
+            new Item.Properties().stacksTo(1));
+
+    /** ProjectE transmutation burst: matter-to-EMC conversion wave and condenser siphon. */
+    public static final DeferredItem<MissileItem> TRANSMUTATION_MISSILE = ITEMS.registerItem(
+            "transmutation_missile", props -> new MissileItem(props, WarheadType.TRANSMUTATION, 0.9D),
+            new Item.Properties().stacksTo(8));
+
+    /** Project EX colossal star: astronomical final star alchemical supernova. */
+    public static final DeferredItem<MissileItem> COLOSSAL_STAR_MISSILE = ITEMS.registerItem(
+            "colossal_star_missile", props -> new MissileItem(props, WarheadType.COLOSSAL_STAR, 0.8D),
+            new Item.Properties().stacksTo(1));
+
+    /** Railcraft steam rupture: high-pressure locomotive boiler explosion. */
+    public static final DeferredItem<MissileItem> STEAM_RUPTURE_MISSILE = ITEMS.registerItem(
+            "steam_rupture_missile", props -> new MissileItem(props, WarheadType.STEAM_RUPTURE, 0.9D),
+            new Item.Properties().stacksTo(8));
+
+    /** RedPower voltmeter discharge: blulectric and red alloy circuit overload. */
+    public static final DeferredItem<MissileItem> VOLTMETER_MISSILE = ITEMS.registerItem(
+            "voltmeter_missile", props -> new MissileItem(props, WarheadType.VOLTMETER, 0.9D),
+            new Item.Properties().stacksTo(8));
+
+    /** Witchery voodoo torment: ancient coven hexes, phantom shades, and eclipse curse. */
+    public static final DeferredItem<MissileItem> VOODOO_MISSILE = ITEMS.registerItem(
+            "voodoo_missile", props -> new MissileItem(props, WarheadType.VOODOO, 0.9D),
+            new Item.Properties().stacksTo(8));
+
+    /** Thermal Series thermal entropy: dual-phase Pyrotheum and Cryotheum thermal shock. */
+    public static final DeferredItem<MissileItem> THERMAL_ENTROPY_MISSILE = ITEMS.registerItem(
+            "thermal_entropy_missile", props -> new MissileItem(props, WarheadType.THERMAL_ENTROPY, 0.9D),
+            new Item.Properties().stacksTo(8));
+
+    /** Botania mana overload: hyper-condensed mana discharge and shimmering pixies. */
+    public static final DeferredItem<MissileItem> MANA_OVERLOAD_MISSILE = ITEMS.registerItem(
+            "mana_overload_missile", props -> new MissileItem(props, WarheadType.MANA_OVERLOAD, 0.9D),
+            new Item.Properties().stacksTo(8));
+
+    /** Draconic Evolution draconic reactor: catastrophic chaos containment failure. */
+    public static final DeferredItem<MissileItem> DRACONIC_REACTOR_MISSILE = ITEMS.registerItem(
+            "draconic_reactor_missile", props -> new MissileItem(props, WarheadType.DRACONIC_REACTOR, 0.8D),
+            new Item.Properties().stacksTo(1));
+
+    /** Blood Magic sanguine sacrifice: vampiric essence harvest and demonic blood runes. */
+    public static final DeferredItem<MissileItem> SANGUINE_MISSILE = ITEMS.registerItem(
+            "sanguine_missile", props -> new MissileItem(props, WarheadType.SANGUINE, 0.9D),
+            new Item.Properties().stacksTo(8));
+
     // ------------------------------------------------------------------ launcher hardware
 
     /** Show it a launch pad: full read-out. Use it in the air: the funding/radius table. */

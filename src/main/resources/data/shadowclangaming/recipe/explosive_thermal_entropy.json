@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_thermal_entropy"
+    },
+    {
+      "item": "shadowclangaming:grenade_thermal_entropy"
+    },
+    {
+      "item": "shadowclangaming:grenade_thermal_entropy"
+    },
+    {
+      "item": "shadowclangaming:grenade_thermal_entropy"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_thermal_entropy",
+    "count": 1
+  }
+}

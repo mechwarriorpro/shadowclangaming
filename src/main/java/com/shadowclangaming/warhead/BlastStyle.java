@@ -130,16 +130,17 @@ public enum BlastStyle {
             return FALLBACK;
         }
         return switch (warheadId) {
-            case "he", "dud", "decoy", "cluster" -> FLASH;
+            case "he", "dud", "decoy", "cluster", "kinetic", "steam_rupture" -> FLASH;
             case "incendiary", "world_rune", "soul_furnace", "ragnarok", "starforge", "beef",
-                 "violator", "clucker" -> FIRE;
-            case "fission", "fusion", "spell" -> RAD;
-            case "contagion" -> TOXIC;
-            case "emp", "tracking", "minefield" -> EMP;
-            case "absolute_zero", "bulwark" -> FROST;
+                 "violator", "clucker", "stellar_swarm", "colossal_star" -> FIRE;
+            case "fission", "fusion", "spell", "supercritical", "mana_overload" -> RAD;
+            case "contagion", "voodoo", "sanguine" -> TOXIC;
+            case "emp", "tracking", "minefield", "voltmeter" -> EMP;
+            case "absolute_zero", "bulwark", "thermal_entropy" -> FROST;
             case "antimatter", "omega", "absolute_annihilation", "universal_imploder", "world_eater",
                  "abyssal_covenant", "arcane_singularity", "reality_breaker", "reality_corruptor",
-                 "spacetime_hammer", "stellar_requiem", "quasar_lance", "big_bang_seed" -> VOID;
+                 "spacetime_hammer", "stellar_requiem", "quasar_lance", "big_bang_seed",
+                 "matter_condenser", "transmutation", "draconic_reactor" -> VOID;
             case "numismatic" -> COIN;
             case "cargo", "constructor", "spatial" -> FLASH;
             default -> FALLBACK;

@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_mana_overload"
+    },
+    {
+      "item": "shadowclangaming:grenade_mana_overload"
+    },
+    {
+      "item": "shadowclangaming:grenade_mana_overload"
+    },
+    {
+      "item": "shadowclangaming:grenade_mana_overload"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_mana_overload",
+    "count": 1
+  }
+}

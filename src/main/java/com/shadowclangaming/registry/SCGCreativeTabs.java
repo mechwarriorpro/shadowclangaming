@@ -97,6 +97,20 @@ public final class SCGCreativeTabs {
                         output.accept(SCGItems.ABSOLUTE_ZERO_MISSILE.get());
                         output.accept(SCGItems.OMEGA_MISSILE.get());
                         output.accept(SCGItems.ABSOLUTE_ANNIHILATION_MISSILE.get());
+                        // Optional mod integration warheads
+                        output.accept(SCGItems.KINETIC_MISSILE.get());
+                        output.accept(SCGItems.SUPERCRITICAL_MISSILE.get());
+                        output.accept(SCGItems.MATTER_CONDENSER_MISSILE.get());
+                        output.accept(SCGItems.STELLAR_SWARM_MISSILE.get());
+                        output.accept(SCGItems.TRANSMUTATION_MISSILE.get());
+                        output.accept(SCGItems.COLOSSAL_STAR_MISSILE.get());
+                        output.accept(SCGItems.STEAM_RUPTURE_MISSILE.get());
+                        output.accept(SCGItems.VOLTMETER_MISSILE.get());
+                        output.accept(SCGItems.VOODOO_MISSILE.get());
+                        output.accept(SCGItems.THERMAL_ENTROPY_MISSILE.get());
+                        output.accept(SCGItems.MANA_OVERLOAD_MISSILE.get());
+                        output.accept(SCGItems.DRACONIC_REACTOR_MISSILE.get());
+                        output.accept(SCGItems.SANGUINE_MISSILE.get());
                         // A loaded constructor missile, so the "fill a sphere" idea is visible in the
                         // creative menu instead of being something you have to be told about.
                         output.accept(loadedConstructorExample());

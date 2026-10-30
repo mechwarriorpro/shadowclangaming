@@ -238,6 +238,11 @@ TITLES = {
     "numismatic": "Numismatic", "bulwark": "Bulwark", "contagion": "Contagion", "spell": "Spell",
     "cargo": "Cargo", "minefield": "Minefield", "tracking": "Tracking", "constructor": "Constructor",
     "spatial": "Spatial", "clucker": "Clucker", "violator": "Violator", "beef": "Beef Supreme",
+    "kinetic": "Kinetic Cataclysm", "supercritical": "Supercritical Phase", "matter_condenser": "Matter Condenser",
+    "stellar_swarm": "Stellar Swarm", "transmutation": "Transmutation", "colossal_star": "Colossal Star",
+    "steam_rupture": "Steam Rupture", "voltmeter": "Voltmeter", "voodoo": "Voodoo Torment",
+    "thermal_entropy": "Thermal Entropy", "mana_overload": "Mana Overload", "draconic_reactor": "Draconic Reactor",
+    "sanguine": "Sanguine Sacrifice",
 }
 
 

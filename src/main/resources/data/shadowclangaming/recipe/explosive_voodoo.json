@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_voodoo"
+    },
+    {
+      "item": "shadowclangaming:grenade_voodoo"
+    },
+    {
+      "item": "shadowclangaming:grenade_voodoo"
+    },
+    {
+      "item": "shadowclangaming:grenade_voodoo"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_voodoo",
+    "count": 1
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_sanguine"
+    },
+    {
+      "item": "shadowclangaming:grenade_sanguine"
+    },
+    {
+      "item": "shadowclangaming:grenade_sanguine"
+    },
+    {
+      "item": "shadowclangaming:grenade_sanguine"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_sanguine",
+    "count": 1
+  }
+}
