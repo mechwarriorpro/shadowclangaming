@@ -1,6 +1,7 @@
 package com.shadowclangaming.client;
 
 import com.shadowclangaming.ShadowClanGaming;
+import com.shadowclangaming.chem.Compound;
 import com.shadowclangaming.chem.Element;
 import com.shadowclangaming.registry.SCGDataComponents;
 import com.shadowclangaming.registry.SCGItems;
