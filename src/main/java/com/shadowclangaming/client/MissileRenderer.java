@@ -218,6 +218,20 @@ public class MissileRenderer extends EntityRenderer<MissileEntity> {
             case ABSOLUTE_ZERO -> 0x0A0A12;
             case OMEGA -> 0xFF1F1F;
             case ABSOLUTE_ANNIHILATION -> 0xE8E8FF;
+            // Optional mod integration warheads
+            case KINETIC -> 0xD4AF37;
+            case SUPERCRITICAL -> 0x32FF70;
+            case MATTER_CONDENSER -> 0x8C28B4;
+            case STELLAR_SWARM -> 0xFFD700;
+            case TRANSMUTATION -> 0xE0115F;
+            case COLOSSAL_STAR -> 0xFF69B4;
+            case STEAM_RUPTURE -> 0xB0C4DE;
+            case VOLTMETER -> 0x1E90FF;
+            case VOODOO -> 0x4B0082;
+            case THERMAL_ENTROPY -> 0x00CED1;
+            case MANA_OVERLOAD -> 0x00FA9A;
+            case DRACONIC_REACTOR -> 0xFF4500;
+            case SANGUINE -> 0xB22222;
         };
     }
 }
