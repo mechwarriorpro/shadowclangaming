@@ -145,6 +145,18 @@ public final class SCGItems {
     public static final DeferredItem<Item> GUN_CELL = ITEMS.registerSimpleItem(
             "gun_cell", new Item.Properties().stacksTo(64));
 
+    // ------------------------------------------------------------------ scythes - crimson handles, metallic silver blades
+
+    /** Single Crimson Reaper Scythe - red lacquered haft, polished silver blade. */
+    public static final DeferredItem<com.shadowclangaming.item.ScytheItem> SCYTHE = ITEMS.registerItem(
+            "scythe", props -> new com.shadowclangaming.item.ScytheItem(
+                    com.shadowclangaming.item.ScytheItem.combatProps(false)), new Item.Properties().stacksTo(1));
+
+    /** Twin Scythes - paired photorealistic set, one inventory slot, dual-wield stats. */
+    public static final DeferredItem<com.shadowclangaming.item.ScytheItem> DUAL_SCYTHE = ITEMS.registerItem(
+            "dual_scythe", props -> new com.shadowclangaming.item.ScytheItem(
+                    com.shadowclangaming.item.ScytheItem.combatProps(true)), new Item.Properties().stacksTo(1));
+
     // ------------------------------------------------------------------ computers
 
     public static final DeferredItem<BlockItem> TERMINAL = ITEMS.registerSimpleBlockItem(SCGBlocks.TERMINAL);

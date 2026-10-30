@@ -179,6 +179,8 @@ public final class SCGCreativeTabs {
                         output.accept(SCGItems.CENTRIFUGE.get());
                         output.accept(SCGItems.POCKET_MICROSCOPE.get());
                         output.accept(SCGItems.CHEMIST_JOURNAL.get());
+                        output.accept(SCGItems.SCYTHE.get());
+                        output.accept(SCGItems.DUAL_SCYTHE.get());
                         output.accept(SCGItems.POLYTOOL.get());
                         // chemical buckets
                         output.accept(com.shadowclangaming.item.ChemicalBucketItem.create(Element.N));

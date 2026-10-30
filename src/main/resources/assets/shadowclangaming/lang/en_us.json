@@ -1042,6 +1042,7 @@
   "tooltip.shadowclangaming.coating.hardened": "Carbide Edge (+3 Armor-Piercing Damage)",
   "tooltip.shadowclangaming.coating.generic": "Chemical Contact Dispersal",
   "tooltip.shadowclangaming.food.laced_with": "⚠ Laced with %s",
+  "tooltip.shadowclangaming.food.laced_with": "\u26a0 Laced with %s",
   "message.shadowclangaming.coating.applied": "Coated %s with %s (%d hits)!",
   "message.shadowclangaming.coating.worn_off": "The chemical coating on %s has worn off.",
   "message.shadowclangaming.food.laced": "Laced %s with %s!",
@@ -1278,4 +1279,10 @@
   "message.shadowclangaming.mana_overload_burst": "A hyper-condensed mana discharge has flooded the area with floral energy!",
   "message.shadowclangaming.draconic_reactor_meltdown": "CRITICAL ALERT: Draconic Reactor core has undergone total chaos containment failure!",
   "message.shadowclangaming.sanguine_sacrifice": "A sanguine blood ritual has sacrificed the life essence of all nearby living beings!"
+}
+  "message.shadowclangaming.sanguine_sacrifice": "A sanguine blood ritual has sacrificed the life essence of all nearby living beings!",
+  "item.shadowclangaming.scythe": "Crimson Scythe",
+  "item.shadowclangaming.dual_scythe": "Twin Crimson Scythes",
+  "tooltip.shadowclangaming.scythe.single": "Short-hafted reaper \u2014 red handle, polished silver blade",
+  "tooltip.shadowclangaming.scythe.dual": "Dual-wield pair \u2014 short handles, silver blades, crossed fury"
 }
