@@ -93,9 +93,9 @@ public class PocketMicroscopeItem extends Item {
                     .append(Component.literal("\n   "));
 
             for (int i = 0; i < yields.size(); i++) {
-                DecompositionTable.Yield y = yields.get(i);
-                Element elem = y.element();
-                String countStr = y.min() == y.max() ? String.valueOf(y.min()) : (y.min() + "-" + y.max());
+                DecompositionTable.Yield yieldDef = yields.get(i);
+                Element elem = yieldDef.element();
+                String countStr = yieldDef.min() == yieldDef.max() ? String.valueOf(yieldDef.min()) : (yieldDef.min() + "-" + yieldDef.max());
                 msg.append(Component.literal(countStr + "x ").withStyle(ChatFormatting.WHITE))
                    .append(Component.literal(elem.symbol()).withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD))
                    .append(Component.literal(" (" + elem.displayName() + ", Z=" + elem.atomicNumber() + ")")

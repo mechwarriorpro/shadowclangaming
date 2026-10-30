@@ -91,7 +91,7 @@ public final class SCGBlocks {
             BlockBehaviour.Properties.of()
                     .mapColor(MapColor.METAL)
                     .strength(4.0F, 8.0F)
-                    .sound(SoundType.HEAVY_METAL)
+                    .sound(SoundType.METAL)
                     .requiresCorrectToolForDrops());
 
     /**
