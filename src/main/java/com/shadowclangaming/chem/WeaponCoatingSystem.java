@@ -11,7 +11,6 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.MobType;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
@@ -140,7 +139,7 @@ public final class WeaponCoatingSystem {
 
             // 6. Precious Catalysts (Au, Ag, Pt)
             if (element == Element.AU || element == Element.AG || element == Element.PT) {
-                if (victim.getMobType() == MobType.UNDEAD) {
+                if (victim.isInvertedHealAndHarm()) {
                     event.setAmount(event.getAmount() * 1.5F + 2.0F); // Consecrated smite
                     level.sendParticles(ParticleTypes.ENCHANTED_HIT, x, y, z, 25, 0.4, 0.4, 0.4, 0.15);
                     level.playSound(null, x, y, z, SoundEvents.PLAYER_ATTACK_CRIT, SoundSource.PLAYERS, 0.9F, 1.4F);
