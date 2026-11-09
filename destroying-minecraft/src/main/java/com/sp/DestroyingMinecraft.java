@@ -40,7 +40,7 @@ import net.minecraft.resources.ResourceLocation;
  */
 @Mod(DestroyingMinecraft.MOD_ID)
 public class DestroyingMinecraft {
-    public static final String MOD_ID = "destroying-minecraft";
+    public static final String MOD_ID = "destroying_minecraft";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
     public DestroyingMinecraft(IEventBus modEventBus, ModContainer modContainer) {

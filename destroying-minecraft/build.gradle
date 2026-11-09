@@ -23,7 +23,7 @@ neoForge {
         server { server(); programArgument '--nogui' }
     }
     mods {
-        'destroying-minecraft' { sourceSet sourceSets.main }
+        'destroying_minecraft' { sourceSet sourceSets.main }
     }
 }
 

@@ -1,0 +1,64 @@
+{
+    "stages": [
+        {
+            "type": "veil:blit",
+            "shader": "destroying_minecraft:bloom/mipmaptree",
+            "in": "destroying_minecraft:bloom/bloom_start",
+            "out": "destroying_minecraft:bloom/mipmaptree"
+        },
+        {
+            "type": "veil:blit",
+            "shader": "destroying_minecraft:bloom/blur/horizontal",
+            "in": "destroying_minecraft:bloom/mipmaptree",
+            "out": "swap"
+        },
+        {
+            "type": "veil:blit",
+            "shader": "destroying_minecraft:bloom/blur/vertical",
+            "in": "swap",
+            "out": "destroying_minecraft:bloom/blur"
+        },
+        {
+            "type": "veil:blit",
+            "shader": "destroying_minecraft:bloom/bloom",
+            "in": "destroying_minecraft:bloom/blur",
+            "out": "destroying_minecraft:bloom/bloom_final"
+        },
+        {
+            "type": "veil:copy",
+            "in": "destroying_minecraft:bloom/bloom_final",
+            "out": "veil:post"
+        }
+    ],
+    "framebuffers": {
+        "swap": {
+            "depth": false,
+            "format": "R11F_G11F_B10F",
+            "autoClear": true,
+            "filter": {
+                "blur": true
+            }
+        }
+    },
+    "textures": {
+        "StartSampler": {
+            "type": "framebuffer",
+            "name": "destroying_minecraft:bloom/bloom_start"
+        },
+        "FinalSampler": {
+            "type": "framebuffer",
+            "name": "destroying_minecraft:bloom/bloom_final"
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,7 @@
+// Original: SpacePotatoee/Destroying-Minecraft — All Rights Reserved, ported to NeoForge for comparison (see THIRD_PARTY.md)
+{
+  "vertex": "veil:blit_screen",
+  "fragment": "destroying_minecraft:cracks/cracks",
+  "textures": {
+  }
+}

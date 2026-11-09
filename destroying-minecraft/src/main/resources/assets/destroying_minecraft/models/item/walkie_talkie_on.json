@@ -1,0 +1,6 @@
+{
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "destroying_minecraft:item/walkie_talkie/walkie_talkie_on"
+  }
+}

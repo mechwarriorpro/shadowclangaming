@@ -1,0 +1,32 @@
+{
+  "destroying_minecraft.midnightconfig.shaderType": "Shader",
+  "destroying_minecraft.midnightconfig.enableDepthOfField": "Enable Depth of Field",
+  "destroying_minecraft.midnightconfig.blurStrength": "Depth of Field Blur Strength",
+  "destroying_minecraft.midnightconfig.autoFocusTime": "Auto Focus Time",
+
+  "destroying_minecraft.midnightconfig.enum.ShaderType.NONE": "NONE",
+  "destroying_minecraft.midnightconfig.enum.ShaderType.NUKE": "NUKE",
+  "destroying_minecraft.midnightconfig.enum.ShaderType.CRACKS": "CRACKS",
+  "destroying_minecraft.midnightconfig.enum.ShaderType.PLANET": "PLANET",
+  "destroying_minecraft.midnightconfig.enum.ShaderType.SUPERNOVA": "SUPERNOVA",
+  "destroying_minecraft.midnightconfig.enum.ShaderType.BLACK_HOLE": "BLACK_HOLE",
+
+  "itemgroup.destroying_minecraft": "Destroying Minecraft",
+  "item.destroying_minecraft.walkie_talkie": "Walkie Talkie",
+  "item.destroying_minecraft.camera_shake_stick": "Camera Shake Stick",
+  "block.destroying_minecraft.physics_door_block": "Physics Door Block",
+  "block.destroying_minecraft.chair_block": "Chair",
+
+  "death.attack.play.zone1" : "%1$s tried to make a run for it!",
+  "death.attack.play.zone2" : "%1$s thought they could get away!",
+  "death.attack.play.zone3" : "%1$s couldn't escape!",
+  "death.attack.play.zone4" : "%1$s can't escape!",
+  "death.attack.play.zone5" : "When will %1$s learn that there is no escape?",
+  "death.attack.play.zone6" : "Poor %1$s didn't return fast enough!",
+  "death.attack.play.zone7" : "%1$s was so close to making it! (not really)",
+
+  "death.attack.cracks1" : "%1$s was evaporated",
+  "death.attack.cracks2" : "%1$s was burnt to a crisp",
+  "death.attack.cracks3" : "%1$s couldn't take the heat",
+  "death.attack.cracks4" : "%1$s evaporated"
+}

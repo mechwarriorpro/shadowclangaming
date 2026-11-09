@@ -12,7 +12,7 @@ public class ModItemGroups {
     public static final DeferredRegister<CreativeModeTab> REGISTRY = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, DestroyingMinecraft.MOD_ID);
 
     public static final Supplier<CreativeModeTab> MAIN = REGISTRY.register("main", () -> CreativeModeTab.builder()
-        .title(Component.translatable("itemGroup.destroying-minecraft"))
+        .title(Component.translatable("itemGroup.destroying_minecraft"))
         .icon(() -> new ItemStack(ModItems.NUKE_TRIGGER.get()))
         .displayItems((ctx, out) -> {
             out.accept(ModItems.CAMERA_SHAKE_STICK.get());

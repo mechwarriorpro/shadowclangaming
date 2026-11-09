@@ -1,0 +1,60 @@
+{
+    "stages": [
+        {
+            "type": "veil:mask",
+            "depth": true
+        },
+        {
+            "type": "veil:blit",
+            "shader": "destroying_minecraft:blackhole/black_hole",
+            "in": "destroying_minecraft:bloom/bloom_start",
+            "out": "swap"
+        },
+        {
+            "type": "veil:copy",
+            "in": "swap",
+            "out": "destroying_minecraft:bloom/bloom_start"
+        },
+        {
+            "type": "veil:copy",
+            "in": "destroying_minecraft:bloom/bloom_start",
+            "out": "destroying_minecraft:blackhole/black_hole",
+            "depth": true
+        }
+    ],
+    "framebuffers": {
+        "swap": {
+            "depth": false,
+            "format": "R11F_G11F_B10F",
+            "autoClear": true,
+            "filter": {
+                "blur": true
+            }
+        }
+    },
+    "textures": {
+        "PrevSampler": {
+            "type": "framebuffer",
+            "name": "destroying_minecraft:blackhole/black_hole"
+        },
+        "PrevDepth": {
+            "type": "framebuffer",
+            "name": "destroying_minecraft:blackhole/black_hole:depth"
+        },
+        "StarsTexture": {
+            "type": "location",
+            "location": "destroying_minecraft:textures/shaders/stars.png"
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+

@@ -2,7 +2,7 @@ modLoader = "javafml"
 loaderVersion = "[4,)"
 license = "All Rights Reserved"
 [[mods]]
-modId = "destroying-minecraft"
+modId = "destroying_minecraft"
 version = "1.0.3"
 displayName = "Destroying Minecraft"
 displayURL = "https://github.com/SpacePotatoee/Destroying-Minecraft"
@@ -11,16 +11,16 @@ credits = "NeoForge port by ShadowClanGaming — original All Rights Reserved, p
 description = '''Its Nukin Time — nuke, orbital laser, black hole, planet drop & supernova.
 NeoForge port of SpacePotatoee's Fabric original (Fabric 1.21.1, Veil 2.3.2).
 Same 5 DestructionTypes, same Veil post-shaders, same world carving — now on NeoForge 21.1.264 so you can drop it next to ShadowClanGaming and compare visuals 1:1.'''
-logoFile = "assets/destroying-minecraft/icon.png"
+logoFile = "assets/destroying_minecraft/icon.png"
 
-[[dependencies.destroying-minecraft]]
+[[dependencies.destroying_minecraft]]
 modId = "neoforge"
 type = "required"
 versionRange = "[21.1.0,)"
 ordering = "NONE"
 side = "BOTH"
 
-[[dependencies.destroying-minecraft]]
+[[dependencies.destroying_minecraft]]
 modId = "minecraft"
 type = "required"
 versionRange = "[1.21.1,1.22)"
@@ -30,7 +30,7 @@ side = "BOTH"
 # Veil is bundled via JarInJar (META-INF/jars/veil-neoforge-*.jar) — not a declared dependency
 # Cardinal Components is bundled via include — not a declared dependency
 
-[[dependencies.destroying-minecraft]]
+[[dependencies.destroying_minecraft]]
 modId = "shadowclangaming"
 type = "optional"
 versionRange = "*"
@@ -38,4 +38,4 @@ ordering = "AFTER"
 side = "BOTH"
 
 [[mixins]]
-config = "destroying-minecraft.mixins.json"
+config = "destroying_minecraft.mixins.json"

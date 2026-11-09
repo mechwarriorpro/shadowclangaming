@@ -7,7 +7,7 @@ Both mods now run on **NeoForge 1.21.1 / 21.1.264** so you can see them in the s
 | Mod | Id | Source | Render path |
 |-----|----|--------|-------------|
 | **ShadowClanGaming** | `shadowclangaming` 1.0.0 | This repo `src/` | `world_blast_volume.fsh` raymarch + `photoreal_nuke/cracks/star/beam` volumes (NeoForge core shaders, no Veil). 122 warheads, 5 of which are `destroying_nuke/laser/black_hole/planet/supernova` mimics. |
-| **Destroying Minecraft (NeoForge port)** | `destroying-minecraft` 1.0.3 | `destroying-minecraft/` (Fabric original by SpacePotatoee/HerrChaos, All Rights Reserved, ported with permission — see THIRD_PARTY.md) | Veil post-pipeline: `pinwheel/shaders/program/nuke/nuke.fsh`, `cracks/cracks.fsh`, `blackhole/black_hole.fsh`, `planet/planet.fsh`, `star_piercer/star_piercer.fsh`, `sky/sky.fsh`, `shadows`, `bloom` — same GLSL, same KeyframeAnimation timelines. |
+| **Destroying Minecraft (NeoForge port)** | `destroying_minecraft` 1.0.3 | `destroying-minecraft/` (Fabric original by SpacePotatoee/HerrChaos, All Rights Reserved, ported with permission — see THIRD_PARTY.md) | Veil post-pipeline: `pinwheel/shaders/program/nuke/nuke.fsh`, `cracks/cracks.fsh`, `blackhole/black_hole.fsh`, `planet/planet.fsh`, `star_piercer/star_piercer.fsh`, `sky/sky.fsh`, `shadows`, `bloom` — same GLSL, same KeyframeAnimation timelines. |
 
 ## Build both jars
 
@@ -35,7 +35,7 @@ Drop both into `mods/` alongside NeoForge 21.1.264. Optional but faithful: Midni
 
 ## Notes
 
-- The NeoForge port keeps the original modId `destroying-minecraft` (hyphen is legal in NeoForge `[a-z][a-z0-9_-]{1,63}`) so resource packs still resolve `destroying-minecraft:pinwheel/...`.
-- Mixins are declared in `neoforge.mods.toml` via `[[mixins]] config = "destroying-minecraft.mixins.json"` — same list as Fabric, adapted for Mojang mappings.
+- The NeoForge port uses modId `destroying_minecraft` (underscore — hyphen is illegal in NeoForge `ModInfo` `[a-z][a-z0-9_]{1,63}`) so resource packs resolve `destroying_minecraft:pinwheel/...`.
+- Mixins are declared in `neoforge.mods.toml` via `[[mixins]] config = "destroying_minecraft.mixins.json"` — same list as Fabric, adapted for Mojang mappings.
 - Veil on NeoForge is `foundry.veil:veil-neoforge-1.21.1:2.3.2` (Fabric was `veil-fabric`). The jar is JarInJar'd under `META-INF/jars/` like the original.
 - All original shaders are vendored verbatim with a credit header (`// Original: SpacePotatoee... ported to NeoForge for comparison`) — no reimplementation drift.
