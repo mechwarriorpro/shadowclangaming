@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "PRP",
+    "RAR",
+    "PRP"
+  ],
+  "key": {
+    "P": {
+      "item": "minecraft:paper"
+    },
+    "R": {
+      "item": "minecraft:redstone"
+    },
+    "A": {
+      "item": "shadowclangaming:rtg_pellet"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:targeting_card",
+    "count": 1
+  }
+}

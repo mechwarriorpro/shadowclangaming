@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " T ",
+    "DID",
+    " R "
+  ],
+  "key": {
+    "T": { "item": "minecraft:tnt" },
+    "D": { "item": "minecraft:diamond_block" },
+    "I": { "item": "shadowclangaming:mrbm" },
+    "R": { "item": "minecraft:redstone_block" }
+  },
+  "result": {
+    "id": "shadowclangaming:icbm",
+    "count": 1
+  }
+}

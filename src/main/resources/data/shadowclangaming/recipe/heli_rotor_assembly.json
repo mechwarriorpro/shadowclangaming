@@ -1,0 +1,26 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "IFI",
+    "RER",
+    "IFI"
+  ],
+  "key": {
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "F": {
+      "item": "minecraft:iron_bars"
+    },
+    "R": {
+      "item": "minecraft:redstone"
+    },
+    "E": {
+      "item": "shadowclangaming:helicopter_spawn"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:heli_rotor_assembly",
+    "count": 1
+  }
+}

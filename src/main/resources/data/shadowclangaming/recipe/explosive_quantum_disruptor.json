@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "CIC",
+    "IEI",
+    "CIC"
+  ],
+  "key": {
+    "C": {
+      "item": "shadowclangaming:plasma_coil"
+    },
+    "I": {
+      "item": "minecraft:echo_shard"
+    },
+    "E": {
+      "item": "minecraft:tnt"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:explosive_quantum_disruptor",
+    "count": 1
+  }
+}

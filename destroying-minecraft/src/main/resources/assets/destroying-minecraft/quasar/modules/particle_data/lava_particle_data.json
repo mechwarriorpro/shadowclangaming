@@ -1,0 +1,20 @@
+{
+  "sprite_data": {
+    "sprite": "destroying-minecraft:textures/particle/lava_particle.png"
+  },
+  "render_style": "BILLBOARD",
+  "init_modules": [
+  ],
+  "update_modules": [],
+  "collision_modules": [
+  ],
+  "forces": [
+    "destroying-minecraft:force/gravity"
+  ],
+  "render_modules": [
+    "destroying-minecraft:color/lava_color"
+  ],
+  "face_velocity": false,
+  "velocity_stretch_factor": 0.0,
+  "should_collide": false
+}

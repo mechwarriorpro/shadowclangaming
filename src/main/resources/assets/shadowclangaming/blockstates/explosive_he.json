@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "primed=false": {
+      "model": "shadowclangaming:block/explosive_he"
+    },
+    "primed=true": {
+      "model": "shadowclangaming:block/explosive_he"
+    }
+  }
+}

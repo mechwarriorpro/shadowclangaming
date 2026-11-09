@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "CIC",
+    "IEI",
+    "CIC"
+  ],
+  "key": {
+    "C": {
+      "item": "shadowclangaming:sanguine_rune"
+    },
+    "I": {
+      "item": "minecraft:wither_skeleton_skull"
+    },
+    "E": {
+      "item": "minecraft:tnt"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:explosive_curse_wave",
+    "count": 1
+  }
+}

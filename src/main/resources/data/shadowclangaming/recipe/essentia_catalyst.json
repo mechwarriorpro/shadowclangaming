@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "EVE",
+    "VJV",
+    "EVE"
+  ],
+  "key": {
+    "E": {
+      "item": "shadowclangaming:essentia_vial"
+    },
+    "V": {
+      "item": "minecraft:amethyst_shard"
+    },
+    "J": {
+      "item": "shadowclangaming:essentia_jar"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:essentia_catalyst",
+    "count": 1
+  }
+}

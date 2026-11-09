@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "PPP",
+    "IC I",
+    "III"
+  ],
+  "key": {
+    "P": {
+      "item": "minecraft:planks"
+    },
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "C": {
+      "item": "minecraft:crafting_table"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:assembly_bench",
+    "count": 1
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "BLB",
+    "BBB",
+    "BBB"
+  ],
+  "key": {
+    "B": {
+      "item": "shadowclangaming:seared_bricks"
+    },
+    "L": {
+      "item": "minecraft:lava_bucket"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:seared_heater",
+    "count": 1
+  }
+}

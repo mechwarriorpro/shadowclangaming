@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "CIC",
+    "IEI",
+    "CIC"
+  ],
+  "key": {
+    "C": {
+      "item": "shadowclangaming:psionic_matrix"
+    },
+    "I": {
+      "item": "shadowclangaming:skill_card_vector"
+    },
+    "E": {
+      "item": "minecraft:tnt"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:explosive_vector_storm",
+    "count": 1
+  }
+}

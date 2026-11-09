@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "shadowclangaming:item/grenade_orbital_railgun"
+  }
+}

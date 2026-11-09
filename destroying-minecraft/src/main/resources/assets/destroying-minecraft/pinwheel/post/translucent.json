@@ -1,0 +1,36 @@
+{
+  "stages": [
+    {
+      "type": "veil:mask",
+      "red": false,
+      "green": false,
+      "blue": false,
+      "alpha": false,
+      "depth": true
+    },
+    {
+      "type": "veil:depth_function",
+      "function": "LEQUAL"
+    },
+    {
+      "type": "veil:blit",
+      "shader": "veil:blit_depth",
+      "in": "destroying-minecraft:translucent",
+      "out": "swap",
+      "clear": false
+    },
+    {
+      "type": "veil:copy",
+      "in": "swap",
+      "out": "minecraft:main",
+      "color": false,
+      "clear": false
+    }
+  ],
+  "framebuffers": {
+    "swap": {
+      "depth": true,
+      "format": "RGBA8"
+    }
+  }
+}

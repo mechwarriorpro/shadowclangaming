@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "primed=false": {
+      "model": "shadowclangaming:block/explosive_universal_imploder"
+    },
+    "primed=true": {
+      "model": "shadowclangaming:block/explosive_universal_imploder"
+    }
+  }
+}

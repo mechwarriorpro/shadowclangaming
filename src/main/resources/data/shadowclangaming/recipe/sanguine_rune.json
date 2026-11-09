@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "BRB",
+    "RQR",
+    "BRB"
+  ],
+  "key": {
+    "B": {
+      "item": "minecraft:bone"
+    },
+    "R": {
+      "item": "minecraft:redstone"
+    },
+    "Q": {
+      "item": "minecraft:quartz"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:sanguine_rune",
+    "count": 1
+  }
+}

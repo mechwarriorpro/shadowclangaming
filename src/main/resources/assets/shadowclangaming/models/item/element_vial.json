@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "shadowclangaming:item/element_vial_liquid",
+    "layer1": "shadowclangaming:item/element_vial"
+  }
+}

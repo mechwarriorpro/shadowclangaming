@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "CIC",
+    "IEI",
+    "CIC"
+  ],
+  "key": {
+    "C": {
+      "item": "shadowclangaming:nexus_shard"
+    },
+    "I": {
+      "item": "shadowclangaming:bc_pipe"
+    },
+    "E": {
+      "item": "minecraft:tnt"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:explosive_recursive_factory",
+    "count": 1
+  }
+}

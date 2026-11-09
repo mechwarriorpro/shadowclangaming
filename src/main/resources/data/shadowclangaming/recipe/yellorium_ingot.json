@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:smelting",
+  "ingredient": {
+    "item": "minecraft:yellow_dye"
+  },
+  "result": {
+    "id": "shadowclangaming:yellorium_ingot"
+  },
+  "experience": 0.7,
+  "cookingtime": 200
+}

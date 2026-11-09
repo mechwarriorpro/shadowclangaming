@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_reality_corruptor"
+    },
+    {
+      "item": "shadowclangaming:grenade_reality_corruptor"
+    },
+    {
+      "item": "shadowclangaming:grenade_reality_corruptor"
+    },
+    {
+      "item": "shadowclangaming:grenade_reality_corruptor"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_reality_corruptor",
+    "count": 1
+  }
+}

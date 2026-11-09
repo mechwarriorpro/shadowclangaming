@@ -1,0 +1,11 @@
+{
+  "width": "4096",
+  "height": "4096",
+  "format": "RGBA8",
+  "autoClear": true,
+  "depth": {
+    "filter": {
+      "blur": true
+    }
+  }
+}

@@ -1,0 +1,158 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "shadowclangaming:item/gun_s0_kinetic"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "custom_model_data": 1
+      },
+      "model": "shadowclangaming:item/gun_s0_kinetic"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 2
+      },
+      "model": "shadowclangaming:item/gun_s0_ember"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 3
+      },
+      "model": "shadowclangaming:item/gun_s0_arc"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 4
+      },
+      "model": "shadowclangaming:item/gun_s0_acid"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 5
+      },
+      "model": "shadowclangaming:item/gun_s0_void"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 6
+      },
+      "model": "shadowclangaming:item/gun_s1_kinetic"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 7
+      },
+      "model": "shadowclangaming:item/gun_s1_ember"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 8
+      },
+      "model": "shadowclangaming:item/gun_s1_arc"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 9
+      },
+      "model": "shadowclangaming:item/gun_s1_acid"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10
+      },
+      "model": "shadowclangaming:item/gun_s1_void"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 11
+      },
+      "model": "shadowclangaming:item/gun_s2_kinetic"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 12
+      },
+      "model": "shadowclangaming:item/gun_s2_ember"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 13
+      },
+      "model": "shadowclangaming:item/gun_s2_arc"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 14
+      },
+      "model": "shadowclangaming:item/gun_s2_acid"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 15
+      },
+      "model": "shadowclangaming:item/gun_s2_void"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 16
+      },
+      "model": "shadowclangaming:item/gun_s3_kinetic"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 17
+      },
+      "model": "shadowclangaming:item/gun_s3_ember"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 18
+      },
+      "model": "shadowclangaming:item/gun_s3_arc"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 19
+      },
+      "model": "shadowclangaming:item/gun_s3_acid"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 20
+      },
+      "model": "shadowclangaming:item/gun_s3_void"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 21
+      },
+      "model": "shadowclangaming:item/gun_s4_kinetic"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 22
+      },
+      "model": "shadowclangaming:item/gun_s4_ember"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 23
+      },
+      "model": "shadowclangaming:item/gun_s4_arc"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 24
+      },
+      "model": "shadowclangaming:item/gun_s4_acid"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 25
+      },
+      "model": "shadowclangaming:item/gun_s4_void"
+    }
+  ]
+}

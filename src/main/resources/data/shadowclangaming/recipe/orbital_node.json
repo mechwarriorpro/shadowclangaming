@@ -1,0 +1,33 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "GAG",
+    "SES",
+    "IRI"
+  ],
+  "key": {
+    "G": {
+      "item": "minecraft:glass"
+    },
+    "A": {
+      "item": "minecraft:amethyst_block"
+    },
+    "S": {
+      "item": "minecraft:amethyst_shard"
+    },
+    "E": {
+      "item": "minecraft:ender_eye"
+    },
+    "I": {
+      "item": "minecraft:iron_block"
+    },
+    "R": {
+      "item": "minecraft:redstone_block"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:orbital_node",
+    "count": 1
+  }
+}

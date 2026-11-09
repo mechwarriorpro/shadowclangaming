@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "minecraft:gunpowder"
+    },
+    {
+      "item": "minecraft:iron_ingot"
+    },
+    {
+      "item": "minecraft:dragon_head"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:grenade_draconic_reactor",
+    "count": 2
+  }
+}

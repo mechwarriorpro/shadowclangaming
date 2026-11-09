@@ -1,0 +1,9 @@
+{
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "destroying-minecraft:item/walkie_talkie/walkie_talkie_off"
+  },
+  "overrides": [
+    { "predicate": { "destroying-minecraft:on": 1.0 }, "model": "destroying-minecraft:item/walkie_talkie_on" }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " G ",
+    "GTG",
+    " G "
+  ],
+  "key": {
+    "G": {
+      "item": "minecraft:gold_ingot"
+    },
+    "T": {
+      "item": "shadowclangaming:missile_module_t1"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:missile_module_t2",
+    "count": 1
+  }
+}

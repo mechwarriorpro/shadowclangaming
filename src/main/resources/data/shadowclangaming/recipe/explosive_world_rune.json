@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_world_rune"
+    },
+    {
+      "item": "shadowclangaming:grenade_world_rune"
+    },
+    {
+      "item": "shadowclangaming:grenade_world_rune"
+    },
+    {
+      "item": "shadowclangaming:grenade_world_rune"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_world_rune",
+    "count": 1
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "shadowclangaming:block/fabricator_top",
+    "bottom": "shadowclangaming:block/fabricator_bottom",
+    "side": "shadowclangaming:block/fabricator_side"
+  }
+}

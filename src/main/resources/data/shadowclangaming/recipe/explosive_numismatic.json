@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_numismatic"
+    },
+    {
+      "item": "shadowclangaming:grenade_numismatic"
+    },
+    {
+      "item": "shadowclangaming:grenade_numismatic"
+    },
+    {
+      "item": "shadowclangaming:grenade_numismatic"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_numismatic",
+    "count": 1
+  }
+}

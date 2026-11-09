@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_spacetime_hammer"
+    },
+    {
+      "item": "shadowclangaming:grenade_spacetime_hammer"
+    },
+    {
+      "item": "shadowclangaming:grenade_spacetime_hammer"
+    },
+    {
+      "item": "shadowclangaming:grenade_spacetime_hammer"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_spacetime_hammer",
+    "count": 1
+  }
+}

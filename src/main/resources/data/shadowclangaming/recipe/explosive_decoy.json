@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_decoy"
+    },
+    {
+      "item": "shadowclangaming:grenade_decoy"
+    },
+    {
+      "item": "shadowclangaming:grenade_decoy"
+    },
+    {
+      "item": "shadowclangaming:grenade_decoy"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_decoy",
+    "count": 1
+  }
+}

@@ -1,0 +1,54 @@
+{
+    "stages": [
+        {
+            "type": "veil:blit",
+            "shader": "destroying-minecraft:bloom/blur/horizontal",
+            "in": "veil:post",
+            "out": "swap"
+        },
+        {
+            "type": "veil:blit",
+            "shader": "destroying-minecraft:bloom/blur/vertical",
+            "in": "swap",
+            "out": "destroying-minecraft:blur"
+        },
+        {
+            "type": "veil:blit",
+            "shader": "destroying-minecraft:post/post",
+            "in": "veil:post",
+            "out": "swap2"
+        },
+        {
+            "type": "veil:copy",
+            "in": "swap2",
+            "out": "veil:post"
+        }
+    ],
+    "framebuffers": {
+    },
+    "textures": {
+        "BlurredTexture": {
+            "type": "framebuffer",
+            "name": "destroying-minecraft:blur"
+        },
+        "MainTexture": {
+            "type": "framebuffer",
+            "name": "minecraft:main"
+        },
+        "MainDepth": {
+            "type": "framebuffer",
+            "name": "minecraft:main:depth"
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+

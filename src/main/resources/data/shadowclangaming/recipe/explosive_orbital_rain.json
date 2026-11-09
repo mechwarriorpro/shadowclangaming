@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "CIC",
+    "IEI",
+    "CIC"
+  ],
+  "key": {
+    "C": {
+      "item": "shadowclangaming:vault_alloy"
+    },
+    "I": {
+      "item": "shadowclangaming:orbital_railgun"
+    },
+    "E": {
+      "item": "minecraft:tnt"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:explosive_orbital_rain",
+    "count": 1
+  }
+}

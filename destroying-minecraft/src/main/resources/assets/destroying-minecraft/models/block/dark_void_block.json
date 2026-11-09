@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "destroying-minecraft:block/dark_void_block"
+  }
+}

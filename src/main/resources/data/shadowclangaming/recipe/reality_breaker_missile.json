@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "AMA",
+    "MXM",
+    "AMA"
+  ],
+  "key": {
+    "A": {
+      "item": "shadowclangaming:antimatter_missile"
+    },
+    "M": {
+      "item": "minecraft:chorus_fruit"
+    },
+    "X": {
+      "item": "minecraft:ender_eye"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:reality_breaker_missile",
+    "count": 1
+  }
+}

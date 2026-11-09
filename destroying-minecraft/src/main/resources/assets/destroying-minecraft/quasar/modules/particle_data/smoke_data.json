@@ -1,0 +1,23 @@
+{
+  "sprite_data": {
+    "sprite": "destroying-minecraft:textures/particle/nuke_smoke.png",
+    "frame_count": 64,
+    "frame_width": 8,
+    "frame_height": 8,
+    "stretch_to_lifetime": false
+  },
+  "render_style": "BILLBOARD",
+  "init_modules": [
+  ],
+  "update_modules": [],
+  "collision_modules": [
+  ],
+  "forces": [
+  ],
+  "render_modules": [
+    "destroying-minecraft:color/smoke_color"
+  ],
+  "face_velocity": false,
+  "velocity_stretch_factor": 0.0,
+  "should_collide": false
+}

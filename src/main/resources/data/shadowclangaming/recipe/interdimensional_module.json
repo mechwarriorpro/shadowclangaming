@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "EOE",
+    "OAO",
+    "EOE"
+  ],
+  "key": {
+    "E": {
+      "item": "minecraft:ender_eye"
+    },
+    "O": {
+      "item": "minecraft:crying_obsidian"
+    },
+    "A": {
+      "item": "shadowclangaming:upgrade_kit"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:interdimensional_module",
+    "count": 1
+  }
+}

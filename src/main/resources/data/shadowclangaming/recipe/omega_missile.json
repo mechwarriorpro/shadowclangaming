@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "AMA",
+    "MXM",
+    "AMA"
+  ],
+  "key": {
+    "A": {
+      "item": "shadowclangaming:antimatter_missile"
+    },
+    "M": {
+      "item": "minecraft:wither_rose"
+    },
+    "X": {
+      "item": "minecraft:netherite_ingot"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:omega_missile",
+    "count": 1
+  }
+}

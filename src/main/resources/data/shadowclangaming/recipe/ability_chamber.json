@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "III",
+    "RDR",
+    "III"
+  ],
+  "key": {
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "R": {
+      "item": "minecraft:redstone"
+    },
+    "D": {
+      "item": "minecraft:diamond"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:ability_chamber",
+    "count": 1
+  }
+}
