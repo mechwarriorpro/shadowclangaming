@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_voltmeter"
+    },
+    {
+      "item": "shadowclangaming:grenade_voltmeter"
+    },
+    {
+      "item": "shadowclangaming:grenade_voltmeter"
+    },
+    {
+      "item": "shadowclangaming:grenade_voltmeter"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_voltmeter",
+    "count": 1
+  }
+}

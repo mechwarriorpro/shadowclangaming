@@ -1,0 +1,57 @@
+{
+  "vertex": "shadowclangaming:world_blast_geom",
+  "fragment": "shadowclangaming:world_blast_geom",
+  "samplers": [],
+  "attributes": [
+    "Position",
+    "Color"
+  ],
+  "uniforms": [
+    {
+      "name": "ScgProj",
+      "type": "matrix4x4",
+      "count": 16,
+      "values": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    {
+      "name": "ScgView",
+      "type": "matrix4x4",
+      "count": 16,
+      "values": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+      ]
+    }
+  ]
+}

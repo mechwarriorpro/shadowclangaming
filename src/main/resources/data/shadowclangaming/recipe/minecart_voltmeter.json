@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "minecraft:minecart"
+    },
+    {
+      "item": "shadowclangaming:explosive_voltmeter"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:minecart_voltmeter",
+    "count": 1
+  }
+}

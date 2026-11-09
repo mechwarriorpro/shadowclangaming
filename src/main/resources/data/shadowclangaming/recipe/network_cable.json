@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "CCC"
+  ],
+  "key": {
+    "C": {
+      "item": "minecraft:string"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:network_cable",
+    "count": 4
+  }
+}

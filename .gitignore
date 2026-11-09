@@ -1,0 +1,26 @@
+# Gradle / build output
+.gradle/
+build/
+out/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.eclipse/
+.settings/
+.classpath
+.project
+bin/
+
+# Minecraft dev runs
+run/
+runs/
+logs/
+
+# OS noise
+.DS_Store
+Thumbs.db

@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "shadowclangaming:block/synthesizer_top",
+    "bottom": "shadowclangaming:block/synthesizer_bottom",
+    "side": "shadowclangaming:block/synthesizer_side"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "GDG",
+    "DAD",
+    "GDG"
+  ],
+  "key": {
+    "G": {
+      "item": "minecraft:gold_ingot"
+    },
+    "D": {
+      "item": "minecraft:diamond"
+    },
+    "A": {
+      "item": "shadowclangaming:unobtainium_ingot"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:vault_alloy",
+    "count": 1
+  }
+}

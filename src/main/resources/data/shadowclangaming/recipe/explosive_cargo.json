@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_cargo"
+    },
+    {
+      "item": "shadowclangaming:grenade_cargo"
+    },
+    {
+      "item": "shadowclangaming:grenade_cargo"
+    },
+    {
+      "item": "shadowclangaming:grenade_cargo"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_cargo",
+    "count": 1
+  }
+}

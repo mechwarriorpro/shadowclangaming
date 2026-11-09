@@ -1,0 +1,41 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "CEM",
+    "SLP",
+    "NVT"
+  ],
+  "key": {
+    "C": {
+      "item": "shadowclangaming:thermite_blend"
+    },
+    "E": {
+      "item": "shadowclangaming:essentia_catalyst"
+    },
+    "M": {
+      "item": "shadowclangaming:mana_essence_bucket"
+    },
+    "S": {
+      "item": "shadowclangaming:sanguine_rune"
+    },
+    "L": {
+      "item": "shadowclangaming:logistics_processor"
+    },
+    "P": {
+      "item": "shadowclangaming:psionic_matrix"
+    },
+    "N": {
+      "item": "shadowclangaming:nexus_shard"
+    },
+    "V": {
+      "item": "shadowclangaming:vault_alloy"
+    },
+    "T": {
+      "item": "shadowclangaming:plasma_coil"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:dimensional_beacon",
+    "count": 1
+  }
+}

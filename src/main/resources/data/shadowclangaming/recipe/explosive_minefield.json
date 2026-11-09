@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_minefield"
+    },
+    {
+      "item": "shadowclangaming:grenade_minefield"
+    },
+    {
+      "item": "shadowclangaming:grenade_minefield"
+    },
+    {
+      "item": "shadowclangaming:grenade_minefield"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_minefield",
+    "count": 1
+  }
+}

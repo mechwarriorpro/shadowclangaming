@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_universal_imploder"
+    },
+    {
+      "item": "shadowclangaming:grenade_universal_imploder"
+    },
+    {
+      "item": "shadowclangaming:grenade_universal_imploder"
+    },
+    {
+      "item": "shadowclangaming:grenade_universal_imploder"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_universal_imploder",
+    "count": 1
+  }
+}

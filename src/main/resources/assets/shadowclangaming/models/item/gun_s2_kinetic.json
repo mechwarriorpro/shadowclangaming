@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "shadowclangaming:item/gun_s2_kinetic"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "primed=false": {
+      "model": "shadowclangaming:block/explosive_antimatter"
+    },
+    "primed=true": {
+      "model": "shadowclangaming:block/explosive_antimatter"
+    }
+  }
+}

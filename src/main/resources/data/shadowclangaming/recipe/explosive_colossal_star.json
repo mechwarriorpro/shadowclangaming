@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_colossal_star"
+    },
+    {
+      "item": "shadowclangaming:grenade_colossal_star"
+    },
+    {
+      "item": "shadowclangaming:grenade_colossal_star"
+    },
+    {
+      "item": "shadowclangaming:grenade_colossal_star"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_colossal_star",
+    "count": 1
+  }
+}

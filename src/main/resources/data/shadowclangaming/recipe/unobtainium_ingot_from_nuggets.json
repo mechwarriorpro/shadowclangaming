@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "NNN",
+    "NNN",
+    "NNN"
+  ],
+  "key": {
+    "N": {
+      "item": "shadowclangaming:unobtainium_nugget"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:unobtainium_ingot",
+    "count": 1
+  }
+}

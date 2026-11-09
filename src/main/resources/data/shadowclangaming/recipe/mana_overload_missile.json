@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " S ",
+    "SMS",
+    " G "
+  ],
+  "key": {
+    "S": {
+      "item": "minecraft:flowering_azalea"
+    },
+    "M": {
+      "item": "shadowclangaming:mrbm"
+    },
+    "G": {
+      "item": "minecraft:gunpowder"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:mana_overload_missile",
+    "count": 1
+  }
+}

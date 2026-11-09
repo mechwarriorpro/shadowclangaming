@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_soul_furnace"
+    },
+    {
+      "item": "shadowclangaming:grenade_soul_furnace"
+    },
+    {
+      "item": "shadowclangaming:grenade_soul_furnace"
+    },
+    {
+      "item": "shadowclangaming:grenade_soul_furnace"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_soul_furnace",
+    "count": 1
+  }
+}

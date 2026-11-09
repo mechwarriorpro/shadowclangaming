@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "primed=false": {
+      "model": "shadowclangaming:block/explosive_stellar_swarm"
+    },
+    "primed=true": {
+      "model": "shadowclangaming:block/explosive_stellar_swarm"
+    }
+  }
+}

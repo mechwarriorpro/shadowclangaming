@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "minecraft:minecart"
+    },
+    {
+      "item": "shadowclangaming:explosive_big_bang_seed"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:minecart_big_bang_seed",
+    "count": 1
+  }
+}

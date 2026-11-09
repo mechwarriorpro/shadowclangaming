@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "minecraft:gunpowder"
+    },
+    {
+      "item": "minecraft:iron_ingot"
+    },
+    {
+      "item": "shadowclangaming:war_bond"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:grenade_numismatic",
+    "count": 2
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " E ",
+    "EME",
+    " G "
+  ],
+  "key": {
+    "E": {
+      "item": "shadowclangaming:enriched_uranium"
+    },
+    "M": {
+      "item": "shadowclangaming:mrbm"
+    },
+    "G": {
+      "item": "minecraft:gunpowder"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:fission_missile",
+    "count": 1
+  }
+}

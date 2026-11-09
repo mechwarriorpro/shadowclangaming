@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "minecraft:minecart"
+    },
+    {
+      "item": "shadowclangaming:explosive_cluster"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:minecart_cluster",
+    "count": 1
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_world_eater"
+    },
+    {
+      "item": "shadowclangaming:grenade_world_eater"
+    },
+    {
+      "item": "shadowclangaming:grenade_world_eater"
+    },
+    {
+      "item": "shadowclangaming:grenade_world_eater"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_world_eater",
+    "count": 1
+  }
+}

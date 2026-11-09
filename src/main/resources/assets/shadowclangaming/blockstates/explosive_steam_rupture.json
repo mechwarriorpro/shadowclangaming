@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "primed=false": {
+      "model": "shadowclangaming:block/explosive_steam_rupture"
+    },
+    "primed=true": {
+      "model": "shadowclangaming:block/explosive_steam_rupture"
+    }
+  }
+}

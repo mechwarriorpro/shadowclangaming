@@ -1,0 +1,54 @@
+# This is the file NeoForge reads to know your mod exists.
+# If the mod does not appear in the mod list, the problem is almost always in here,
+# or in the "modId" not matching @Mod(ShadowClanGaming.MOD_ID) in ShadowClanGaming.java.
+
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "All Rights Reserved"
+
+[[mods]]
+modId = "shadowclangaming"
+version = "1.0.0"
+displayName = "ShadowClanGaming"
+authors = "ShadowClanGaming"
+description = '''
+ShadowClanGaming: strategic weapons and a working computer stack for 1.21.1. Guided missiles, launch pads
+and target designators, an element chemistry chain that ends in warheads, a magic rifle system, plus radar,
+Create Big Cannons fire control and a Lua computer with screens and disks. Runs standalone; Create,
+Aeronautics, Numismatics, CBC and AE2 are optional.
+'''
+
+logoFile = "shadowclangaming.png"
+
+[[dependencies.shadowclangaming]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1.0,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.shadowclangaming]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21.1,1.22)"
+ordering = "NONE"
+side = "BOTH"
+
+# ---------------------------------------------------------------------------
+# Optional integrations. Uncomment once you start writing compat code, and make
+# sure the modId is exactly right (check the other mod's neoforge.mods.toml).
+# Declaring them here only affects load order, never "is this mod required".
+# ---------------------------------------------------------------------------
+# [[dependencies.shadowclangaming]]
+# modId = "create"
+# type = "optional"
+# versionRange = "[6.0.0,)"
+# ordering = "AFTER"
+# side = "BOTH"
+#
+# [[dependencies.shadowclangaming]]
+# modId = "createbigcannons"
+# type = "optional"
+# versionRange = "*"
+# ordering = "AFTER"
+# side = "BOTH"

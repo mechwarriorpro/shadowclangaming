@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_clucker"
+    },
+    {
+      "item": "shadowclangaming:grenade_clucker"
+    },
+    {
+      "item": "shadowclangaming:grenade_clucker"
+    },
+    {
+      "item": "shadowclangaming:grenade_clucker"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_clucker",
+    "count": 1
+  }
+}
