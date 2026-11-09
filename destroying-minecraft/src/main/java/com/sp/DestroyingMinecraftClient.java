@@ -78,7 +78,7 @@ public class DestroyingMinecraftClient {
             net.minecraft.client.model.geom.ModelLayerLocation loc = StarPiercerModel.STAR_PIERCER_MODEL_LAYER;
             net.neoforged.neoforge.client.event.EntityRenderersEvent.RegisterLayerDefinitions reg = null; // registered via modEventBus
             net.minecraft.client.renderer.entity.EntityRenderers.register(ModEntities.STAR_PIERCER_ENTITY.get(), StarPiercerEntityRenderer::new);
-            net.minecraft.client.renderer.blockentity.BlockEntityRenderers.register(ModBlockEntities.PHYSICS_DOOR_BE.get(), PhysicsDoorBlockRenderer::new);
+            // net.minecraft.client.renderer.blockentity.BlockEntityRenderers.register(ModBlockEntities.PHYSICS_DOOR_BE.get(), PhysicsDoorBlockRenderer::new); // stubbed
 
             // RenderTypeShardRegistry.addGenericShard(...); // Veil optional
 
@@ -90,7 +90,7 @@ public class DestroyingMinecraftClient {
         // Fallback path when Veil is not present — delegates to same logic
     }
 
-    private void onClientTick(net.neoforged.neoforge.event.tick.ClientTickEvent.Post event) {
+    private void onClientTick(ClientTickEvent.Post event) {
         // ClientTickInstances tick here
     }
 
