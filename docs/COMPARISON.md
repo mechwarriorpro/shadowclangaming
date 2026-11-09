@@ -36,6 +36,6 @@ Drop both into `mods/` alongside NeoForge 21.1.264. Optional but faithful: Midni
 ## Notes
 
 - The NeoForge port uses modId `destroying_minecraft` (underscore — hyphen is illegal in NeoForge `ModInfo` `[a-z][a-z0-9_]{1,63}`) so resource packs resolve `destroying_minecraft:pinwheel/...`.
-- Mixins are declared in `neoforge.mods.toml` via `[[mixins]] config = "destroying_minecraft.mixins.json"` — same list as Fabric, adapted for Mojang mappings.
+- Mixins are **disabled** in the NeoForge port (`neoforge.mods.toml` has no `[[mixins]]` — all Fabric mixins were stubs targeting `Object` and crash Mixin `ClassInfo.addMixin`; gameplay-relevant mixins are reimplemented as NeoForge events where needed. See `destroying_minecraft.mixins.json` removal in fix-for-crash).
 - Veil on NeoForge is `foundry.veil:veil-neoforge-1.21.1:2.3.2` (Fabric was `veil-fabric`). The jar is JarInJar'd under `META-INF/jars/` like the original.
 - All original shaders are vendored verbatim with a credit header (`// Original: SpacePotatoee... ported to NeoForge for comparison`) — no reimplementation drift.

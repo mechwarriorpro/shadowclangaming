@@ -37,5 +37,3 @@ versionRange = "*"
 ordering = "AFTER"
 side = "BOTH"
 
-[[mixins]]
-config = "destroying_minecraft.mixins.json"
