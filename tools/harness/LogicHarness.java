@@ -2415,7 +2415,12 @@ public final class LogicHarness {
                     java.util.Map.entry("eclipse_catalyst", "star=0.6"),
                     java.util.Map.entry("genesis_seed", "embers=0.5"),
                     java.util.Map.entry("omega_nexus", "waves=0.7"),
-                    java.util.Map.entry("unification", "glyphs=0.6"));
+                    java.util.Map.entry("unification", "glyphs=0.6"),
+                    java.util.Map.entry("destroying_nuke", "waves=1.0,flash=0.9,cap=0.95,dust=0.9,shell=0.85"),
+                    java.util.Map.entry("destroying_laser", "beam=1.0,shaft=1.0,sparks=0.85,flash=0.7,cracks=0.95"),
+                    java.util.Map.entry("destroying_black_hole", "hole=1.0,implode=1.0,vortex=0.95,disc=1.0,lens=1.0"),
+                    java.util.Map.entry("destroying_planet", "hole=0.9,vortex=0.9,disc=0.85,lens=0.9,debris=1.0,dust=1.0"),
+                    java.util.Map.entry("destroying_supernova", "star=1.0,flash=1.0,waves=0.95,halo=0.9,shell=1.0,granule=0.7,nebula=0.85"));
 
     /** Read one feature weight by the name the shader uses, so the table above stays in the shader's words. */
     private static float feature(com.shadowclangaming.warhead.BlastMotif.Volume v, String name) {

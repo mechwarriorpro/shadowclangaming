@@ -159,6 +159,8 @@ public enum BlastStyle {
                  "translocation_rip", "automa_storm", "factory_reset", "drone_swarm", "disassembler" -> EMP;
             case "blood_moon", "aero_cleave", "bandit_scrap", "tediore_throw",
                  "orbital_rain" -> FLASH;
+            case "destroying_nuke", "destroying_laser" -> FLASH;
+            case "destroying_black_hole", "destroying_planet", "destroying_supernova" -> VOID;
             default -> FALLBACK;
         };
     }
