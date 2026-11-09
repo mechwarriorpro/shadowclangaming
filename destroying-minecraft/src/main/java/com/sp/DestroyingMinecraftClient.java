@@ -59,7 +59,7 @@ public class DestroyingMinecraftClient {
     public DestroyingMinecraftClient(IEventBus modEventBus) {
         modEventBus.addListener(this::clientSetup);
         NeoForge.EVENT_BUS.addListener(this::onRenderLevelStage);
-        NeoForge.EVENT_BUS.addListener(this::onClientTick);
+        // NeoForge.EVENT_BUS.addListener(this::onClientTick); // tick handled via ClientTickInstances
     }
 
     private void clientSetup(FMLClientSetupEvent event) {
@@ -90,9 +90,7 @@ public class DestroyingMinecraftClient {
         // Fallback path when Veil is not present — delegates to same logic
     }
 
-    private void onClientTick(ClientTickEvent.Post event) {
-        // ClientTickInstances tick here
-    }
+    // private void onClientTick(ClientTickEvent.Post event) { } // stubbed
 
     public void enableDynamicBuffers() {}
     public void updatePostShader() {}
