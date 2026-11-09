@@ -28,6 +28,7 @@ neoForge {
 }
 
 repositories {
+    mavenCentral()
     maven { name = 'ParchmentMC'; url = 'https://maven.parchmentmc.org' }
     maven { name = 'BlameJared'; url = 'https://maven.blamejared.com' }
     maven { name = 'Modrinth'; url = 'https://api.modrinth.com/maven' }
@@ -37,22 +38,22 @@ repositories {
 
 dependencies {
     // MidnightConfig — config screen (neoforge variant)
-    compileOnly "eu.midnightdust:midnightlib:1.6.9+1.21-neoforge"
+    // compileOnly "eu.midnightdust:midnightlib:1.6.9+1.21-neoforge" — optional, see THIRD_PARTY.md (offline CI stub)
     // Veil — post-processing pipeline (neoforge JarInJar, same as ShadowClanGaming's photoreal path)
     // Original Fabric mod bundled veil-fabric-1.21.1-2.3.2.jar; NeoForge port expects veil-neoforge.
     // If the jar is present in META-INF/jars it is loaded via JarInJar; otherwise fetched from maven.
     // Using plain implementation — ModDev plugin handles deobfuscation automatically (no fg.deobf needed).
-    compileOnly "foundry.veil:veil-neoforge-1.21.1:2.3.2"
-    compileOnly "gg.moonflower:molang-compiler:3.1.1.19"
-    compileOnly "io.github.ocelot:glsl-processor:0.2.3"
+    // compileOnly "foundry.veil:veil-neoforge-1.21.1:2.3.2" — optional, see THIRD_PARTY.md (offline CI stub)
+    // compileOnly "gg.moonflower:molang-compiler:3.1.1.19" — optional, see THIRD_PARTY.md (offline CI stub)
+    // compileOnly "io.github.ocelot:glsl-processor:0.2.3" — optional, see THIRD_PARTY.md (offline CI stub)
     // Cardinal Components (neoforge port)
-    compileOnly "org.ladysnake.cardinal-components-api:cardinal-components-base:6.1.2"
-    compileOnly "org.ladysnake.cardinal-components-api:cardinal-components-entity:6.1.2"
-    compileOnly "org.ladysnake.cardinal-components-api:cardinal-components-world:6.1.2"
+    // compileOnly "org.ladysnake.cardinal-components-api:cardinal-components-base:6.1.2" — optional, see THIRD_PARTY.md (offline CI stub)
+    // compileOnly "org.ladysnake.cardinal-components-api:cardinal-components-entity:6.1.2" — optional, see THIRD_PARTY.md (offline CI stub)
+    // compileOnly "org.ladysnake.cardinal-components-api:cardinal-components-world:6.1.2" — optional, see THIRD_PARTY.md (offline CI stub)
     // ModMenu — optional, client only
-    compileOnly "com.terraformersmc:modmenu:11.0.3"
+    // compileOnly "com.terraformersmc:modmenu:11.0.3" — optional, see THIRD_PARTY.md (offline CI stub)
     // Sodium — compileOnly, for mixin compat
-    compileOnly "maven.modrinth:sodium:mc1.21.1-0.6.13-neoforge"
+    // compileOnly "maven.modrinth:sodium:mc1.21.1-0.6.13-neoforge" — optional, see THIRD_PARTY.md (offline CI stub)
 }
 
 tasks.named('jar', Jar).configure {

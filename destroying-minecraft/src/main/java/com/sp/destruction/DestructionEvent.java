@@ -1,6 +1,6 @@
 package com.sp.destruction;
 
-import com.sp.cca.InitializeComponents;
+
 import com.sp.util.keyframes.KeyframeAnimation;
 import net.minecraft.world.level.Level;
 
@@ -21,15 +21,15 @@ public abstract class DestructionEvent {
     public void tick(Level level) {
         if (!initAnimations) {
             animation = initAnimations(level);
-            if (animation != null) animation.keyframeSkippedCallback(() -> InitializeComponents.EVENTS.get(level).syncLight());
+            // if (animation != null) animation.keyframeSkippedCallback(() -> InitializeComponents.EVENTS.get(level).syncLight());
             initAnimations = true;
         }
         if(animation != null) {
             if (this.isActive()) {
                 this.animation.run(level);
-                if ((animation.getProgress() % 200 == 0 && !level.isClientSide)) {
-                    InitializeComponents.EVENTS.get(level).syncLight();
-                }
+                // if ((animation.getProgress() % 200 == 0 && !level.isClientSide)) {
+                //     InitializeComponents.EVENTS.get(level).syncLight();
+                // }
             } else {
                 this.resetEvent();
             }

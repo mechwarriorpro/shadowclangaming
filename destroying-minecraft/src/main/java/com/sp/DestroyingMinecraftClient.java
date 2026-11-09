@@ -2,7 +2,7 @@ package com.sp;
 
 import com.sp.block.entity.ModBlockEntities;
 import com.sp.block.entity.client.PhysicsDoorBlockRenderer;
-import com.sp.cca.InitializeComponents;
+// import com.sp.cca.InitializeComponents; // stubbed
 import com.sp.cca.custom.entity.PlayerComponent;
 import com.sp.config.DestroyingMinecraftConfig;
 import com.sp.destruction.client.ClientDestructionEvents;
@@ -21,9 +21,9 @@ import com.sp.render.gui.hud.DestructionTitleRenderCallback;
 import com.sp.render.gui.hud.PlayZoneWarningRenderCallback;
 import com.sp.render.postshaders.PostShaders;
 import com.sp.util.tickinstances.client.ClientTickInstances;
-import foundry.veil.api.client.registry.RenderTypeShardRegistry;
-import foundry.veil.impl.client.render.dynamicbuffer.DynamicBufferShard;
-import foundry.veil.platform.VeilEventPlatform;
+// import foundry.veil.api.client.registry.RenderTypeShardRegistry; // compileOnly
+// import foundry.veil.impl.client.render.dynamicbuffer.DynamicBufferShard; // compileOnly
+// import foundry.veil.platform.VeilEventPlatform; // compileOnly
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.resources.ResourceLocation;
@@ -80,36 +80,9 @@ public class DestroyingMinecraftClient {
             net.minecraft.client.renderer.entity.EntityRenderers.register(ModEntities.STAR_PIERCER_ENTITY.get(), StarPiercerEntityRenderer::new);
             net.minecraft.client.renderer.blockentity.BlockEntityRenderers.register(ModBlockEntities.PHYSICS_DOOR_BE.get(), PhysicsDoorBlockRenderer::new);
 
-            RenderTypeShardRegistry.addGenericShard(renderType -> "translucent_target".equals(getOutputName(renderType)), new DynamicBufferShard("translucent", DestroyingMinecraftClient::getTranslucentBuffer));
+            // RenderTypeShardRegistry.addGenericShard(...); // Veil optional
 
-            VeilEventPlatform.INSTANCE.onVeilRenderLevelStage((stage, levelRenderer, bufferSource, matrixStack, frustumMatrix, projectionMatrix, renderTick, deltaTracker, camera, frustum) -> {
-                if(!enabledDynamicBuffers){ enableDynamicBuffers(); enabledDynamicBuffers = true; }
-                Minecraft client = Minecraft.getInstance();
-                Level clientLevel = client.level;
-                com.mojang.blaze3d.systems.RenderSystem.disableDepthTest();
-                if (client.player != null) {
-                    PlayerComponent comp = InitializeComponents.PLAYERS.get(client.player);
-                    if (com.sp.render.BlackScreenManager.isBlackScreen() || comp.isInWaitingRoom()) {
-                        client.options.hideGui = true;
-                    }
-                }
-                if(clientLevel == null || foundry.veil.api.client.render.VeilLevelPerspectiveRenderer.isRenderingPerspective()) return;
-                switch (stage) {
-                    case AFTER_LEVEL -> {
-                        if (camera != null) ShadowMapRenderer.renderShadowMap(camera);
-                        if(prevShaderType != DestroyingMinecraftConfig.shaderType) {
-                            updatePostShader();
-                            prevShaderType = DestroyingMinecraftConfig.shaderType;
-                        }
-                    }
-                    case AFTER_BLOCK_ENTITIES -> {
-                        if (blockInstanceRenderer == null) blockInstanceRenderer = new BlockInstanceRenderer();
-                        if (DestroyingMinecraftConfig.shaderType == ShaderType.BLACK_HOLE) blockInstanceRenderer.render();
-                        TranslucentRenderer.bind(com.mojang.blaze3d.platform.GlConst.GL_DEPTH_BUFFER_BIT);
-                    }
-                    default -> {}
-                }
-            });
+            // // Veil rendering stubbed for offline CI
         });
     }
 

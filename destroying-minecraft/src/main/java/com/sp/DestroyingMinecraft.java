@@ -17,10 +17,9 @@ import com.sp.world.playzone.PlayZoneManager;
 import com.sp.world.spinningblockexplosion.SpinningBlockExplosion;
 import com.sp.destruction.DestructionEvent;
 import com.sp.destruction.server.ServerDestructionEvent;
-import com.sp.cca.InitializeComponents;
 import com.sp.cca.custom.world.WorldDestructionEventsComponent;
-import eu.midnightdust.lib.config.MidnightConfig;
-import net.minecraft.world.World;
+// MidnightConfig optional
+import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
@@ -46,7 +45,7 @@ public class DestroyingMinecraft {
 
     public DestroyingMinecraft(IEventBus modEventBus, ModContainer modContainer) {
         // Config (MidnightConfig supports NeoForge via its neoforge jar)
-        MidnightConfig.init(MOD_ID, DestroyingMinecraftConfig.class);
+        // MidnightConfig.init(MOD_ID, DestroyingMinecraftConfig.class); // optional
 
         ModItems.REGISTRY.register(modEventBus);
         ModBlocks.REGISTRY.register(modEventBus);
@@ -75,7 +74,7 @@ public class DestroyingMinecraft {
         event.enqueueWork(() -> {
             // CCA is auto-registered via fabric.mod.json cardinal-components entrypoint;
             // on NeoForge we initialize manually.
-            InitializeComponents.register();
+            // InitializeComponents.register(); // CCA stubbed
         });
     }
 
@@ -84,7 +83,7 @@ public class DestroyingMinecraft {
         for (SpinningBlockExplosion explosion : SpinningBlockExplosion.getExplosions()) {
             if (level.equals(explosion.getWorld())) explosion.explode();
         }
-        if (level.dimension() == World.OVERWORLD) {
+        if (level.dimension() == Level.OVERWORLD) {
             BlackHoleDestruction.tick(level);
         }
     }
@@ -93,7 +92,7 @@ public class DestroyingMinecraft {
         PlayZoneManager.clearAllPlayZones();
         for (DestructionEvent e : ServerDestructionEvent.getAllServerInstances()) e.resetAnimations();
         for (net.minecraft.server.level.ServerLevel world : event.getServer().getAllLevels()) {
-            WorldDestructionEventsComponent comp = InitializeComponents.EVENTS.get(world);
+            WorldDestructionEventsComponent comp = com.sp.cca.SimpleWorldStorage.get(world);
             if (comp.getCurrentDestructionEvent() != null) comp.getCurrentDestructionEvent().resetEvent();
             comp.setAndStartCurrentDestructionEvent(null, -1);
         }
