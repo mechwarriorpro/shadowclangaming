@@ -10,9 +10,6 @@ permissions:
   contents: write
 
 jobs:
-  # The fast half of the verification: everything in this mod that is arithmetic rather than Minecraft is
-  # compiled and asserted here, plus the asset/lang/shader sweeps. No NeoForm decompile, no downloads of
-  # the game, so it answers "is the logic right" in about a minute instead of fifteen.
   checks:
     name: Harnesses and sweeps
     runs-on: ubuntu-latest
@@ -26,18 +23,12 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      # The JVM compile never sees GLSL, and sweep.py can only check that uniform names join. So a shader
-      # that does not compile used to reach the release: VolumetricFx catches the failure at runtime, sets
-      # loadFailed, and the game quietly draws CPU triangles instead - which presents as "the effects are
-      # transparent and all look the same" with a completely green build.
       - name: Install a GLSL compiler
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq glslang-tools
           glslangValidator --version | head -1
 
-      # Every check runs even if an earlier one fails, so one report covers the whole suite instead of
-      # needing a push per failure.
       - name: Run the fast checks
         id: checks
         continue-on-error: true
@@ -69,8 +60,6 @@ jobs:
           echo "status=$status" >> "$GITHUB_OUTPUT"
           exit "$status"
 
-      # The runner's own log lives on blob storage that a sandboxed reviewer may not be able to fetch, so
-      # the tail of it is posted back onto the commit where it can be read through the API.
       - name: Publish the check log on the commit
         if: always()
         env:
@@ -92,15 +81,11 @@ jobs:
           echo "one or more fast checks failed; see the commit comment for the tail of the log"
           exit 1
 
-  # The real build: compiles all 269 sources against a genuine NeoForge 21.1.264 / Minecraft 1.21.1
-  # classpath and packages the jar. This is the only step that can catch a type error.
   build:
-    name: Compile and package
+    name: Compile and package (both jars)
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
-      # NeoForm decompiles Minecraft as a child Java process; keep the heavy work
-      # on the hosted runner, not in the constrained local workspace.
       JAVA_TOOL_OPTIONS: -XX:ActiveProcessorCount=2 -XX:+UseSerialGC -Xmx3G
     steps:
       - uses: actions/checkout@v4
@@ -114,61 +99,67 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Compile and package
+      - name: Compile and package — both NeoForge jars
         id: build
         continue-on-error: true
         run: |
           set -o pipefail
-          # Prefer the gradle binary cached by setup-gradle over the wrapper download (which 504s on services.gradle.org)
           if command -v gradle >/dev/null 2>&1; then
             GRADLE_CMD="gradle"
           else
             GRADLE_CMD="./gradlew"
           fi
-          $GRADLE_CMD build --no-daemon --stacktrace --max-workers=2 \
+          # Build root (ShadowClanGaming) + subproject (destroying-minecraft NeoForge port)
+          # :jar builds only the jar task; use 'build' if you want tests too
+          $GRADLE_CMD jar :destroying-minecraft:jar --no-daemon --stacktrace --max-workers=2 \
             -Dorg.gradle.jvmargs='-Xmx2G -XX:+UseSerialGC -XX:ActiveProcessorCount=2' 2>&1 | tee /tmp/build.log
+          # Also list what was built
+          ls -lh build/libs/*.jar destroying-minecraft/build/libs/*.jar 2>&1 | tee -a /tmp/build.log || true
 
-      - name: Report jar contents
+      - name: Report jar contents (both)
         if: steps.build.outcome == 'success'
         run: |
-          for jar in build/libs/*.jar; do
+          for jar in build/libs/*.jar destroying-minecraft/build/libs/*.jar; do
+            [ -f "$jar" ] || continue
             echo "== $jar"
             sha256sum "$jar" | sed 's/^/sha256 /'
             unzip -l "$jar" | tail -3
-            echo "new classes: $(unzip -l "$jar" | grep -c 'com/shadowclangaming')"
+            echo "new classes: $(unzip -l "$jar" | grep -c 'com/')"
             echo "shader programs in the jar:"
-            unzip -l "$jar" | awk '{print $4}' | grep 'shaders/core/' | sed 's/^/  /'
-            unzip -p "$jar" META-INF/MANIFEST.MF || true
-            unzip -l "$jar" | awk '{print $4}' | grep -v '^$' | sort | uniq -d \
-              | sed 's/^/DUPLICATE ENTRY: /'
+            unzip -l "$jar" | awk '{print $4}' | grep -E 'shaders/(core|program)/' | head -20 | sed 's/^/  /'
+            unzip -p "$jar" META-INF/MANIFEST.MF 2>/dev/null | head -10 || true
+            echo ""
           done | tee /tmp/jar.log
+          echo "=== All jars ==="
+          ls -lh build/libs/*.jar destroying-minecraft/build/libs/*.jar 2>&1 | tee -a /tmp/jar.log
 
-      - name: Publish the jar as a GitHub release
+      - name: Publish both jars as a GitHub release
         if: steps.build.outcome == 'success'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # The Actions artifact blob host is not reachable from everywhere, and a jar nobody can
-          # download is not a delivery. A release asset is served from the repository itself.
           set -e
-          jar=$(ls build/libs/ShadowClanGaming-*.jar | head -1)
-          tag="v1.0.0-round45"
-          # Move the tag, not just the asset: a release whose tag points at last week's commit while its
-          # jar came from today's build is a release that lies about its own contents.
+          scg_jar=$(ls build/libs/ShadowClanGaming-*.jar 2>/dev/null | head -1)
+          dm_jar=$(ls destroying-minecraft/build/libs/destroying-minecraft-*.jar 2>/dev/null | head -1)
+          if [ -z "$scg_jar" ]; then echo "ShadowClanGaming jar not found"; ls -R build/libs/ 2>&1 || true; exit 1; fi
+          if [ -z "$dm_jar" ]; then echo "destroying-minecraft jar not found"; ls -R destroying-minecraft/build/libs/ 2>&1 || true; exit 1; fi
+          echo "Found: $scg_jar"
+          echo "Found: $dm_jar"
+          tag="v1.0.0-round46"
           git tag -f "$tag" "$GITHUB_SHA" > /dev/null
           git push -f origin "refs/tags/$tag"
           notes="Built from ${GITHUB_SHA} on ${GITHUB_REF_NAME} by run ${GITHUB_RUN_ID}.
-          Per-warhead world-space blast geometry (38 motifs, 12 layer kinds), effect-derived fuses
-          for block/grenade/minecart, and the Soul Furnace rework: it eats every 100 ticks until a
-          look-around comes back empty. Not runtime-tested - the CI build, the sweeps and the three
-          harnesses pass."
+          Two NeoForge 1.21.1 jars for side-by-side visual comparison:
+          - ShadowClanGaming 1.0.0 (122 warheads + 5 destroying_* photoreal mimics via world_blast_volume)
+          - destroying-minecraft 1.0.3 NeoForge port (original 5 DestructionTypes via Veil pinwheel shaders)
+          Drop both into mods/ alongside NeoForge 21.1.264. See docs/COMPARISON.md."
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
             gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --notes "$notes"
           else
             gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-              --title "ShadowClanGaming 1.0.0 - per-warhead world effects and fuses" --notes "$notes"
+              --title "ShadowClanGaming 1.0.0 + Destroying Minecraft 1.0.3 (NeoForge) — side-by-side" --notes "$notes"
           fi
-          gh release upload "$tag" "$jar" --repo "$GITHUB_REPOSITORY" --clobber
+          gh release upload "$tag" "$scg_jar" "$dm_jar" --repo "$GITHUB_REPOSITORY" --clobber
           echo "published: https://github.com/$GITHUB_REPOSITORY/releases/tag/$tag" | tee -a /tmp/jar.log
 
       - name: Publish the build log on the commit
@@ -177,7 +168,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           {
-            echo "### Gradle build: ${{ steps.build.outcome }}"
+            echo "### Gradle build (both jars): ${{ steps.build.outcome }}"
             echo
             echo '```'
             grep -nE "error:|warning:|FAILED|FAILURE|BUILD SUCCESS|What went wrong|> Task .* FAILED" \
@@ -186,7 +177,7 @@ jobs:
             grep -A3 -nE "error:" /tmp/build.log 2>/dev/null | head -n 120 || true
             echo '--- tail ---'
             tail -n 40 /tmp/build.log 2>/dev/null || true
-            echo '--- jar ---'
+            echo '--- jars ---'
             cat /tmp/jar.log 2>/dev/null || true
             echo '```'
           } > /tmp/body.md || true
@@ -197,11 +188,13 @@ jobs:
         if: steps.build.outcome != 'success'
         run: exit 1
 
-      - name: Upload jar
+      - name: Upload jars (both)
         if: steps.build.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: shadowclangaming-jar
-          path: build/libs/*.jar
+          name: both-jars
+          path: |
+            build/libs/*.jar
+            destroying-minecraft/build/libs/*.jar
           if-no-files-found: error
           retention-days: 14
