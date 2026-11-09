@@ -63,8 +63,9 @@ public class DestroyingMinecraft {
         NeoForge.EVENT_BUS.addListener(this::onServerStopped);
 
         // Commands & networking are registered via RegisterCommandsEvent / RegisterPayloadHandlersEvent
+        // Commands & networking: RegisterCommandsEvent is on NeoForge bus, RegisterPayloadHandlersEvent is on MOD bus
         NeoForge.EVENT_BUS.register(DestroyingMinecraftCommands.class);
-        NeoForge.EVENT_BUS.register(InitializePackets.class);
+        modEventBus.addListener(InitializePackets::registerPayloads);
         NeoForge.EVENT_BUS.register(ServerDestructionEvents.class);
 
         LOGGER.info("\"It's nukein' time\" -He said as he loaded the fork into the microwave (NeoForge port)");
