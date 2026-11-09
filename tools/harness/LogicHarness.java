@@ -1414,20 +1414,20 @@ public final class LogicHarness {
             "railgun_barrage", "vector_storm", "teleport_disarray", "meltdowner_beam", "gravity_crush", "pyro_squall", "aero_cleave", "mental_bleed", "heli_strike", "air_raid",
             "jakobs_revenge", "vladof_spin", "torgue_boom", "maliwan_storm", "hyperion_pulse", "dahl_burst", "bandit_scrap", "tediore_throw", "orbital_rain", "kaiju_cannon",
             "nexus_prism", "alchemic_apotheosis", "bloodstar", "techno_mage", "void_forge", "chimera", "eclipse_catalyst", "genesis_seed", "omega_nexus", "unification",
-            "interceptor",
+            "interceptor", "destroying_nuke", "destroying_laser", "destroying_black_hole", "destroying_planet", "destroying_supernova",
     };
 
     private static void explosivePackagingTests() {
         section("explosive packaging");
 
-        // The roster is the source of truth: 123 warheads (122 + interceptor SAM), all packable, none skipped.
+        // The roster is the source of truth: 128 warheads (122 + interceptor SAM + 5 destroying), all packable, none skipped.
         int packable = 0;
         for (String id : WARHEADS) {
             if (com.shadowclangaming.warhead.ExplosivePackaging.packable(id)) {
                 packable++;
             }
         }
-        eq("the roster is 123 warheads", 123, WARHEADS.length);
+        eq("the roster is 128 warheads", 128, WARHEADS.length);
         eq("every warhead is packable", WARHEADS.length, packable);
         check("dud is packable too (a training charge)",
                 com.shadowclangaming.warhead.ExplosivePackaging.packable("dud"));
@@ -1471,14 +1471,14 @@ public final class LogicHarness {
                         && !form.impact()
                         && !com.shadowclangaming.warhead.ExplosivePackaging.Form.GRENADE.impact());
 
-        // Three forms for every warhead: 123 warheads -> 369 ids, no duplicates.
+        // Three forms for every warhead: 128 warheads -> 384 ids, no duplicates.
         java.util.Set<String> ids = new java.util.HashSet<>();
         for (String id : WARHEADS) {
             for (var f : com.shadowclangaming.warhead.ExplosivePackaging.Form.values()) {
                 ids.add(com.shadowclangaming.warhead.ExplosivePackaging.id(f, id));
             }
         }
-        eq("369 packaged ids, all distinct", 3 * WARHEADS.length, ids.size());
+        eq("384 packaged ids, all distinct", 3 * WARHEADS.length, ids.size());
     }
 
     // ------------------------------------------------------------------ barrage

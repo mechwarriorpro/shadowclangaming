@@ -38,22 +38,23 @@ repositories {
 dependencies {
     // MidnightConfig — config screen (neoforge variant)
     implementation "eu.midnightdust:midnightlib:1.6.9+1.21-neoforge"
-    // Veil — post-processing pipeline (neoforge jar-in-jar, same as ShadowClanGaming's photoreal path)
-    // Original Fabric mod bundled veil-fabric-1.21.1-2.3.2.jar; NeoForge port bundles veil-neoforge equivalent.
-    // If the jar is present in META-INF/jars it is loaded via JarInJar; otherwise Loom fetches it.
-    implementation fg.deobf("foundry.veil:veil-neoforge-1.21.1:2.3.2") {
+    // Veil — post-processing pipeline (neoforge JarInJar, same as ShadowClanGaming's photoreal path)
+    // Original Fabric mod bundled veil-fabric-1.21.1-2.3.2.jar; NeoForge port expects veil-neoforge.
+    // If the jar is present in META-INF/jars it is loaded via JarInJar; otherwise fetched from maven.
+    // Using plain implementation — ModDev plugin handles deobfuscation automatically (no fg.deobf needed).
+    implementation("foundry.veil:veil-neoforge-1.21.1:2.3.2") {
         exclude group: 'maven.modrinth', module: 'midnightlib'
     }
-    implementation fg.deobf("gg.moonflower:molang-compiler:3.1.1.19")
-    implementation fg.deobf("io.github.ocelot:glsl-processor:0.2.3")
+    implementation "gg.moonflower:molang-compiler:3.1.1.19"
+    implementation "io.github.ocelot:glsl-processor:0.2.3"
     // Cardinal Components (neoforge port)
-    implementation fg.deobf("org.ladysnake.cardinal-components-api:cardinal-components-base:6.1.2")
-    implementation fg.deobf("org.ladysnake.cardinal-components-api:cardinal-components-entity:6.1.2")
-    implementation fg.deobf("org.ladysnake.cardinal-components-api:cardinal-components-world:6.1.2")
+    implementation "org.ladysnake.cardinal-components-api:cardinal-components-base:6.1.2"
+    implementation "org.ladysnake.cardinal-components-api:cardinal-components-entity:6.1.2"
+    implementation "org.ladysnake.cardinal-components-api:cardinal-components-world:6.1.2"
     // ModMenu — optional, client only
-    implementation fg.deobf("com.terraformersmc:modmenu:11.0.3")
+    implementation "com.terraformersmc:modmenu:11.0.3"
     // Sodium — compileOnly, for mixin compat
-    compileOnly fg.deobf("maven.modrinth:sodium:mc1.21.1-0.6.13-neoforge")
+    compileOnly "maven.modrinth:sodium:mc1.21.1-0.6.13-neoforge"
 }
 
 tasks.named('jar', Jar).configure {
