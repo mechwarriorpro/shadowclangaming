@@ -34,7 +34,7 @@ public class CustomPayloads {
     public record BraamPayload(SoundEvent soundEvent) implements CustomPacketPayload {
         public static final Type<BraamPayload> TYPE = new Type<>(id("asp"));
         public static final StreamCodec<RegistryFriendlyByteBuf, BraamPayload> CODEC = new StreamCodec<>() {
-            public BraamPayload decode(RegistryFriendlyByteBuf buf) { return new BraamPayload(net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT.getValueOrThrow(buf.readResourceLocation())); }
+            public BraamPayload decode(RegistryFriendlyByteBuf buf) { return new BraamPayload(SoundEvent.createVariableRangeEvent(buf.readResourceLocation())); }
             public void encode(RegistryFriendlyByteBuf buf, BraamPayload v) { buf.writeResourceLocation(v.soundEvent().getLocation()); }
         };
         @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }

@@ -93,6 +93,6 @@ public class InitializePackets {
         try { net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, new CustomPayloads.WaitingRoomPacketPayload(v)); } catch (Exception ignored) {}
     }
     public static void sendBraam(net.minecraft.server.level.ServerPlayer player, double clamped) {
-        try { net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, new CustomPayloads.BraamPayload(net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT.getValueOrThrow(net.minecraft.resources.ResourceLocation.parse("minecraft:block.note_block.basedrum")))); } catch (Exception ignored) {}
+        try { net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, new CustomPayloads.BraamPayload(net.minecraft.sounds.SoundEvent.createVariableRangeEvent(net.minecraft.resources.ResourceLocation.parse("minecraft:block.note_block.basedrum")))); } catch (Exception ignored) {}
     }
 }
