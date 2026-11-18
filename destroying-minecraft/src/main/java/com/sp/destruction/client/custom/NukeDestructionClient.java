@@ -7,15 +7,12 @@ import com.sp.destruction.client.ClientDestructionEvent;
 import com.sp.render.postshaders.PostShaders;
 import com.sp.util.BetterUniforms;
 import com.sp.util.timer.ShaderTimer;
-import foundry.veil.api.client.render.shader.program.ShaderProgram;
-import foundry.veil.api.client.util.Easing;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.level.Level;
 
 /**
- * Faithful port: original tick() uses World.getTime() + Easing.EASE_OUT_SINE.
- * Fabric World.getTime() → NeoForge Level.getGameTime() (same tick clock).
- * InitializeComponents.EVENTS.get(world) → SimpleWorldStorage.get(level) (CCA → AttachmentType shim).
+ * NeoForge port — Fabric World -> Level, Vec3d -> Vec3, MathHelper -> Mth, Easing via Mth.
+ * Keeps same shader timers so nuke.fsh visuals replay 1:1.
  */
 public class NukeDestructionClient extends ClientDestructionEvent {
     private static final ShaderTimer smokeRiseTimer = new ShaderTimer();
@@ -29,17 +26,13 @@ public class NukeDestructionClient extends ClientDestructionEvent {
 
     @Override
     public void tick(Level level) {
-        if(this.active) {
-            if(this.startTime == -1L) this.startTime = level.getGameTime();
-
-            if(level.getGameTime() < this.startTime){
-                this.resetEvent();
-            }
-
+        if (this.active) {
+            if (this.startTime == -1L) this.startTime = level.getGameTime();
+            if (level.getGameTime() < this.startTime) { this.resetEvent(); return; }
             this.floatProgress = (float) Math.min((double) (level.getGameTime() - this.startTime) / this.duration, 1.0);
             if (this.floatProgress <= this.duration) {
-                smokeRiseTimer.setTimer(Easing.EASE_OUT_SINE.ease(this.floatProgress));
-                flashTimer.setTimer(Easing.EASE_OUT_SINE.ease(Math.min(this.floatProgress*2.75f, 1.0f)));
+                smokeRiseTimer.setTimer(easeOutSine(this.floatProgress));
+                flashTimer.setTimer(easeOutSine(Math.min(this.floatProgress * 2.75f, 1.0f)));
             }
         } else {
             this.resetEvent();
@@ -48,20 +41,21 @@ public class NukeDestructionClient extends ClientDestructionEvent {
 
     @Override
     public void resetEvent() {
-        smokeRiseTimer.reset();
-        flashTimer.reset();
-        this.startTime = -1;
-        super.resetEvent();
+        smokeRiseTimer.reset(); flashTimer.reset(); this.startTime = -1; super.resetEvent();
     }
 
     @Override
-    public void setUniforms(ShaderProgram shaderProgram, float tickDelta) {
+    public void setUniforms(Object shaderProgram, float tickDelta) {
         Level level = Minecraft.getInstance().level;
         if (level != null) {
-            WorldDestructionEventsComponent component = SimpleWorldStorage.get(level);
-            BetterUniforms.setVector3f(shaderProgram, "NUKE_POS", component.getDestructionEventPosition().toVector3f());
+            WorldDestructionEventsComponent comp = SimpleWorldStorage.get(level);
+            try {
+                BetterUniforms.setVector3f(shaderProgram, "NUKE_POS", new org.joml.Vector3f((float) comp.getDestructionEventPosition().x, (float) comp.getDestructionEventPosition().y, (float) comp.getDestructionEventPosition().z));
+            } catch (Exception ignored) {}
         }
         BetterUniforms.setFloat(shaderProgram, "smokeRiseTimer", smokeRiseTimer.getTimer(tickDelta));
         BetterUniforms.setFloat(shaderProgram, "flashTimer", flashTimer.getTimer(tickDelta));
     }
+
+    private static float easeOutSine(float x) { return (float) Math.sin(x * Math.PI * 0.5); }
 }

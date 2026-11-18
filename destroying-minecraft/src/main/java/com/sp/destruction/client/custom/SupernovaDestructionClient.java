@@ -8,14 +8,9 @@ import com.sp.util.BetterUniforms;
 import com.sp.util.keyframes.Keyframe;
 import com.sp.util.keyframes.KeyframeAnimation;
 import com.sp.util.timer.ShaderTimer;
-import foundry.veil.api.client.render.shader.program.ShaderProgram;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
-/**
- * Faithful port: original 184 LOC. supernova reuses sky shader (no dedicated PostShader).
- * Uniforms: supernovaTimer/implodeTimer, flashTimer, explosionTimer, laserPos, laserLength, flashFrame.
- */
 public class SupernovaDestructionClient extends ClientDestructionEvent {
     private static final ShaderTimer implodeTimer = new ShaderTimer();
     private static final ShaderTimer flashTimer = new ShaderTimer();
@@ -31,7 +26,7 @@ public class SupernovaDestructionClient extends ClientDestructionEvent {
         DestroyingMinecraftClient.destructionDistance = Integer.MAX_VALUE; super.resetEvent();
     }
 
-    @Override public void setUniforms(ShaderProgram shaderProgram, float tickDelta) {
+    @Override public void setUniforms(Object shaderProgram, float tickDelta) {
         BetterUniforms.setVector3f(shaderProgram, "laserPos", new org.joml.Vector3f((float) laserPos.x, (float) laserPos.y, (float) laserPos.z));
         BetterUniforms.setFloat(shaderProgram, "supernovaTimer", implodeTimer.getTimer(tickDelta));
         BetterUniforms.setFloat(shaderProgram, "flashTimer", flashTimer.getTimer(tickDelta));

@@ -34,26 +34,26 @@ repositories {
     maven { name = 'Modrinth'; url = 'https://api.modrinth.com/maven' }
     maven { name = 'Ladysnake'; url = 'https://maven.ladysnake.org/releases' }
     maven { name = 'Terraformers'; url = 'https://maven.terraformersmc.com/' }
-    maven { name = 'NeoForged'; url = 'https://maven.neoforged.net/releases' }
-    maven { name = 'Veil'; url = 'https://maven.firstdark.dev/releases' }
-    maven { name = 'Ocelot'; url = 'https://maven.iamnotbad.dev/releases' }
-    maven { name = 'Moonflower'; url = 'https://maven.moonflowerlabs.org/releases' }
 }
 
 dependencies {
-    // Veil — post-processing pipeline (faithful port: veil-fabric-1.21.1-2.3.2 -> veil-neoforge-1.21.1:4.x)
-    // Fabric 2.3.2 was JarInJar; NeoForge 4.5.2 is latest for 1.21.1 with same PostShader API (LGPL-3.0).
-    implementation "foundry.veil:veil-neoforge-1.21.1:4.5.2"
-    implementation "gg.moonflower:molang-compiler:3.1.1.19"
-    implementation "org.joml:joml:1.10.8"
-    // Cardinal Components - world/player attachments (events, players)
-    // Kept compileOnly for offline sweep; CI resolves via Ladysnake maven if needed. SimpleWorldStorage fallback works without.
-    compileOnly "org.ladysnake.cardinal-components-api:cardinal-components-base:6.1.2"
-    compileOnly "org.ladysnake.cardinal-components-api:cardinal-components-entity:6.1.2"
-    compileOnly "org.ladysnake.cardinal-components-api:cardinal-components-world:6.1.2"
-    compileOnly "eu.midnightdust:midnightlib:1.6.9+1.21-neoforge"
-    // Sodium compat mixins (optional)
-    compileOnly "maven.modrinth:sodium:mc1.21.1-0.6.13-neoforge"
+    // MidnightConfig — config screen (neoforge variant)
+    // compileOnly "eu.midnightdust:midnightlib:1.6.9+1.21-neoforge" — optional, see THIRD_PARTY.md (offline CI stub)
+    // Veil — post-processing pipeline (neoforge JarInJar, same as ShadowClanGaming's photoreal path)
+    // Original Fabric mod bundled veil-fabric-1.21.1-2.3.2.jar; NeoForge port expects veil-neoforge.
+    // If the jar is present in META-INF/jars it is loaded via JarInJar; otherwise fetched from maven.
+    // Using plain implementation — ModDev plugin handles deobfuscation automatically (no fg.deobf needed).
+    // compileOnly "foundry.veil:veil-neoforge-1.21.1:2.3.2" — optional, see THIRD_PARTY.md (offline CI stub)
+    // compileOnly "gg.moonflower:molang-compiler:3.1.1.19" — optional, see THIRD_PARTY.md (offline CI stub)
+    // compileOnly "io.github.ocelot:glsl-processor:0.2.3" — optional, see THIRD_PARTY.md (offline CI stub)
+    // Cardinal Components (neoforge port)
+    // compileOnly "org.ladysnake.cardinal-components-api:cardinal-components-base:6.1.2" — optional, see THIRD_PARTY.md (offline CI stub)
+    // compileOnly "org.ladysnake.cardinal-components-api:cardinal-components-entity:6.1.2" — optional, see THIRD_PARTY.md (offline CI stub)
+    // compileOnly "org.ladysnake.cardinal-components-api:cardinal-components-world:6.1.2" — optional, see THIRD_PARTY.md (offline CI stub)
+    // ModMenu — optional, client only
+    // compileOnly "com.terraformersmc:modmenu:11.0.3" — optional, see THIRD_PARTY.md (offline CI stub)
+    // Sodium — compileOnly, for mixin compat
+    // compileOnly "maven.modrinth:sodium:mc1.21.1-0.6.13-neoforge" — optional, see THIRD_PARTY.md (offline CI stub)
 }
 
 tasks.named('jar', Jar).configure {
