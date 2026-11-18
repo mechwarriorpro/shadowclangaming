@@ -27,9 +27,6 @@ versionRange = "[1.21.1,1.22)"
 ordering = "NONE"
 side = "BOTH"
 
-[[mixins]]
-config = "destroying-minecraft.mixins.json"
-
 # Veil is bundled via JarInJar (META-INF/jars/veil-neoforge-*.jar) — not a declared dependency
 # Cardinal Components is bundled via include — not a declared dependency
 
