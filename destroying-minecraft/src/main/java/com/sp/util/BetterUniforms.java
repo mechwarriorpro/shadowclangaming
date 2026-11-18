@@ -1,41 +1,49 @@
 package com.sp.util;
 
+import foundry.veil.api.client.render.shader.program.ShaderProgram;
+import foundry.veil.api.client.render.shader.uniform.ShaderUniform;
 import org.joml.Matrix4f;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
 
 /**
- * Veil helper — when Veil is present sets uniforms via its ShaderProgram API.
- * When Veil is not on classpath (offline CI / no JarInJar) calls are no-op so
- * the mod still loads and gameplay works, just without post-shaders.
- * Uses reflection to avoid hard compile dependency; keep signatures identical to original.
+ * Faithful port: original BetterUniforms kept verbatim (no Fabric→NeoForge rename).
+ * Veil's ShaderUniform API is identical on both loaders.
  */
 public class BetterUniforms {
-    public static void setMatrix(Object shaderProgram, String name, Matrix4f mat) {
-        trySet(shaderProgram, name, u -> u.getClass().getMethod("setMatrix", Matrix4f.class).invoke(u, mat));
-    }
-    public static void setVector3f(Object shaderProgram, String name, Vector3f vec) {
-        trySet(shaderProgram, name, u -> u.getClass().getMethod("setVector", Vector3f.class).invoke(u, vec));
-    }
-    public static void setVector2f(Object shaderProgram, String name, Vector2f vec) {
-        trySet(shaderProgram, name, u -> u.getClass().getMethod("setVector", Vector2f.class).invoke(u, vec));
-    }
-    public static void setFloat(Object shaderProgram, String name, float v) {
-        trySet(shaderProgram, name, u -> u.getClass().getMethod("setFloat", float.class).invoke(u, v));
-    }
-    public static void setInt(Object shaderProgram, String name, int v) {
-        trySet(shaderProgram, name, u -> u.getClass().getMethod("setInt", int.class).invoke(u, v));
+
+    public static void setMatrix(ShaderProgram shaderProgram, String charSequence, Matrix4f matrix4f) {
+        ShaderUniform uniform = shaderProgram.getUniform(charSequence);
+        if(uniform != null) {
+            uniform.setMatrix(matrix4f);
+        }
     }
 
-    private interface UniformSetter { void set(Object uniform) throws Exception; }
+    public static void setVector3f(ShaderProgram shaderProgram, String charSequence, Vector3f vector3f) {
+        ShaderUniform uniform = shaderProgram.getUniform(charSequence);
+        if(uniform != null) {
+            uniform.setVector(vector3f);
+        }
+    }
 
-    private static void trySet(Object shaderProgram, String name, UniformSetter setter) {
-        if (shaderProgram == null) return;
-        try {
-            Object uniform = shaderProgram.getClass().getMethod("getUniform", String.class).invoke(shaderProgram, name);
-            if (uniform != null) setter.set(uniform);
-        } catch (Exception ignored) {
-            // Veil not present or API changed — safe no-op for CI / headless
+    public static void setVector2f(ShaderProgram shaderProgram, String charSequence, Vector2f vector2f) {
+        ShaderUniform uniform = shaderProgram.getUniform(charSequence);
+        if(uniform != null) {
+            uniform.setVector(vector2f);
+        }
+    }
+
+    public static void setFloat(ShaderProgram shaderProgram, String charSequence, float value) {
+        ShaderUniform uniform = shaderProgram.getUniform(charSequence);
+        if(uniform != null) {
+            uniform.setFloat(value);
+        }
+    }
+
+    public static void setInt(ShaderProgram shaderProgram, String charSequence, int value) {
+        ShaderUniform uniform = shaderProgram.getUniform(charSequence);
+        if(uniform != null) {
+            uniform.setInt(value);
         }
     }
 }
