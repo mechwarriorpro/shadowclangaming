@@ -41,9 +41,9 @@ repositories {
 }
 
 dependencies {
-    // Veil — post-processing pipeline (faithful port: veil-fabric-1.21.1-2.3.2 -> veil-neoforge-1.21.1-2.3.2)
-    // Same API, just loader swap. Required for PostShader/BetterUniforms/PrevUniforms to compile typed (not Object reflection).
-    implementation "foundry.veil:veil-neoforge-1.21.1:2.3.2"
+    // Veil — post-processing pipeline (faithful port: veil-fabric-1.21.1-2.3.2 -> veil-neoforge-1.21.1:4.x)
+    // Fabric 2.3.2 was JarInJar; NeoForge 4.5.2 is latest for 1.21.1 with same PostShader API (LGPL-3.0).
+    implementation "foundry.veil:veil-neoforge-1.21.1:4.5.2"
     implementation "gg.moonflower:molang-compiler:3.1.1.19"
     implementation "org.joml:joml:1.10.8"
     // Cardinal Components - world/player attachments (events, players)
