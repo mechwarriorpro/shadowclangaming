@@ -6,6 +6,8 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 public class DestroyingMinecraftCommands {
     @SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event) {
-        // /destroying_minecraft <type> — wired to ServerDestructionEvent.create(type, level, pos).start()
+        DestructionCommand.register(event.getDispatcher());
+        try { RipPlatformOutCommand.register(event.getDispatcher()); } catch (Exception ignored) {}
+        try { PlayersCommand.register(event.getDispatcher()); } catch (Exception ignored) {}
     }
 }

@@ -1,6 +1,7 @@
 package com.sp.render.gui.hud;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.client.event.RenderGuiEvent;
+
+import com.sp.destruction.DestructionType;
+
 public class DestructionTitleRenderCallback {
-    @SubscribeEvent public void onRender(RenderGuiEvent.Post event) {}
+    public static void setDestructionTitle(DestructionType type) {}
 }

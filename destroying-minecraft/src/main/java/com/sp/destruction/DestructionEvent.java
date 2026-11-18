@@ -1,6 +1,6 @@
 package com.sp.destruction;
 
-
+import com.sp.cca.SimpleWorldStorage;
 import com.sp.util.keyframes.KeyframeAnimation;
 import net.minecraft.world.level.Level;
 
@@ -21,24 +21,20 @@ public abstract class DestructionEvent {
     public void tick(Level level) {
         if (!initAnimations) {
             animation = initAnimations(level);
-            // if (animation != null) animation.keyframeSkippedCallback(() -> InitializeComponents.EVENTS.get(level).syncLight());
+            if (animation != null) animation.keyframeSkippedCallback(() -> SimpleWorldStorage.get(level).syncLight());
             initAnimations = true;
         }
-        if(animation != null) {
+        if (animation != null) {
             if (this.isActive()) {
                 this.animation.run(level);
-                // if ((animation.getProgress() % 200 == 0 && !level.isClientSide)) {
-                //     InitializeComponents.EVENTS.get(level).syncLight();
-                // }
+                if ((animation.getProgress() % 200 == 0 && !level.isClientSide)) SimpleWorldStorage.get(level).syncLight();
             } else {
                 this.resetEvent();
             }
         }
     }
 
-    public void resetAnimationToCurrentTime(Level level) {
-        if (this.animation != null) this.animation.resetToCurrentTime(level);
-    }
+    public void resetAnimationToCurrentTime(Level level) { if (this.animation != null) this.animation.resetToCurrentTime(level); }
     protected void skipKeyframe() { if (animation != null) animation.skipKeyframe(); }
     protected KeyframeAnimation initAnimations(Level level) { return null; }
     public int getProgress() { return animation != null ? animation.skippedTime : 0; }

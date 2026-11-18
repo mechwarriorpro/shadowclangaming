@@ -80,12 +80,13 @@ public class DestroyingMinecraft {
     }
 
     private void onServerTick(ServerTickEvent.Post event) {
-        if (!(event.getServer().overworld() instanceof net.minecraft.server.level.ServerLevel level)) return;
-        for (SpinningBlockExplosion explosion : SpinningBlockExplosion.getExplosions()) {
-            if (level.equals(explosion.getWorld())) explosion.explode();
-        }
-        if (level.dimension() == Level.OVERWORLD) {
-            BlackHoleDestruction.tick(level);
+        for (net.minecraft.server.level.ServerLevel level : event.getServer().getAllLevels()) {
+            for (SpinningBlockExplosion explosion : SpinningBlockExplosion.getExplosions()) {
+                if (level.equals(explosion.getWorld())) explosion.explode();
+            }
+            if (level.dimension() == Level.OVERWORLD) BlackHoleDestruction.tick(level);
+            // Tick active destruction event via SimpleWorldStorage (original used CCA tick)
+            try { com.sp.cca.SimpleWorldStorage.get(level).tick(); } catch (Exception ignored) {}
         }
     }
 

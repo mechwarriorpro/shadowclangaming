@@ -1,6 +1,8 @@
 package com.sp.config;
 
+import com.sp.render.ShaderType;
+
 public class DestroyingMinecraftConfig {
-    public static ShaderType shaderType = ShaderType.NUKE;
-    public enum ShaderType { NONE, NUKE, CRACKS, BLACK_HOLE, PLANET, SUPERNOVA, METEOR, STAR_PIERCER }
+    public static ShaderType shaderType = ShaderType.NONE;
+    public static void write(String modId) {}
 }

@@ -51,7 +51,7 @@ public class DestroyingMinecraftClient {
     private static final ResourceLocation TRANSLUCENT_FRAMEBUFFER = DestroyingMinecraft.idOf("translucent");
     public static boolean shouldRenderDebug = false;
     public BlockInstanceRenderer blockInstanceRenderer;
-    private static ShaderType prevShaderType;
+    private static com.sp.render.ShaderType prevShaderType;
     private static final Set<ResourceLocation> removedPipelines = new HashSet<>(1);
     private static boolean enabledDynamicBuffers = false;
     public static int destructionDistance = Integer.MAX_VALUE;
@@ -87,7 +87,27 @@ public class DestroyingMinecraftClient {
     }
 
     private void onRenderLevelStage(RenderLevelStageEvent event) {
-        // Fallback path when Veil is not present — delegates to same logic
+        // NeoForge port of VeilEventPlatform.INSTANCE.onVeilRenderLevelStage + preVeilPostProcessing
+        // When Veil is present we are called inside its PostPipeline; we set uniforms via reflection.
+        // When Veil absent this is just a normal level stage — no-op but doesn't crash.
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_LEVEL) return;
+        var mc = Minecraft.getInstance();
+        if (mc.level == null) return;
+        try {
+            // Try to get Veil's post context via the event — if not present, event itself is not a PostPipeline.Context
+            // So we do a reflective check; original Fabric code set uniforms in preVeilPostProcessing callback.
+            // Here we approximate by iterating our ShaderType's enabled shaders and calling their uniform setters
+            // with the event as context (they handle reflection safely).
+            var shaderType = com.sp.config.DestroyingMinecraftConfig.shaderType;
+            if (shaderType == null) shaderType = com.sp.render.ShaderType.NONE;
+            float tickDelta = mc.getTimer().getGameTimeDeltaPartialTick(true);
+            for (var postShader : shaderType.getEnabledShaders()) {
+                try { postShader.setUniforms(event, tickDelta, mc, mc.level); } catch (Exception ignored) {}
+            }
+            // Also tick the destruction so veil timer uniforms are fresh (backup if ClientTickInstances missed)
+            var comp = com.sp.cca.SimpleWorldStorage.get(mc.level);
+            if (comp.getCurrentDestructionEvent() != null) comp.tick();
+        } catch (Exception ignored) {}
     }
 
     // private void onClientTick(ClientTickEvent.Post event) { } // stubbed
@@ -96,5 +116,6 @@ public class DestroyingMinecraftClient {
     public void updatePostShader() {}
     public static net.minecraft.client.renderer.RenderType getTranslucentBuffer() { return null; }
     public static String getOutputName(Object rt) { return rt.toString(); }
+    /** Legacy alias — use com.sp.render.ShaderType instead */
     public enum ShaderType { NONE, NUKE, CRACKS, BLACK_HOLE, PLANET, SUPERNOVA, METEOR, STAR_PIERCER }
 }
