@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "AMA",
+    "MXM",
+    "AMA"
+  ],
+  "key": {
+    "A": {
+      "item": "shadowclangaming:antimatter_missile"
+    },
+    "M": {
+      "item": "minecraft:iron_block"
+    },
+    "X": {
+      "item": "minecraft:anvil"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:spacetime_hammer_missile",
+    "count": 1
+  }
+}

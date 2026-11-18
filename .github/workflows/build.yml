@@ -1,0 +1,200 @@
+name: Build
+
+on:
+  push:
+    branches: [ main, master, arena/da1d4f8a-shadowclangaming ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  checks:
+    name: Harnesses and sweeps
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install a GLSL compiler
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq glslang-tools
+          glslangValidator --version | head -1
+
+      - name: Run the fast checks
+        id: checks
+        continue-on-error: true
+        run: |
+          cat > /tmp/checks.sh <<'EOS'
+          status=0
+          run() {
+            name="$1"; shift
+            echo
+            echo "=================== $name ==================="
+            if "$@"; then
+              echo "RESULT: PASS ($name)"
+            else
+              echo "RESULT: FAIL ($name)"
+              status=1
+            fi
+          }
+          run "sweep (assets, lang, recipes, shaders, motifs, fuses)" python3 tools/sweep.py
+          run "names" python3 tools/check_names.py
+          run "logic harness" bash tools/run_logic_harness.sh
+          run "api harness" bash tools/run_api_harness.sh
+          run "lua harness" bash tools/run_lua_harness.sh
+          run "syntax check" bash tools/check_syntax.sh
+          run "glsl compiles" bash tools/check_glsl.sh
+          echo "$status" > /tmp/checks.status
+          EOS
+          bash /tmp/checks.sh 2>&1 | tee /tmp/checks.log
+          status="$(cat /tmp/checks.status 2>/dev/null || echo 1)"
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit "$status"
+
+      - name: Publish the check log on the commit
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo "### Fast checks: ${{ steps.checks.outcome }}"
+            echo
+            echo '```'
+            tail -n 170 /tmp/checks.log 2>/dev/null || true
+            echo '```'
+          } > /tmp/body.md || true
+          gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/comments" \
+            -f body="$(cat /tmp/body.md)" > /dev/null || echo "could not post the log"
+
+      - name: Fail the job if any check failed
+        if: steps.checks.outputs.status == '1'
+        run: |
+          echo "one or more fast checks failed; see the commit comment for the tail of the log"
+          exit 1
+
+  build:
+    name: Compile and package (both jars)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      JAVA_TOOL_OPTIONS: -XX:ActiveProcessorCount=2 -XX:+UseSerialGC -Xmx3G
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Compile and package — both NeoForge jars
+        id: build
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          if command -v gradle >/dev/null 2>&1; then
+            GRADLE_CMD="gradle"
+          else
+            GRADLE_CMD="./gradlew"
+          fi
+          # Build root (ShadowClanGaming) + subproject (destroying-minecraft NeoForge port)
+          # :jar builds only the jar task; use 'build' if you want tests too
+          $GRADLE_CMD jar :destroying-minecraft:jar --no-daemon --stacktrace --max-workers=2 \
+            -Dorg.gradle.jvmargs='-Xmx2G -XX:+UseSerialGC -XX:ActiveProcessorCount=2' 2>&1 | tee /tmp/build.log
+          # Also list what was built
+          ls -lh build/libs/*.jar destroying-minecraft/build/libs/*.jar 2>&1 | tee -a /tmp/build.log || true
+
+      - name: Report jar contents (both)
+        if: steps.build.outcome == 'success'
+        run: |
+          for jar in build/libs/*.jar destroying-minecraft/build/libs/*.jar; do
+            [ -f "$jar" ] || continue
+            echo "== $jar"
+            sha256sum "$jar" | sed 's/^/sha256 /'
+            unzip -l "$jar" | tail -3
+            echo "new classes: $(unzip -l "$jar" | grep -c 'com/')"
+            echo "shader programs in the jar:"
+            unzip -l "$jar" | awk '{print $4}' | grep -E 'shaders/(core|program)/' | head -20 | sed 's/^/  /'
+            unzip -p "$jar" META-INF/MANIFEST.MF 2>/dev/null | head -10 || true
+            echo ""
+          done | tee /tmp/jar.log
+          echo "=== All jars ==="
+          ls -lh build/libs/*.jar destroying-minecraft/build/libs/*.jar 2>&1 | tee -a /tmp/jar.log
+
+      - name: Publish both jars as a GitHub release
+        if: steps.build.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          scg_jar=$(ls build/libs/ShadowClanGaming-*.jar 2>/dev/null | head -1)
+          dm_jar=$(ls destroying-minecraft/build/libs/destroying-minecraft-*.jar 2>/dev/null | head -1)
+          if [ -z "$scg_jar" ]; then echo "ShadowClanGaming jar not found"; ls -R build/libs/ 2>&1 || true; exit 1; fi
+          if [ -z "$dm_jar" ]; then echo "destroying-minecraft jar not found"; ls -R destroying-minecraft/build/libs/ 2>&1 || true; exit 1; fi
+          echo "Found: $scg_jar"
+          echo "Found: $dm_jar"
+          tag="v1.0.0-round46"
+          git tag -f "$tag" "$GITHUB_SHA" > /dev/null
+          git push -f origin "refs/tags/$tag"
+          notes="Built from ${GITHUB_SHA} on ${GITHUB_REF_NAME} by run ${GITHUB_RUN_ID}.
+          Two NeoForge 1.21.1 jars for side-by-side visual comparison:
+          - ShadowClanGaming 1.0.0 (122 warheads + 5 destroying_* photoreal mimics via world_blast_volume)
+          - destroying-minecraft 1.0.3 NeoForge port (original 5 DestructionTypes via Veil pinwheel shaders)
+          Drop both into mods/ alongside NeoForge 21.1.264. See docs/COMPARISON.md."
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --notes "$notes"
+          else
+            gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+              --title "ShadowClanGaming 1.0.0 + Destroying Minecraft 1.0.3 (NeoForge) — side-by-side" --notes "$notes"
+          fi
+          gh release upload "$tag" "$scg_jar" "$dm_jar" --repo "$GITHUB_REPOSITORY" --clobber
+          echo "published: https://github.com/$GITHUB_REPOSITORY/releases/tag/$tag" | tee -a /tmp/jar.log
+
+      - name: Publish the build log on the commit
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo "### Gradle build (both jars): ${{ steps.build.outcome }}"
+            echo
+            echo '```'
+            grep -nE "error:|warning:|FAILED|FAILURE|BUILD SUCCESS|What went wrong|> Task .* FAILED" \
+              /tmp/build.log 2>/dev/null | tail -n 120 || true
+            echo '--- errors with their context ---'
+            grep -A3 -nE "error:" /tmp/build.log 2>/dev/null | head -n 120 || true
+            echo '--- tail ---'
+            tail -n 40 /tmp/build.log 2>/dev/null || true
+            echo '--- jars ---'
+            cat /tmp/jar.log 2>/dev/null || true
+            echo '```'
+          } > /tmp/body.md || true
+          gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/comments" \
+            -f body="$(cat /tmp/body.md)" > /dev/null || echo "could not post the log"
+
+      - name: Fail the job if the build failed
+        if: steps.build.outcome != 'success'
+        run: exit 1
+
+      - name: Upload jars (both)
+        if: steps.build.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: both-jars
+          path: |
+            build/libs/*.jar
+            destroying-minecraft/build/libs/*.jar
+          if-no-files-found: error
+          retention-days: 14

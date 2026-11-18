@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_stellar_swarm"
+    },
+    {
+      "item": "shadowclangaming:grenade_stellar_swarm"
+    },
+    {
+      "item": "shadowclangaming:grenade_stellar_swarm"
+    },
+    {
+      "item": "shadowclangaming:grenade_stellar_swarm"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_stellar_swarm",
+    "count": 1
+  }
+}

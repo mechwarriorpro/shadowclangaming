@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "B B",
+    "B B",
+    "BBB"
+  ],
+  "key": {
+    "B": {
+      "item": "shadowclangaming:seared_bricks"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:casting_basin",
+    "count": 1
+  }
+}

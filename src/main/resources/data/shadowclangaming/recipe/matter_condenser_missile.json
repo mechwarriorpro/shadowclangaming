@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " S ",
+    "SMS",
+    " G "
+  ],
+  "key": {
+    "S": {
+      "item": "minecraft:lodestone"
+    },
+    "M": {
+      "item": "shadowclangaming:mrbm"
+    },
+    "G": {
+      "item": "minecraft:gunpowder"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:matter_condenser_missile",
+    "count": 1
+  }
+}

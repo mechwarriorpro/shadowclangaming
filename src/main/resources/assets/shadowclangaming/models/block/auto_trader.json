@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "shadowclangaming:block/auto_trader_top",
+    "bottom": "shadowclangaming:block/auto_trader_bottom",
+    "side": "shadowclangaming:block/auto_trader_side"
+  }
+}

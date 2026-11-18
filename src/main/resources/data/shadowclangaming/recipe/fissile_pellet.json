@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "UGU",
+    "GRG",
+    "UGU"
+  ],
+  "key": {
+    "U": {
+      "item": "shadowclangaming:enriched_uranium"
+    },
+    "G": {
+      "item": "minecraft:gunpowder"
+    },
+    "R": {
+      "item": "minecraft:redstone_block"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:fissile_pellet",
+    "count": 1
+  }
+}

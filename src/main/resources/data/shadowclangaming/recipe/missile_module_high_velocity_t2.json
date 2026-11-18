@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "FTF",
+    "FFF",
+    "FGF"
+  ],
+  "key": {
+    "F": {
+      "item": "minecraft:firework_rocket"
+    },
+    "T": {
+      "item": "shadowclangaming:missile_module_t2"
+    },
+    "G": {
+      "item": "minecraft:iron_ingot"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:missile_module_high_velocity_t2",
+    "count": 1
+  }
+}

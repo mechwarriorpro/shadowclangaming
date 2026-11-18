@@ -1,0 +1,11 @@
+{
+  "max_lifetime": 1,
+  "loop": false,
+  "rate": 1,
+  "count": 45,
+  "emitter_settings": {
+    "shape": "destroying_minecraft:lava_emitter_shape",
+    "particle_settings": "destroying_minecraft:smoke_settings"
+  },
+  "particle_data": "destroying_minecraft:smoke_data"
+}

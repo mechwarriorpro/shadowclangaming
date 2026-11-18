@@ -1,0 +1,9 @@
+{
+  "_comment": "Unobtainium - 500x power of yellorium, 100x lifetime. Made 1 Nether Star + 8 Yellorium => 9 Unobtainium in smeltery",
+  "name": "unobtainium",
+  "color": "00FFAA",
+  "power_multiplier": 500,
+  "lifetime_multiplier": 100,
+  "fuel_time": 120000,
+  "power_per_mb": 50000
+}

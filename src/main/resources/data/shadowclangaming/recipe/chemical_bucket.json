@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "VVV",
+    "VBV",
+    "VVV"
+  ],
+  "key": {
+    "V": {
+      "item": "shadowclangaming:element_vial"
+    },
+    "B": {
+      "item": "minecraft:bucket"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:chemical_bucket",
+    "count": 1
+  }
+}

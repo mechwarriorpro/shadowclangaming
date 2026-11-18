@@ -1,0 +1,11 @@
+{
+  "description": { "translate": "enchantment.shadowclangaming.mana_capacity" },
+  "supported_items": "#minecraft:enchantable/armor",
+  "weight": 5,
+  "max_level": 5,
+  "min_cost": { "base": 1, "per_level_above_first": 9 },
+  "max_cost": { "base": 15, "per_level_above_first": 9 },
+  "anvil_cost": 1,
+  "slots": ["armor"],
+  "effects": {}
+}

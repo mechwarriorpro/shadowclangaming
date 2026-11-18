@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_supercritical"
+    },
+    {
+      "item": "shadowclangaming:grenade_supercritical"
+    },
+    {
+      "item": "shadowclangaming:grenade_supercritical"
+    },
+    {
+      "item": "shadowclangaming:grenade_supercritical"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_supercritical",
+    "count": 1
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "TSE",
+    "SLS",
+    "ESP"
+  ],
+  "key": {
+    "T": {
+      "item": "shadowclangaming:thermite_blend"
+    },
+    "S": {
+      "item": "shadowclangaming:sanguine_rune"
+    },
+    "E": {
+      "item": "shadowclangaming:essentia_catalyst"
+    },
+    "L": {
+      "item": "shadowclangaming:logistics_processor"
+    },
+    "P": {
+      "item": "shadowclangaming:psionic_matrix"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:nexus_shard",
+    "count": 1
+  }
+}

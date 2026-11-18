@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "primed=false": {
+      "model": "shadowclangaming:block/explosive_quasar_lance"
+    },
+    "primed=true": {
+      "model": "shadowclangaming:block/explosive_quasar_lance"
+    }
+  }
+}

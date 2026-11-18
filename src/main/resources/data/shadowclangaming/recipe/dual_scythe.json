@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "S S",
+    " R ",
+    "R R"
+  ],
+  "key": {
+    "S": { "item": "shadowclangaming:scythe" },
+    "R": { "item": "minecraft:red_dye" }
+  },
+  "result": { "id": "shadowclangaming:dual_scythe", "count": 1 }
+}

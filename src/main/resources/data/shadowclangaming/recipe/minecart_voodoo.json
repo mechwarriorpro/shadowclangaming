@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "minecraft:minecart"
+    },
+    {
+      "item": "shadowclangaming:explosive_voodoo"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:minecart_voodoo",
+    "count": 1
+  }
+}

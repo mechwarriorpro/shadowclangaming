@@ -1,0 +1,26 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "ECE",
+    "SBS",
+    "ECE"
+  ],
+  "key": {
+    "E": {
+      "item": "minecraft:ender_pearl"
+    },
+    "C": {
+      "item": "shadowclangaming:skill_card_blank"
+    },
+    "S": {
+      "item": "minecraft:echo_shard"
+    },
+    "B": {
+      "item": "minecraft:book"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:psionic_matrix",
+    "count": 1
+  }
+}

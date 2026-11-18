@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "B B",
+    "BBB",
+    "B B"
+  ],
+  "key": {
+    "B": {
+      "item": "shadowclangaming:seared_bricks"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:seared_drain",
+    "count": 1
+  }
+}

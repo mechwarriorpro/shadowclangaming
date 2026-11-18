@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_matter_condenser"
+    },
+    {
+      "item": "shadowclangaming:grenade_matter_condenser"
+    },
+    {
+      "item": "shadowclangaming:grenade_matter_condenser"
+    },
+    {
+      "item": "shadowclangaming:grenade_matter_condenser"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_matter_condenser",
+    "count": 1
+  }
+}

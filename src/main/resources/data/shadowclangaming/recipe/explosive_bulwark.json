@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_bulwark"
+    },
+    {
+      "item": "shadowclangaming:grenade_bulwark"
+    },
+    {
+      "item": "shadowclangaming:grenade_bulwark"
+    },
+    {
+      "item": "shadowclangaming:grenade_bulwark"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_bulwark",
+    "count": 1
+  }
+}

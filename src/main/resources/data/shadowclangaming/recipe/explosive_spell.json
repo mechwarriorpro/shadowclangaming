@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_spell"
+    },
+    {
+      "item": "shadowclangaming:grenade_spell"
+    },
+    {
+      "item": "shadowclangaming:grenade_spell"
+    },
+    {
+      "item": "shadowclangaming:grenade_spell"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_spell",
+    "count": 1
+  }
+}

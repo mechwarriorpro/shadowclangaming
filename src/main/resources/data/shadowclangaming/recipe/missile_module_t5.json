@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " N ",
+    "NTN",
+    " N "
+  ],
+  "key": {
+    "N": {
+      "item": "minecraft:nether_star"
+    },
+    "T": {
+      "item": "shadowclangaming:missile_module_t4"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:missile_module_t5",
+    "count": 1
+  }
+}

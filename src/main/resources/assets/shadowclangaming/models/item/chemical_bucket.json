@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "shadowclangaming:item/chemical_bucket_liquid",
+    "layer1": "shadowclangaming:item/chemical_bucket"
+  }
+}

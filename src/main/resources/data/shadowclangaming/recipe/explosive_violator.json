@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_violator"
+    },
+    {
+      "item": "shadowclangaming:grenade_violator"
+    },
+    {
+      "item": "shadowclangaming:grenade_violator"
+    },
+    {
+      "item": "shadowclangaming:grenade_violator"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_violator",
+    "count": 1
+  }
+}
