@@ -31,7 +31,9 @@ public class CustomPayloads {
 
     public record BraamPayload(SoundEvent soundEvent) implements CustomPacketPayload {
         public static final Type<BraamPayload> TYPE = new Type<>(id("asp"));
-        public static final StreamCodec<RegistryFriendlyByteBuf, BraamPayload> CODEC = StreamCodec.of((buf, v) -> { try { buf.writeResourceLocation(v.soundEvent.getLocation()); } catch (Exception e) { buf.writeResourceLocation(ResourceLocation.fromNamespaceAndPath("minecraft", "entity.lightning_bolt.thunder")); } }, buf -> new BraamPayload(net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT.getValue(buf.readResourceLocation())));
+        public static final StreamCodec<RegistryFriendlyByteBuf, BraamPayload> CODEC = StreamCodec.of(
+                (buf, v) -> buf.writeResourceLocation(v.soundEvent().getLocation()),
+                buf -> new BraamPayload(net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT.getValue(buf.readResourceLocation())));
         @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
