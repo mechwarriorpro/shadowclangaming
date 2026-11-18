@@ -44,7 +44,7 @@ public class LaserDestructionServer extends ServerDestructionEvent {
                         lavaSpewDelay = random.nextIntBetweenInclusive(30, 100);
                     } else lavaSpewDelay--;
                     int playerCount = 0;
-                    List<net.minecraft.world.entity.player.Player> players = level.players();
+                    var players = level.players();
                     if (players.size() > 1) {
                         for (var p : players) if (!p.isCreative() && !p.isSpectator()) playerCount++;
                         if (playerCount <= 1) this.skipKeyframe();

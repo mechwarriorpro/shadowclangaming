@@ -86,7 +86,7 @@ public class InitializePackets {
     }
 
     public static void sendLavaSpew(net.minecraft.server.level.ServerPlayer player, net.minecraft.world.phys.Vec3 pos) {
-        try { net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, new CustomPayloads.LavaSpewPacketPayload(pos.toVector3f())); } catch (Exception ignored) {}
+        try { net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, new CustomPayloads.LavaSpewPacketPayload(new org.joml.Vector3f((float)pos.x, (float)pos.y, (float)pos.z))); } catch (Exception ignored) {}
     }
     public static void sendWaitingRoom(net.minecraft.server.level.ServerPlayer player, boolean v) {
         try { net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, new CustomPayloads.WaitingRoomPacketPayload(v)); } catch (Exception ignored) {}
