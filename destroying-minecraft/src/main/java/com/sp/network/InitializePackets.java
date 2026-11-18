@@ -1,5 +1,6 @@
 package com.sp.network;
 
+import com.sp.DestroyingMinecraft;
 import com.sp.cca.SimpleWorldStorage;
 import com.sp.cca.custom.world.WorldDestructionEventsComponent;
 import com.sp.networking.CustomPayloads;
@@ -92,6 +93,6 @@ public class InitializePackets {
         try { net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, new CustomPayloads.WaitingRoomPacketPayload(v)); } catch (Exception ignored) {}
     }
     public static void sendBraam(net.minecraft.server.level.ServerPlayer player, double clamped) {
-        try { net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, new CustomPayloads.BraamPayload(net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT.getValue(net.minecraft.resources.ResourceLocation.parse("minecraft:block.note_block.basedrum")))); } catch (Exception ignored) {}
+        try { net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, new CustomPayloads.BraamPayload(net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT.getValueOrThrow(net.minecraft.resources.ResourceLocation.parse("minecraft:block.note_block.basedrum")))); } catch (Exception ignored) {}
     }
 }

@@ -23,7 +23,7 @@ public class ServerPacketManager {
     }
     public static void sendBraamPacket(Player player, double clamped) {
         try {
-            send(player, new CustomPayloads.BraamPayload(net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT.getValue(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("minecraft", "block.note_block.basedrum"))));
+            send(player, new CustomPayloads.BraamPayload(net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT.getValueOrThrow(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("minecraft", "block.note_block.basedrum"))));
         } catch (Exception ignored) {}
     }
     public static void sendUpdatePlayZonePacket(Player player, PlayZone playZone, boolean remove) {
