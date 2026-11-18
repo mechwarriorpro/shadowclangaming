@@ -66,7 +66,11 @@ public class DestroyingMinecraft {
         // Commands & networking: RegisterCommandsEvent is on NeoForge bus, RegisterPayloadHandlersEvent is on MOD bus
         NeoForge.EVENT_BUS.register(DestroyingMinecraftCommands.class);
         modEventBus.addListener(InitializePackets::registerPayloads);
-        NeoForge.EVENT_BUS.register(ServerDestructionEvents.class);
+        // ServerDestructionEvents only holds static ServerDestructionEvent singletons
+        // (CRACKS/PLANET/SUPERNOVA/BLACK_HOLE); it has no @SubscribeEvent methods so
+        // EventBus.register would throw IllegalArgumentException at 19:32:22.
+        // Just force its static init so the 4 servers register via ServerDestructionEvent.register().
+        ServerDestructionEvents.registerServerEvents();
 
         LOGGER.info("\"It's nukein' time\" -He said as he loaded the fork into the microwave (NeoForge port)");
     }
