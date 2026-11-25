@@ -65,7 +65,7 @@ public class DestructionCommand {
         }
         long startTime = level.getGameTime();
         for (ServerPlayer p : level.players().stream().filter(e -> e instanceof ServerPlayer).map(e -> (ServerPlayer) e).toList()) {
-            PacketDistributor.sendToPlayer(p, new CustomPayloads.DestructionPayload(type.getName(), startTime, pos.toVector3f()));
+            PacketDistributor.sendToPlayer(p, new CustomPayloads.DestructionPayload(type.getName(), startTime, new org.joml.Vector3f((float)pos.x, (float)pos.y, (float)pos.z)));
             try { p.setRespawnPosition(level.dimension(), BlockPos.containing(pos), 0, true, false); } catch (Exception ignored) {}
         }
         if (type.equals(DestructionType.BLACK_HOLE)) {
@@ -88,7 +88,7 @@ public class DestructionCommand {
             level.getEntitiesOfClass(net.minecraft.world.entity.Entity.class, box, en -> en.getType().toString().contains("block_physics")).forEach(net.minecraft.world.entity.Entity::discard);
         } catch (Exception ignored) {}
         for (ServerPlayer p : level.players().stream().filter(e -> e instanceof ServerPlayer).map(e -> (ServerPlayer) e).toList())
-            PacketDistributor.sendToPlayer(p, new CustomPayloads.DestructionPayload("reset", 0, Vec3.ZERO.toVector3f()));
+            PacketDistributor.sendToPlayer(p, new CustomPayloads.DestructionPayload("reset", 0, new org.joml.Vector3f(0, 0, 0)));
         ctx.getSource().sendSuccess(() -> Component.literal("Reset destruction events"), true);
         return 1;
     }
