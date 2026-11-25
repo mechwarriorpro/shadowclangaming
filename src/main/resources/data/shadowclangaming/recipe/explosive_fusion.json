@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_fusion"
+    },
+    {
+      "item": "shadowclangaming:grenade_fusion"
+    },
+    {
+      "item": "shadowclangaming:grenade_fusion"
+    },
+    {
+      "item": "shadowclangaming:grenade_fusion"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_fusion",
+    "count": 1
+  }
+}

@@ -1,0 +1,64 @@
+{
+    "stages": [
+        {
+            "type": "veil:blit",
+            "shader": "destroying_minecraft:planet/planet",
+            "in": "destroying_minecraft:bloom/bloom_start",
+            "out": "swap"
+        },
+        {
+            "type": "veil:copy",
+            "in": "swap",
+            "out": "destroying_minecraft:bloom/bloom_start"
+        }
+    ],
+    "framebuffers": {
+        "swap": {
+            "depth": false,
+            "format": "R11F_G11F_B10F",
+            "autoClear": true,
+            "filter": {
+                "blur": true
+            }
+        }
+    },
+    "textures": {
+        "PlanetColor": {
+            "type": "location",
+            "location": "destroying_minecraft:textures/shaders/planet/planet_color.png"
+        },
+        "PebbleDepth": {
+            "type": "location",
+            "location": "destroying_minecraft:textures/shaders/planet/shadertoy_depth.png"
+        },
+        "MaterialSampler": {
+            "type": "framebuffer",
+            "name": "veil:dynamic_main",
+            "sampler": 6
+        },
+        "HandDepthSampler": {
+            "type": "framebuffer",
+            "name": "veil:first_person:depth"
+        },
+        "NormalSampler": {
+          "type": "framebuffer",
+          "name": "veil:dynamic_main",
+          "sampler": 2
+        },
+        "OpaqueDepth": {
+          "type": "framebuffer",
+          "name": "veil:dynamic_main:depth"
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+

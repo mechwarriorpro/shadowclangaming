@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_interceptor"
+    },
+    {
+      "item": "shadowclangaming:grenade_interceptor"
+    },
+    {
+      "item": "shadowclangaming:grenade_interceptor"
+    },
+    {
+      "item": "shadowclangaming:grenade_interceptor"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_interceptor",
+    "count": 1
+  }
+}

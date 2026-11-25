@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_steam_rupture"
+    },
+    {
+      "item": "shadowclangaming:grenade_steam_rupture"
+    },
+    {
+      "item": "shadowclangaming:grenade_steam_rupture"
+    },
+    {
+      "item": "shadowclangaming:grenade_steam_rupture"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_steam_rupture",
+    "count": 1
+  }
+}

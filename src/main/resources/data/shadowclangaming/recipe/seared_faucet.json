@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " B ",
+    "BBB"
+  ],
+  "key": {
+    "B": {
+      "item": "shadowclangaming:seared_bricks"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:seared_faucet",
+    "count": 1
+  }
+}

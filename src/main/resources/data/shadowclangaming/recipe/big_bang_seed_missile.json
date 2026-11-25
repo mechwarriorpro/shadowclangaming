@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "AMA",
+    "MXM",
+    "AMA"
+  ],
+  "key": {
+    "A": {
+      "item": "shadowclangaming:antimatter_missile"
+    },
+    "M": {
+      "item": "minecraft:nether_star"
+    },
+    "X": {
+      "item": "minecraft:end_crystal"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:big_bang_seed_missile",
+    "count": 1
+  }
+}

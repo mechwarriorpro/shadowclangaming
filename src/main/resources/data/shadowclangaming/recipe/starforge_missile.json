@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "AMA",
+    "MXM",
+    "AMA"
+  ],
+  "key": {
+    "A": {
+      "item": "shadowclangaming:antimatter_missile"
+    },
+    "M": {
+      "item": "minecraft:glowstone_dust"
+    },
+    "X": {
+      "item": "minecraft:gold_block"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:starforge_missile",
+    "count": 1
+  }
+}

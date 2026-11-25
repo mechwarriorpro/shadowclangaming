@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_ragnarok"
+    },
+    {
+      "item": "shadowclangaming:grenade_ragnarok"
+    },
+    {
+      "item": "shadowclangaming:grenade_ragnarok"
+    },
+    {
+      "item": "shadowclangaming:grenade_ragnarok"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_ragnarok",
+    "count": 1
+  }
+}

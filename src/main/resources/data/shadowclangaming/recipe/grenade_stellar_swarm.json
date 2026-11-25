@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "minecraft:gunpowder"
+    },
+    {
+      "item": "minecraft:iron_ingot"
+    },
+    {
+      "item": "minecraft:daylight_detector"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:grenade_stellar_swarm",
+    "count": 2
+  }
+}

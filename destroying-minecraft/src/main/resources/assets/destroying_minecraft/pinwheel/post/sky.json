@@ -1,0 +1,40 @@
+{
+    "stages": [
+        {
+            "type": "veil:blit",
+            "shader": "destroying_minecraft:sky/sky",
+            "out": "destroying_minecraft:bloom/bloom_start"
+        }
+    ],
+    "framebuffers": {
+    },
+    "textures": {
+        "StarsTexture": {
+            "type": "location",
+            "location": "destroying_minecraft:textures/shaders/stars.png"
+        },
+        "OpaqueDepth": {
+          "type": "framebuffer",
+          "name": "veil:dynamic_main:depth"
+        },
+        "TranslucentDepth": {
+          "type": "framebuffer",
+          "name": "destroying_minecraft:translucent:depth"
+        },
+        "HandDepth": {
+          "type": "framebuffer",
+          "name": "veil:first_person:depth"
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+

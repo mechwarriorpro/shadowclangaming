@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "shadowclangaming:block/chemical_reactor_top",
+    "bottom": "shadowclangaming:block/chemical_reactor_bottom",
+    "side": "shadowclangaming:block/chemical_reactor_side"
+  }
+}

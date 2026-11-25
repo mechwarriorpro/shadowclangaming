@@ -1,0 +1,23 @@
+{
+  "vertex": "shadowclangaming:post/apex_common",
+  "fragment": "shadowclangaming:post/cbc_disintegration",
+  "samplers": [
+    {
+      "name": "DiffuseSampler"
+    }
+  ],
+  "uniforms": [
+    {
+      "name": "Strength",
+      "type": "float",
+      "count": 1,
+      "values": [1.0]
+    },
+    {
+      "name": "Time",
+      "type": "float",
+      "count": 1,
+      "values": [0.0]
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "shadowclangaming:block/network_rack_top",
+    "bottom": "shadowclangaming:block/network_rack_bottom",
+    "side": "shadowclangaming:block/network_rack_side"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " A ",
+    "AQA",
+    " A "
+  ],
+  "key": {
+    "A": {
+      "item": "minecraft:amethyst_shard"
+    },
+    "Q": {
+      "item": "minecraft:quartz"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:frequency_chip",
+    "count": 1
+  }
+}

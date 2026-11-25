@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "CRC",
+    "RER",
+    "CRC"
+  ],
+  "key": {
+    "C": {
+      "item": "minecraft:copper_ingot"
+    },
+    "R": {
+      "item": "minecraft:repeater"
+    },
+    "E": {
+      "item": "shadowclangaming:tritium_cell"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:plasma_coil",
+    "count": 1
+  }
+}

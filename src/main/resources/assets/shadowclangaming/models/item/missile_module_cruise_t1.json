@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "shadowclangaming:item/missile_module_t1"
+  }
+}

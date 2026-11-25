@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:unobtainium_ingot"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:unobtainium_nugget",
+    "count": 9
+  }
+}

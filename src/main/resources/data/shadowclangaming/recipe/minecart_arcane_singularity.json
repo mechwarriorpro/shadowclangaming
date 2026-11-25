@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "minecraft:minecart"
+    },
+    {
+      "item": "shadowclangaming:explosive_arcane_singularity"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:minecart_arcane_singularity",
+    "count": 1
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_fission"
+    },
+    {
+      "item": "shadowclangaming:grenade_fission"
+    },
+    {
+      "item": "shadowclangaming:grenade_fission"
+    },
+    {
+      "item": "shadowclangaming:grenade_fission"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_fission",
+    "count": 1
+  }
+}

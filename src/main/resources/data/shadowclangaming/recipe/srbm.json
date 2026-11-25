@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " T ",
+    "CIC",
+    " R "
+  ],
+  "key": {
+    "T": { "item": "minecraft:tnt" },
+    "C": { "item": "minecraft:copper_ingot" },
+    "I": { "item": "minecraft:iron_ingot" },
+    "R": { "item": "minecraft:redstone" }
+  },
+  "result": {
+    "id": "shadowclangaming:srbm",
+    "count": 2
+  }
+}

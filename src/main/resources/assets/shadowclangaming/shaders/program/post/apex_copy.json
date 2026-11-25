@@ -1,0 +1,9 @@
+{
+  "vertex": "shadowclangaming:post/apex_common",
+  "fragment": "shadowclangaming:post/apex_copy",
+  "samplers": [
+    {
+      "name": "DiffuseSampler"
+    }
+  ]
+}

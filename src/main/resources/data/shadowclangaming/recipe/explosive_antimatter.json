@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_antimatter"
+    },
+    {
+      "item": "shadowclangaming:grenade_antimatter"
+    },
+    {
+      "item": "shadowclangaming:grenade_antimatter"
+    },
+    {
+      "item": "shadowclangaming:grenade_antimatter"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_antimatter",
+    "count": 1
+  }
+}

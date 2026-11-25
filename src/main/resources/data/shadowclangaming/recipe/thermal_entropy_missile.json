@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " S ",
+    "SMS",
+    " G "
+  ],
+  "key": {
+    "S": {
+      "item": "minecraft:packed_mud"
+    },
+    "M": {
+      "item": "shadowclangaming:mrbm"
+    },
+    "G": {
+      "item": "minecraft:gunpowder"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:thermal_entropy_missile",
+    "count": 1
+  }
+}

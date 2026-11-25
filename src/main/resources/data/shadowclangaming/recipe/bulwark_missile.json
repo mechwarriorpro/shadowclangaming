@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " E ",
+    "EIE",
+    " S "
+  ],
+  "key": {
+    "E": {
+      "item": "minecraft:ender_pearl"
+    },
+    "I": {
+      "item": "minecraft:iron_block"
+    },
+    "S": {
+      "item": "shadowclangaming:mrbm"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:bulwark_missile",
+    "count": 1
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "shadowclangaming:block/explosive_arcane_singularity"
+  }
+}

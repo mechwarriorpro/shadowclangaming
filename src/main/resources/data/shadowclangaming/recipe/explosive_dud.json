@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "shadowclangaming:grenade_dud"
+    },
+    {
+      "item": "shadowclangaming:grenade_dud"
+    },
+    {
+      "item": "shadowclangaming:grenade_dud"
+    },
+    {
+      "item": "shadowclangaming:grenade_dud"
+    }
+  ],
+  "result": {
+    "id": "shadowclangaming:explosive_dud",
+    "count": 1
+  }
+}

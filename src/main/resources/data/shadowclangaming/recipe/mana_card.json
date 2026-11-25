@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "PAP",
+    "ALA",
+    "PAP"
+  ],
+  "key": {
+    "P": {
+      "item": "minecraft:paper"
+    },
+    "A": {
+      "item": "minecraft:amethyst_shard"
+    },
+    "L": {
+      "item": "minecraft:lapis_lazuli"
+    }
+  },
+  "result": {
+    "id": "shadowclangaming:mana_card",
+    "count": 1
+  }
+}
