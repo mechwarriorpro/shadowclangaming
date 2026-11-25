@@ -3,6 +3,7 @@ package com.sp;
 import com.sp.block.ModBlocks;
 import com.sp.block.entity.ModBlockEntities;
 import com.sp.command.DestroyingMinecraftCommands;
+import com.sp.command.ModArgumentTypes;
 import com.sp.component.ModDataComponentTypes;
 import com.sp.config.DestroyingMinecraftConfig;
 import com.sp.destruction.server.ServerDestructionEvents;
@@ -55,6 +56,7 @@ public class DestroyingMinecraft {
         ModGameRules.register(modEventBus);
         ModDataComponentTypes.REGISTRY.register(modEventBus);
         ModItemGroups.REGISTRY.register(modEventBus);
+        ModArgumentTypes.COMMAND_ARGUMENT_TYPES.register(modEventBus);
 
         modEventBus.addListener(this::commonSetup);
 
